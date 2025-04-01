@@ -5,13 +5,19 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FileUp,
   FileText,
   RefreshCw,
   Wand2,
   Upload,
-  Currency,
+  AlertCircle,
+  CheckCircle,
+  BookOpen,
+  BrainCircuit,
+  FileDigit,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { validatePdfFile } from "@/lib/PdfValidation";
@@ -30,6 +36,7 @@ import { generateDocumentationFromGeminiAI } from "@/lib/gemini";
 // Import Firebase functions
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase";
+import { cn } from "@/lib/utils";
 
 export function Documentation() {
   const { formData, updateFormData, generateQuotation, nextStep } =
@@ -463,109 +470,235 @@ export function Documentation() {
       <div>
         <p className="text-sm text-muted-foreground">Step 3/4</p>
         <h2 className="sm:text-2xl font-bold text-foreground">
-          Share Your Documentation
+          Upload existing documentation or generate new developer guides with AI
+          assistance
         </h2>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="flex flex-col sm:grid sm:grid-cols-2 w-full h-[20]">
-          <TabsTrigger value="upload" className="flex-1">
-            Upload Document
+        <TabsList className="grid grid-cols-1 sm:grid-cols-2 w-full h-auto p-1 bg-gradient-to-r from-indigo-100 to-pink-100 dark:from-indigo-950/40 dark:to-pink-950/40 rounded-lg">
+          <TabsTrigger
+            value="upload"
+            className={cn(
+              "flex items-center gap-2 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-md transition-all duration-300 rounded-md",
+              activeTab === "upload" ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2"
+            >
+              <FileUp className="h-5 w-5" />
+              <span className="font-medium">Upload Document</span>
+            </motion.div>
           </TabsTrigger>
-          <TabsTrigger value="generate" className="flex-1">
-            Generate Document
+          <TabsTrigger
+            value="generate"
+            className={cn(
+              "flex items-center gap-2 py-3 data-[state=active]:bg-white dark:data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-md transition-all duration-300 rounded-md",
+              activeTab === "generate"
+                ? "text-primary"
+                : "text-muted-foreground"
+            )}
+          >
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2"
+            >
+              <Wand2 className="h-5 w-5" />
+              <span className="font-medium">Generate Document</span>
+            </motion.div>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upload" className="space-y-4 pt-4">
-          <div className="border-2 border-dashed rounded-lg p-8 text-center">
-            <FileUp className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
-            <h3 className="font-medium">Upload your requirements document</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Only PDF files are supported (up to 10MB)
-            </p>
-
-            <div className="flex justify-center">
-              <input
-                type="file"
-                id="file-upload"
-                className="hidden"
-                accept=".pdf"
-                onChange={handleFileChange}
-              />
-              <Label
-                htmlFor="file-upload"
-                className="cursor-pointer inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
+        <TabsContent value="upload" className="space-y-6 pt-2">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="border-2 flex flex-col items-center justify-center border-dashed border-primary/20 hover:border-primary/40 transition-colors rounded-lg p-8 text-center bg-gradient-to-r from-violet-50/50 to-pink-50/50 dark:from-violet-950/20 dark:to-pink-950/20">
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+                className="w-16 h-16 flex items-center justify-center rounded-full bg-purple-100 mb-4 group-hover:bg-primary/20 transition-colors"
               >
-                <FileUp className="h-4 w-4" />
-                {fileName ? fileName : "Select PDF File"}
-              </Label>
-            </div>
+                <FileUp className="h-8 w-8 text-purple-500" />
+              </motion.div>
+              <h3 className="text-xl font-semibold mb-2">
+                {fileName ? "Document Ready!" : "Upload Your Documentation"}
+              </h3>
+              <p className="text-muted-foreground max-w-md mb-4">
+                {fileName
+                  ? "Your document is ready. You can now improve it with AI or submit directly."
+                  : "Click to browse and upload your PDF file. We'll help enhance it with AI."}
+              </p>
 
-            {fileError && (
-              <p className="text-sm text-destructive mt-2">{fileError}</p>
-            )}
-          </div>
-
-          {formData.documentationFile && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-md bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">{fileName}</span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-2"
-                    onClick={improveDocumentation}
-                    disabled={isImproving || hasImproved} // Disable if improving or already improved
+              <div className="flex justify-center">
+                <input
+                  type="file"
+                  id="file-upload"
+                  className="hidden"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                />
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <Label
+                    htmlFor="file-upload"
+                    className="cursor-pointer inline-flex items-center gap-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white px-6 py-3 rounded-md shadow-lg hover:shadow-xl transition-all duration-300"
                   >
-                    {isImproving ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        Improving...
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="h-4 w-4" />
-                        {hasImproved ? "Improved with AI" : "Improve with AI"}
-                      </>
-                    )}
-                  </Button>
-                </div>
+                    <FileUp className="h-5 w-5" />
+                    {fileName ? fileName : "Select PDF File"}
+                  </Label>
+                </motion.div>
               </div>
 
-              {formData.improvedDocumentation && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium">AI-Improved Documentation</h3>
-                  </div>
-
-                  <div className="border rounded-md h-64 overflow-y-auto">
-                    <Editor
-                      value={formData.improvedDocumentation}
-                      onChange={handleImprovedEditorChange}
-                    />
-                  </div>
-                </div>
+              {fileError && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 text-destructive mt-4 justify-center"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  <p>{fileError}</p>
+                </motion.div>
               )}
             </div>
-          )}
+
+            {formData.documentationFile && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="space-y-6 mt-6"
+              >
+                <div className="flex flex-col md:flex-row items-center gap-3 md:gap-0 justify-between p-4 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-6 w-6 text-primary" />
+                    <span className="font-medium">{fileName}</span>
+                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button
+                      size="lg"
+                      className="gap-2 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white shadow-md"
+                      onClick={improveDocumentation}
+                      disabled={isImproving || hasImproved}
+                    >
+                      {isImproving ? (
+                        <>
+                          <RefreshCw className="h-5 w-5 animate-spin" />
+                          Improving...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="h-5 w-5" />
+                          {hasImproved
+                            ? "Improved with AI ✓"
+                            : "Improve with AI"}
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                </div>
+
+                {formData.improvedDocumentation && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    transition={{ duration: 0.5 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-lg flex items-center gap-2">
+                        <span className="bg-gradient-to-r from-violet-600 to-pink-600 bg-clip-text text-transparent">
+                          AI-Improved Documentation
+                        </span>
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      </h3>
+                    </div>
+
+                    <div className="border rounded-md h-80 overflow-y-auto bg-muted/20 shadow-inner">
+                      <Editor
+                        value={formData.improvedDocumentation}
+                        onChange={handleImprovedEditorChange}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
+          </motion.div>
         </TabsContent>
 
         <TabsContent value="generate" className="space-y-4 pt-4">
           {!formData.generatedDocumentation && !isGenerating && (
-            <div className="border-2 border-dashed rounded-lg p-8 text-center">
-              <FileText className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
-              <h3 className="font-medium">Generate Developer Documentation</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                We'll create detailed documentation based on your project
-                details
-              </p>
+            <div className="border-2 border-dashed border-primary/20 hover:border-primary/40 transition-colors rounded-lg p-8 text-center bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-950/20 dark:to-purple-950/20">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="relative p-0 rounded-xl overflow-hidden"
+              >
+                <div className="flex flex-col items-center">
+                  <motion.div
+                    animate={{ rotate: [0, 5, -5, 0] }}
+                    transition={{ repeat: Infinity, duration: 4 }}
+                    className="w-16 h-16 flex items-center justify-center rounded-full bg-purple-100 mb-4 group-hover:bg-primary/20 transition-colors"
+                  >
+                    <BrainCircuit className="h-8 w-8 text-purple-500" />
+                  </motion.div>
+                  <h3 className="text-xl font-semibold mb-2">
+                    Generate Developer Documentation
+                  </h3>
+                  <p className="text-muted-foreground max-w-md mb-6">
+                    Let our AI create comprehensive documentation based on your
+                    project details. Perfect for technical specifications, API
+                    docs, and development guidelines.
+                  </p>
 
-              <Button onClick={generateDocumentation}>Generate Now</Button>
+                  <div className="space-y-4 w-full max-w-md">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-6 rounded-xl border border-purple-500 transition-all duration-300 hover:shadow-md hover:border-purple-400 cursor-pointer">
+                        <FileDigit className="h-6 w-6 text-purple-500 mb-2" />
+                        <h4 className="font-medium text-purple-500">Technical Specs</h4>
+                        <p className="text-xs">
+                          Complete API and code documentation
+                        </p>
+                      </div>
+                      <div className="p-6 rounded-xl border border-purple-500 transition-all duration-300 hover:shadow-md hover:border-purple-400 cursor-pointer">
+                        <BookOpen className="h-6 w-6 text-purple-500 mb-2" />
+                        <h4 className="font-medium text-purple-500">Save Time</h4>
+                        <p className="text-xs ">
+                          Generate in seconds instead of hours
+                        </p>
+                      </div>
+                    </div>
+
+                    <motion.div
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button
+                        onClick={generateDocumentation}
+                        className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-6 rounded-md shadow-lg hover:shadow-xl transition-all duration-300"
+                      >
+                        <Sparkles className="h-5 w-5 mr-2" />
+                        <span className="font-medium">
+                          Generate Documentation
+                        </span>
+                      </Button>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           )}
 

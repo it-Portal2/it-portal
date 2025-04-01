@@ -23,8 +23,8 @@ export interface ProjectFormData {
   // Cloudinary URLs
   cloudinaryDocumentationUrl: string | null;
   cloudinaryQuotationUrl: string | null;
-   // Add currency field
-  currency: "INR" | "USD"
+  // Add currency field
+  currency: "INR" | "USD";
   projectBudget: number; // Add this new field
 }
 
@@ -133,10 +133,51 @@ export const useProjectFormStore = create<ProjectFormStore>((set, get) => ({
   prevStep: () => set((state) => ({ step: Math.max(state.step - 1, 1) })),
 
   updateFormData: (data) =>
-    set((state) => ({
-      formData: { ...state.formData, ...data },
-    })),
+    set((state) => {
+      const newFormData = { ...state.formData, ...data };
 
+      // Automatically assign developers based on development areas count
+      if (data.developmentAreas) {
+        const count = data.developmentAreas.length;
+        const cycle = Math.floor(count / 3); // Complete cycles of 3
+        const remainder = count % 3; // Remaining areas after complete cycles
+
+        // Base values from complete cycles
+        const baseSenior = cycle;
+        const baseJunior = cycle;
+        const baseDesigner = cycle;
+
+        // Add remaining based on position in cycle
+        let senior = baseSenior;
+        let junior = baseJunior;
+        let designer = baseDesigner;
+
+        if (remainder === 1) {
+          senior += 1;
+        } else if (remainder === 2) {
+          senior += 1;
+          junior += 1;
+        }
+
+        // Only update if these values are greater than current manual selections
+        newFormData.seniorDevelopers = Math.max(
+          state.formData.seniorDevelopers,
+          senior
+        );
+        newFormData.juniorDevelopers = Math.max(
+          state.formData.juniorDevelopers,
+          junior
+        );
+        newFormData.uiUxDesigners = Math.max(
+          state.formData.uiUxDesigners,
+          designer
+        );
+      }
+
+      return {
+        formData: newFormData,
+      };
+    }),
   // Function to sync user data from auth store to form data
 
   syncUserData: () => {
@@ -205,30 +246,40 @@ export const useProjectFormStore = create<ProjectFormStore>((set, get) => ({
     const { formData } = get();
 
     // Calculate rates based on selected currency
-    const exchangeRate = 83 // 1 USD = ₹83
+    const exchangeRate = 83; // 1 USD = ₹83
 
     // For INR, use base rates
     // For USD, add 4% to base INR value and then divide by exchange rate
-    const seniorDevRate = formData.currency === "INR" ? 75000 : Math.round((75000 + 0.04 * 75000) / exchangeRate) // ≈ $940
+    const seniorDevRate =
+      formData.currency === "INR"
+        ? 75000
+        : Math.round((75000 + 0.04 * 75000) / exchangeRate); // ≈ $940
 
-    const juniorDevRate = formData.currency === "INR" ? 30000 : Math.round((30000 + 0.04 * 30000) / exchangeRate) // ≈ $376
+    const juniorDevRate =
+      formData.currency === "INR"
+        ? 30000
+        : Math.round((30000 + 0.04 * 30000) / exchangeRate); // ≈ $376
 
-    const uiUxRate = formData.currency === "INR" ? 8000 : Math.round((8000 + 0.04 * 8000) / exchangeRate) // ≈ $100
+    const uiUxRate =
+      formData.currency === "INR"
+        ? 8000
+        : Math.round((8000 + 0.04 * 8000) / exchangeRate); // ≈ $100
 
     const projectManagementCost =
-      formData.currency === "INR" ? 50000 : Math.round((50000 + 0.04 * 50000) / exchangeRate) // ≈ $627
+      formData.currency === "INR"
+        ? 50000
+        : Math.round((50000 + 0.04 * 50000) / exchangeRate); // ≈ $627
 
     // Calculate cost based on team composition with correct rates
-    const seniorDevCost = formData.seniorDevelopers * seniorDevRate
-    const juniorDevCost = formData.juniorDevelopers * juniorDevRate
-    const uiUxCost = formData.uiUxDesigners * uiUxRate
-    const totalCost = seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost
+    const seniorDevCost = formData.seniorDevelopers * seniorDevRate;
+    const juniorDevCost = formData.juniorDevelopers * juniorDevRate;
+    const uiUxCost = formData.uiUxDesigners * uiUxRate;
+    const totalCost =
+      seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
 
-
-    
     // Set the projectBudget value to totalCost
     get().updateFormData({ projectBudget: totalCost });
-    
+
     // Create quotation data object
     const quotationData: QuotationData = {
       clientName: formData.clientName,
@@ -241,10 +292,10 @@ export const useProjectFormStore = create<ProjectFormStore>((set, get) => ({
       juniorDevelopers: formData.juniorDevelopers,
       uiUxDesigners: formData.uiUxDesigners,
       currency: formData.currency,
-    }
+    };
 
     // Generate HTML for the quotation using our utility function
-    const quotationHtml = generateQuotationHtml(quotationData)
+    const quotationHtml = generateQuotationHtml(quotationData);
 
     // Update the form data with the generated HTML
     get().updateFormData({ quotationPdf: quotationHtml });

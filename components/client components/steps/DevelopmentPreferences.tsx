@@ -1,9 +1,8 @@
+
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
-
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -26,7 +25,7 @@ interface DeveloperTypeSelectorProps {
   currency: string;
 }
 
-// Update the DeveloperTypeSelector to show correct currency values
+// Keep DeveloperTypeSelector component the same
 function DeveloperTypeSelector({
   title,
   cost,
@@ -35,13 +34,10 @@ function DeveloperTypeSelector({
   onChange,
   currency,
 }: DeveloperTypeSelectorProps) {
-  // Get cost display based on currency
   const displayCost =
     currency === "INR"
       ? cost
       : cost.replace("₹", "$").replace(/\d+,\d+/g, (match) => {
-          // Convert the INR value to USD using the formula:
-          // (Base INR + 4% of Base INR) / 83
           const inrValue = Number.parseInt(match.replace(",", ""));
           const usdValue = Math.round((inrValue + 0.04 * inrValue) / 83);
           return usdValue.toLocaleString();
@@ -51,8 +47,8 @@ function DeveloperTypeSelector({
     <div className="flex items-center justify-between p-3 border rounded-md">
       <div className="flex items-center">
         <div>
-          <h4 className="font-medium">{title}</h4>
-          <p className="text-sm text-muted-foreground">{displayCost}</p>
+          <h4 className="font-medium text-sm">{title}</h4>
+          <p className="text-xs text-muted-foreground">{displayCost}</p>
         </div>
 
         <TooltipProvider>
@@ -95,7 +91,6 @@ function DeveloperTypeSelector({
   );
 }
 
-// In the DevelopmentPreferences component, update the cost displays
 export function DevelopmentPreferences() {
   const { formData, updateFormData, validationErrors } = useProjectFormStore();
   const [newArea, setNewArea] = useState("");
@@ -122,12 +117,11 @@ export function DevelopmentPreferences() {
     }
   };
 
-  // Pass currency to each DeveloperTypeSelector with updated cost displays
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm text-muted-foreground">Step 2/4</p>
-        <h2 className="text-2xl font-bold text-foreground">
+        <h2 className="sm:text-2xl font-bold text-foreground">
           Development Preferences and Team Size Selection
         </h2>
       </div>
@@ -148,9 +142,9 @@ export function DevelopmentPreferences() {
               value={newArea}
               onChange={(e) => setNewArea(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={
-                validationErrors.developmentAreas ? "border-destructive" : ""
-              }
+              className={`placeholder:text-xs ${
+                validationErrors.projectName ? "border-destructive" : ""
+              }`}
             />
             <Button type="button" onClick={addDevelopmentArea} size="sm">
               <Plus className="w-4 h-4" />
@@ -180,15 +174,12 @@ export function DevelopmentPreferences() {
         </div>
 
         <div className="space-y-4">
-          <Label>Number of developers required</Label>
 
           <div className="space-y-3">
             <DeveloperTypeSelector
               title="Senior Developer"
               cost={
-                formData.currency === "INR"
-                  ? "(₹70,000-80,000)"
-                  : "($940-1000)"
+                formData.currency === "INR" ? "(₹70,000-80,000)" : "($940-1000)"
               }
               tooltip="Senior developers are seasoned professionals in software development, providing technical leadership and expertise. They ensure high-quality code, troubleshoot complex issues, mentor junior developers, and contribute to project management."
               value={formData.seniorDevelopers}

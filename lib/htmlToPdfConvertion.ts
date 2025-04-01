@@ -6,6 +6,8 @@ export async function htmlToPdfBlobForQuotation(htmlContent: string): Promise<Bl
   element.style.position = "absolute";
   element.style.left = "-9999px";
   element.style.top = "-9999px";
+  element.style.width = "210mm"; // Explicitly set A4 width
+  element.style.height = "297mm"; // Explicitly set A4 height
   document.body.appendChild(element);
 
   try {
@@ -14,11 +16,12 @@ export async function htmlToPdfBlobForQuotation(htmlContent: string): Promise<Bl
 
     // Render HTML to canvas with high quality
     const canvas = await html2canvas(element, {
-      scale: 2, // Higher scale for better quality
+      scale: 2, // High resolution
       useCORS: true,
       logging: false,
-      backgroundColor: null, // Preserve transparency if any
-      windowWidth: 794, // A4 width in pixels at 96 DPI (210mm)
+      backgroundColor: "#FFFFFF", // Explicit white background
+      width: 794, // A4 width in pixels at 96 DPI (210mm)
+      height: 1123, // A4 height in pixels at 96 DPI (297mm)
     });
 
     const imgData = canvas.toDataURL("image/jpeg", 1.0); // Full quality JPEG
@@ -26,93 +29,27 @@ export async function htmlToPdfBlobForQuotation(htmlContent: string): Promise<Bl
       orientation: "portrait",
       unit: "mm",
       format: "a4",
-      compress: true, // Enable compression for smaller file size
+      compress: true,
     });
 
     // A4 dimensions in mm
-    const imgWidth = 210; // A4 width
-    const imgHeight = (canvas.height * imgWidth) / canvas.width; // Maintain aspect ratio
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Ensure the image fits within A4 height (297mm)
-    if (imgHeight > 297) {
-      // If the content exceeds A4 height, scale it down to fit
-      const scaleFactor = 297 / imgHeight;
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        0,
-        0,
-        imgWidth * scaleFactor,
-        imgHeight * scaleFactor,
-        undefined,
-        "FAST" // Faster compression
-      );
-    } else {
-      // Add image as-is if it fits
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        0,
-        0,
-        imgWidth,
-        imgHeight,
-        undefined,
-        "FAST"
-      );
-    }
+    // Fit content exactly to A4
+    pdf.addImage(
+      imgData,
+      "JPEG",
+      0,
+      0,
+      imgWidth,
+      297, // Force height to match A4
+      undefined,
+      "FAST"
+    );
 
-    // Generate initial blob
-    let pdfBlob = pdf.output("blob");
-
-    // Check file size and optimize if necessary (e.g., > 500KB)
-    if (pdfBlob.size > 500000) {
-      // Re-render with lower quality
-      const canvasLowQuality = await html2canvas(element, {
-        scale: 1.5, // Slightly lower scale
-        useCORS: true,
-        logging: false,
-        backgroundColor: null,
-        windowWidth: 794,
-      });
-
-      const imgDataLowQuality = canvasLowQuality.toDataURL("image/jpeg", 0.8); // Reduced quality
-      const pdfLowQuality = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-        compress: true,
-      });
-
-      const imgHeightLowQuality = (canvasLowQuality.height * imgWidth) / canvasLowQuality.width;
-
-      if (imgHeightLowQuality > 297) {
-        const scaleFactor = 297 / imgHeightLowQuality;
-        pdfLowQuality.addImage(
-          imgDataLowQuality,
-          "JPEG",
-          0,
-          0,
-          imgWidth * scaleFactor,
-          imgHeightLowQuality * scaleFactor,
-          undefined,
-          "FAST"
-        );
-      } else {
-        pdfLowQuality.addImage(
-          imgDataLowQuality,
-          "JPEG",
-          0,
-          0,
-          imgWidth,
-          imgHeightLowQuality,
-          undefined,
-          "FAST"
-        );
-      }
-
-      pdfBlob = pdfLowQuality.output("blob");
-    }
-
+    // Generate blob
+    const pdfBlob = pdf.output("blob");
     return pdfBlob;
   } catch (error) {
     console.error("Error generating PDF blob:", error);
