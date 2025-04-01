@@ -29,9 +29,9 @@ export const useAuth = () => {
     setError(null);
 
     try {
-      console.log("Attempting login with:", { email, role });
+  //    console.log("Attempting login with:", { email, role });
       const userProfile = await signInWithEmail(email, password, role);
-      console.log("Login successful, userProfile:", userProfile);
+    //  console.log("Login successful, userProfile:", userProfile);
 
       let redirectPath: string;
       switch (role) {
@@ -50,19 +50,19 @@ export const useAuth = () => {
       }
 
       const currentPath = window.location.pathname;
-      console.log("Current path:", currentPath, "Redirect path:", redirectPath);
+    //  console.log("Current path:", currentPath, "Redirect path:", redirectPath);
       if (currentPath !== redirectPath) {
         const token = await auth.currentUser?.getIdToken(true);
-        console.log("Token before redirect:", token);
+     //   console.log("Token before redirect:", token);
         if (token) {
-          console.log(`Redirecting to ${redirectPath} with token`);
+     //     console.log(`Redirecting to ${redirectPath} with token`);
           await router.push(`${redirectPath}?token=${encodeURIComponent(token)}`);
         } else {
-          console.error("No token available for redirect");
+      //    console.error("No token available for redirect");
           await router.push(redirectPath);
         }
       } else {
-        console.log("Already on correct path, no redirect needed");
+   //     console.log("Already on correct path, no redirect needed");
       }
 
       return true;
@@ -78,7 +78,7 @@ export const useAuth = () => {
   const logout = async () => {
     setLoading(true);
     try {
-      console.log("Attempting logout...");
+     // console.log("Attempting logout...");
       await logoutUser();
       const response = await fetch("/api/clearCookie", { method: "POST" });
       if (!response.ok) {
@@ -90,7 +90,7 @@ export const useAuth = () => {
       // Use window.location.replace to avoid adding to history
       window.location.replace("/"); // This prevents back navigation to previous route
       const cookie = document.cookie.split("; ").find((row) => row.startsWith("firebaseToken="));
-      console.log("Cookie after logout (client-side):", cookie || "No firebaseToken cookie found");
+    //  console.log("Cookie after logout (client-side):", cookie || "No firebaseToken cookie found");
       return true;
     } catch (error: any) {
       console.error("Logout error:", error.message);
@@ -107,7 +107,7 @@ export const useAuth = () => {
     try {
       console.log("Starting signUp with:", { email, name });
       await createUserAccount(email, password, name, phone);
-      console.log("SignUp successful, redirecting to /client/create-project");
+   //   console.log("SignUp successful, redirecting to /client/create-project");
       const token = await auth.currentUser?.getIdToken(true);
       await router.push(`/client/create-project?token=${encodeURIComponent(token || "")}`);
       return true;
@@ -132,7 +132,7 @@ export const useAuth = () => {
       if (currentPath !== "/client") {
         await router.push(`/client?token=${encodeURIComponent(token || "")}`);
       } else {
-        console.log("Already on /client, no redirect needed");
+   //    console.log("Already on /client, no redirect needed");
       }
       return true;
     } catch (error: any) {

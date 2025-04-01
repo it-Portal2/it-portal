@@ -73,7 +73,7 @@ export default function ProjectTimeline({ project }: ProjectTimelineProps) {
               {/* Timeline dot */}
               <div
                 className={cn(
-                  "absolute left-[-20px] w-6 h-6 rounded-full border-2 border-background flex items-center justify-center",
+                  "absolute left-[-30px] w-6 h-6 rounded-full border-2 border-background flex items-center justify-center",
                   event.status === "completed"
                     ? "bg-green-500"
                     : event.status === "delayed"

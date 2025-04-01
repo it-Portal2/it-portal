@@ -27,6 +27,11 @@ export default function AuthPage() {
 
   const [showStaffLogin, setShowStaffLogin] = useState(false);
 
+  // Add local loading states to prevent multiple clicks
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+
   // Client signup form state
   const [clientSignupForm, setClientSignupForm] = useState({
     name: "",
@@ -46,6 +51,10 @@ export default function AuthPage() {
   useEffect(() => {
     if (error) {
       toast.error(error);
+      // Reset all local loading states if there's an error
+      setIsSigningUp(false);
+      setIsLoggingIn(false);
+      setIsGoogleSigningIn(false);
     }
   }, [error]);
 
@@ -69,9 +78,15 @@ export default function AuthPage() {
   const handleClientSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Prevent multiple clicks
+    if (isSigningUp || isLoading) return;
+
+    setIsSigningUp(true);
+
     // Validate form
     if (clientSignupForm.password !== clientSignupForm.confirmPassword) {
       toast.error("Passwords don't match");
+      setIsSigningUp(false);
       return;
     }
 
@@ -88,12 +103,19 @@ export default function AuthPage() {
       }
     } catch (error) {
       console.error("Signup error:", error);
+    } finally {
+      setIsSigningUp(false);
     }
   };
 
   // Handle login (for all roles)
   const handleLogin = async (e: React.FormEvent, role: UserRole) => {
     e.preventDefault();
+
+    // Prevent multiple clicks
+    if (isLoggingIn || isLoading) return;
+
+    setIsLoggingIn(true);
 
     try {
       const success = await login(loginForm.email, loginForm.password, role);
@@ -103,11 +125,18 @@ export default function AuthPage() {
       }
     } catch (error) {
       console.error("Login error:", error);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   // Handle Google sign-in
   const handleGoogleSignIn = async () => {
+    // Prevent multiple clicks
+    if (isGoogleSigningIn || isLoading) return;
+
+    setIsGoogleSigningIn(true);
+
     try {
       const success = await googleLogin();
 
@@ -116,6 +145,8 @@ export default function AuthPage() {
       }
     } catch (error) {
       console.error("Google sign-in error:", error);
+    } finally {
+      setIsGoogleSigningIn(false);
     }
   };
 
@@ -149,6 +180,10 @@ export default function AuthPage() {
     },
   };
 
+  // Determine if a button should be disabled
+  const isButtonDisabled =
+    isLoading || isSigningUp || isLoggingIn || isGoogleSigningIn;
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <motion.div
@@ -177,6 +212,7 @@ export default function AuthPage() {
                 !showStaffLogin ? "bg-blue-600 text-white" : ""
               }`}
               onClick={() => setShowStaffLogin(false)}
+              disabled={isButtonDisabled}
             >
               <UserIcon className="mr-2 h-4 w-4" />
               Client Area
@@ -187,6 +223,7 @@ export default function AuthPage() {
                 showStaffLogin ? "bg-blue-600 text-white" : ""
               }`}
               onClick={() => setShowStaffLogin(true)}
+              disabled={isButtonDisabled}
             >
               <ShieldIcon className="mr-2 h-4 w-4" />
               Staff Login
@@ -366,9 +403,9 @@ export default function AuthPage() {
                             <Button
                               type="submit"
                               className="w-full"
-                              disabled={isLoading}
+                              disabled={isButtonDisabled}
                             >
-                              {isLoading
+                              {isSigningUp
                                 ? "Creating account..."
                                 : "Create account"}
                             </Button>
@@ -396,7 +433,7 @@ export default function AuthPage() {
                             variant="outline"
                             className="w-full mt-4 flex items-center gap-2"
                             onClick={handleGoogleSignIn}
-                            disabled={isLoading}
+                            disabled={isButtonDisabled}
                           >
                             <Image
                               src="/google.png"
@@ -405,7 +442,9 @@ export default function AuthPage() {
                               alt="Picture of the author"
                               className="h-4 w-4"
                             />
-                            Google
+                            {isGoogleSigningIn
+                              ? "Signing in with Google..."
+                              : "Google"}
                           </Button>
                         </motion.div>
                       </div>
@@ -428,6 +467,7 @@ export default function AuthPage() {
                               placeholder="Email"
                               value={loginForm.email}
                               onChange={handleLoginChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -439,6 +479,7 @@ export default function AuthPage() {
                               placeholder="Password"
                               value={loginForm.password}
                               onChange={handleLoginChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -449,9 +490,11 @@ export default function AuthPage() {
                             <Button
                               type="submit"
                               className="w-full"
-                              disabled={isLoading}
+                              disabled={isButtonDisabled}
                             >
-                              {isLoading ? "Logging in..." : "Login as Client"}
+                              {isLoggingIn
+                                ? "Logging in..."
+                                : "Login as Client"}
                             </Button>
                           </motion.div>
                         </div>
@@ -470,14 +513,14 @@ export default function AuthPage() {
                         </div>
 
                         <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                          whileHover={{ scale: isButtonDisabled ? 1 : 1.02 }}
+                          whileTap={{ scale: isButtonDisabled ? 1 : 0.98 }}
                         >
                           <Button
                             variant="outline"
                             className="w-full mt-4 flex items-center gap-2"
                             onClick={handleGoogleSignIn}
-                            disabled={isLoading}
+                            disabled={isButtonDisabled}
                           >
                             <Image
                               src="/google.png"
@@ -486,7 +529,9 @@ export default function AuthPage() {
                               alt="Picture of the author"
                               className="h-4 w-4"
                             />
-                            Google
+                            {isGoogleSigningIn
+                              ? "Signing in with Google..."
+                              : "Google"}
                           </Button>
                         </motion.div>
                       </div>
@@ -578,6 +623,7 @@ export default function AuthPage() {
                               placeholder="Admin Email"
                               value={loginForm.email}
                               onChange={handleLoginChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -589,6 +635,7 @@ export default function AuthPage() {
                               placeholder="Password"
                               value={loginForm.password}
                               onChange={handleLoginChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -599,7 +646,7 @@ export default function AuthPage() {
                             <Button
                               type="submit"
                               className="w-full"
-                              disabled={isLoading}
+                              disabled={isButtonDisabled}
                             >
                               {isLoading ? "Logging in..." : "Login as Admin"}
                             </Button>
@@ -627,6 +674,7 @@ export default function AuthPage() {
                               placeholder="Developer Email"
                               value={loginForm.email}
                               onChange={handleLoginChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -638,6 +686,7 @@ export default function AuthPage() {
                               placeholder="Password"
                               value={loginForm.password}
                               onChange={handleLoginChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -648,7 +697,7 @@ export default function AuthPage() {
                             <Button
                               type="submit"
                               className="w-full"
-                              disabled={isLoading}
+                              disabled={isButtonDisabled}
                             >
                               {isLoading
                                 ? "Logging in..."
