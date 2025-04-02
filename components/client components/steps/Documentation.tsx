@@ -5,7 +5,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   FileUp,
   FileText,
@@ -32,9 +32,8 @@ import {
   htmlToPdfBlob,
   htmlToPdfBlobForQuotation,
 } from "@/lib/htmlToPdfConvertion";
-import { generateDocumentationFromGeminiAI } from "@/lib/gemini";
-// Import Firebase functions
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import axios from "axios";
+import { collection, addDoc } from "firebase/firestore";
 import { db } from "@/firebase";
 import { cn } from "@/lib/utils";
 
@@ -173,11 +172,21 @@ export function Documentation() {
         description: "Please wait while we process your project details.",
       });
 
-      const generatedDoc = await generateDocumentationFromGeminiAI(
-        formData.projectName,
-        formData.projectOverview,
-        formData.developmentAreas || []
-      );
+      // Call the API route with axios
+      const response = await axios.post("/api/client/create-project", {
+        projectName: formData.projectName,
+        projectOverview: formData.projectOverview,
+        developmentAreas: formData.developmentAreas || [],
+      });
+
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message ||
+            "Failed to generate documentation from server"
+        );
+      }
+
+      const generatedDoc = response.data.documentation;
 
       updateFormData({
         generatedDocumentation: generatedDoc,
@@ -192,7 +201,7 @@ export function Documentation() {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to generate documentation";
+          : "Failed to generate documentation. Please try again.";
       toast.error("Generation Failed", { description: errorMessage });
     } finally {
       setIsGenerating(false);
@@ -668,14 +677,18 @@ export function Documentation() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-6 rounded-xl border border-purple-500 transition-all duration-300 hover:shadow-md hover:border-purple-400 cursor-pointer">
                         <FileDigit className="h-6 w-6 text-purple-500 mb-2" />
-                        <h4 className="font-medium text-purple-500">Technical Specs</h4>
+                        <h4 className="font-medium text-purple-500">
+                          Technical Specs
+                        </h4>
                         <p className="text-xs">
                           Complete API and code documentation
                         </p>
                       </div>
                       <div className="p-6 rounded-xl border border-purple-500 transition-all duration-300 hover:shadow-md hover:border-purple-400 cursor-pointer">
                         <BookOpen className="h-6 w-6 text-purple-500 mb-2" />
-                        <h4 className="font-medium text-purple-500">Save Time</h4>
+                        <h4 className="font-medium text-purple-500">
+                          Save Time
+                        </h4>
                         <p className="text-xs ">
                           Generate in seconds instead of hours
                         </p>
