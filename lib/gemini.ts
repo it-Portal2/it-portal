@@ -233,6 +233,7 @@ export async function generateDocumentationFromGeminiAI(
   projectOverview: string,
   developmentAreas: string[]
 ): Promise<any> {
+  const startTime = Date.now();
   if (!API_KEY) {
     throw new Error("Google API key is not configured");
   }
@@ -429,19 +430,19 @@ export async function generateDocumentationFromGeminiAI(
 
     const result = await model.generateContent(PROMPT);
     const response = await result.response.text();
-
+    console.log(`API call took ${Date.now() - startTime}ms`);
     // Remove any unnecessary AI-generated intro
     // Remove the ```html at the start and ``` at the end
     let cleanedResponse = response.replace(/^```html\s*|\s*```$/g, "").trim();
 
     // Remove patterns like `*?\n\n##` and replace them with `##`
     cleanedResponse = cleanedResponse.replace(/\*?\n\n##/g, "##");
-    //  console.log(cleanedResponse);
+    console.log(cleanedResponse);
 
     return cleanedResponse;
   } catch (error) {
     console.error("Documentation generation error:", error);
-
+    console.log(`API call failed after ${Date.now() - startTime}ms`);
     if (error instanceof Error) {
       const apiError = error as APIError;
       return NextResponse.json(

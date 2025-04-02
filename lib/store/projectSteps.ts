@@ -1,5 +1,6 @@
+// src/stores/projectFormStore.ts
 import { create } from "zustand";
-import { persist } from "zustand/middleware"; // Add this import
+import { persist, createJSONStorage } from "zustand/middleware"; // Add persist middleware
 import { z } from "zod";
 import { useAuthStore } from "./userStore";
 import { generateQuotationHtml, QuotationData } from "../quotationUtils";
@@ -20,15 +21,13 @@ export interface ProjectFormData {
   clientName: string;
   clientEmail: string;
   clientPhoneNumber: string;
-  // Cloudinary URLs
   cloudinaryDocumentationUrl: string | null;
   cloudinaryQuotationUrl: string | null;
-  // Add currency field
   currency: "INR" | "USD";
   projectBudget: number;
 }
 
-// Define validation schemas for each step
+// Validation schemas remain the same
 const projectDetailsSchema = z.object({
   projectName: z
     .string()
@@ -80,14 +79,10 @@ const documentationSchema = z
     }
   );
 
-// Define the store type
 interface ProjectFormStore {
-  // State
   step: number;
   formData: ProjectFormData;
   validationErrors: Record<string, string>;
-
-  // Actions
   nextStep: () => void;
   prevStep: () => void;
   updateFormData: (data: Partial<ProjectFormData>) => void;
@@ -95,11 +90,9 @@ interface ProjectFormStore {
   generateQuotation: () => void;
   resetForm: () => void;
   syncUserData: () => void;
-  clearValidationErrors: () => void; // New function to clear validation errors
-  setStep: (step: number) => void; // New function to directly set the step
+  resetCurrentStepData: () => void; // New action to reset current step data
 }
 
-// Default form data without user info
 const defaultFormData: ProjectFormData = {
   projectName: "",
   projectOverview: "",
@@ -122,54 +115,36 @@ const defaultFormData: ProjectFormData = {
   projectBudget: 0,
 };
 
-// Create the Zustand store with persistence
 export const useProjectFormStore = create<ProjectFormStore>()(
   persist(
     (set, get) => ({
-      // Initial state
       step: 1,
       formData: { ...defaultFormData },
       validationErrors: {},
 
-      // Actions
       nextStep: () => set((state) => ({ step: Math.min(state.step + 1, 4) })),
 
-      prevStep: () => set((state) => ({ step: Math.max(state.step - 1, 1) })),
-      
-      // Directly set step
-      setStep: (step) => set({ step }),
-
-      // Clear validation errors
-      clearValidationErrors: () => set({ validationErrors: {} }),
+      prevStep: () => {
+        const currentStep = get().step;
+        get().resetCurrentStepData(); // Reset current step data before going back
+        set((state) => ({ step: Math.max(state.step - 1, 1) }));
+      },
 
       updateFormData: (data) =>
         set((state) => {
           const newFormData = { ...state.formData, ...data };
-
-          // Automatically assign developers based on development areas count
           if (data.developmentAreas) {
             const count = data.developmentAreas.length;
-            const cycle = Math.floor(count / 3); // Complete cycles of 3
-            const remainder = count % 3; // Remaining areas after complete cycles
-
-            // Base values from complete cycles
-            const baseSenior = cycle;
-            const baseJunior = cycle;
-            const baseDesigner = cycle;
-
-            // Add remaining based on position in cycle
-            let senior = baseSenior;
-            let junior = baseJunior;
-            let designer = baseDesigner;
-
-            if (remainder === 1) {
-              senior += 1;
-            } else if (remainder === 2) {
+            const cycle = Math.floor(count / 3);
+            const remainder = count % 3;
+            let senior = cycle;
+            let junior = cycle;
+            let designer = cycle;
+            if (remainder === 1) senior += 1;
+            else if (remainder === 2) {
               senior += 1;
               junior += 1;
             }
-
-            // Only update if these values are greater than current manual selections
             newFormData.seniorDevelopers = Math.max(
               state.formData.seniorDevelopers,
               senior
@@ -183,23 +158,12 @@ export const useProjectFormStore = create<ProjectFormStore>()(
               designer
             );
           }
-
-          // Clear validationErrors for the fields being updated
-          const clearedErrors = { ...state.validationErrors };
-          Object.keys(data).forEach((key) => {
-            delete clearedErrors[key];
-          });
-
-          return {
-            formData: newFormData,
-            validationErrors: clearedErrors,
-          };
+          return { formData: newFormData };
         }),
 
       syncUserData: () => {
         const authState = useAuthStore.getState();
         const profile = authState.profile;
-
         if (profile) {
           set((state) => ({
             formData: {
@@ -214,43 +178,18 @@ export const useProjectFormStore = create<ProjectFormStore>()(
 
       validateCurrentStep: async () => {
         const { step, formData } = get();
-        
         try {
-          if (step === 1) {
-            await projectDetailsSchema.parseAsync({
-              projectName: formData.projectName,
-              projectOverview: formData.projectOverview,
-              clientName: formData.clientName,
-              clientEmail: formData.clientEmail,
-              clientPhoneNumber: formData.clientPhoneNumber,
-            });
-          } else if (step === 2) {
-            await developmentPreferencesSchema.parseAsync({
-              developmentAreas: formData.developmentAreas,
-              seniorDevelopers: formData.seniorDevelopers,
-              juniorDevelopers: formData.juniorDevelopers,
-              uiUxDesigners: formData.uiUxDesigners,
-            });
-          } else if (step === 3) {
-            await documentationSchema.parseAsync({
-              documentationFile: formData.documentationFile,
-              documentationFileContent: formData.documentationFileContent,
-              documentationFileText: formData.documentationFileText,
-              generatedDocumentation: formData.generatedDocumentation,
-              improvedDocumentation: formData.improvedDocumentation,
-              cloudinaryDocumentationUrl: formData.cloudinaryDocumentationUrl,
-            });
-          }
-
+          if (step === 1) await projectDetailsSchema.parseAsync(formData);
+          else if (step === 2)
+            await developmentPreferencesSchema.parseAsync(formData);
+          else if (step === 3) await documentationSchema.parseAsync(formData);
           set({ validationErrors: {} });
           return true;
         } catch (error) {
           if (error instanceof z.ZodError) {
             const errors: Record<string, string> = {};
             error.errors.forEach((err) => {
-              if (err.path) {
-                errors[err.path.join(".")] = err.message;
-              }
+              if (err.path) errors[err.path.join(".")] = err.message;
             });
             set({ validationErrors: errors });
           }
@@ -260,43 +199,31 @@ export const useProjectFormStore = create<ProjectFormStore>()(
 
       generateQuotation: () => {
         const { formData } = get();
-
-        // Calculate rates based on selected currency
-        const exchangeRate = 83; // 1 USD = ₹83
-
-        // For INR, use base rates
-        // For USD, add 4% to base INR value and then divide by exchange rate
+        const exchangeRate = 83;
         const seniorDevRate =
           formData.currency === "INR"
             ? 75000
-            : Math.round((75000 + 0.04 * 75000) / exchangeRate); // ≈ $940
-
+            : Math.round((75000 * 1.04) / exchangeRate);
         const juniorDevRate =
           formData.currency === "INR"
             ? 30000
-            : Math.round((30000 + 0.04 * 30000) / exchangeRate); // ≈ $376
-
+            : Math.round((30000 * 1.04) / exchangeRate);
         const uiUxRate =
           formData.currency === "INR"
             ? 8000
-            : Math.round((8000 + 0.04 * 8000) / exchangeRate); // ≈ $100
-
+            : Math.round((8000 * 1.04) / exchangeRate);
         const projectManagementCost =
           formData.currency === "INR"
             ? 50000
-            : Math.round((50000 + 0.04 * 50000) / exchangeRate); // ≈ $627
+            : Math.round((50000 * 1.04) / exchangeRate);
 
-        // Calculate cost based on team composition with correct rates
-        const seniorDevCost = formData.seniorDevelopers * seniorDevRate;
-        const juniorDevCost = formData.juniorDevelopers * juniorDevRate;
-        const uiUxCost = formData.uiUxDesigners * uiUxRate;
         const totalCost =
-          seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
+          formData.seniorDevelopers * seniorDevRate +
+          formData.juniorDevelopers * juniorDevRate +
+          formData.uiUxDesigners * uiUxRate +
+          projectManagementCost;
 
-        // Set the projectBudget value to totalCost
         get().updateFormData({ projectBudget: totalCost });
-
-        // Create quotation data object
         const quotationData: QuotationData = {
           clientName: formData.clientName,
           clientEmail: formData.clientEmail,
@@ -309,11 +236,7 @@ export const useProjectFormStore = create<ProjectFormStore>()(
           uiUxDesigners: formData.uiUxDesigners,
           currency: formData.currency,
         };
-
-        // Generate HTML for the quotation using our utility function
         const quotationHtml = generateQuotationHtml(quotationData);
-
-        // Update the form data with the generated HTML
         get().updateFormData({ quotationPdf: quotationHtml });
       },
 
@@ -323,19 +246,53 @@ export const useProjectFormStore = create<ProjectFormStore>()(
           formData: { ...defaultFormData },
           validationErrors: {},
         }),
+
+      resetCurrentStepData: () => {
+        const { step, formData } = get();
+        let newFormData = { ...formData };
+        if (step === 1) {
+          newFormData = {
+            ...newFormData,
+            projectName: "",
+            projectOverview: "",
+            currency: "INR",
+          };
+        } else if (step === 2) {
+          newFormData = {
+            ...newFormData,
+            developmentAreas: [],
+            seniorDevelopers: 0,
+            juniorDevelopers: 0,
+            uiUxDesigners: 0,
+          };
+        } else if (step === 3) {
+          newFormData = {
+            ...newFormData,
+            documentationFile: null,
+            documentationFileContent: null,
+            documentationFileText: null,
+            generatedDocumentation: "",
+            improvedDocumentation: null,
+            cloudinaryDocumentationUrl: null,
+          };
+        } else if (step === 4) {
+          newFormData = {
+            ...newFormData,
+            quotationPdf: null,
+            cloudinaryQuotationUrl: null,
+          };
+        }
+        set({ formData: newFormData });
+      },
     }),
     {
-      name: "project-form-storage", // unique name for localStorage
-      partialize: (state) => {
-        // Don't persist the file object as it can't be serialized properly
-        const { formData, step, validationErrors } = state;
-        const { documentationFile, ...restFormData } = formData;
-        return { 
-          formData: restFormData, 
-          step, 
-          validationErrors 
-        };
-      },
+      name: "project-form-storage", // Key for localStorage
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        step: state.step,
+        formData: state.formData,
+        validationErrors: state.validationErrors,
+      }), // Persist only these fields
     }
   )
 );

@@ -10,32 +10,38 @@ import { Suggestions } from "./steps/Suggestions";
 import { Documentation } from "./steps/Documentation";
 import { FinalStep } from "./steps/FinalStep";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function ProjectSubmissionForm() {
   return <ProjectFormContent />;
 }
 
 function ProjectFormContent() {
-  const { 
-    step, 
-    nextStep, 
-    prevStep, 
-    formData, 
-    validateCurrentStep,
-    clearValidationErrors
-  } = useProjectFormStore();
-  
+  const { step, nextStep, prevStep, formData, validateCurrentStep, resetForm } =
+    useProjectFormStore();
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
-  // Clear validation errors when component mounts
+  const router = useRouter();
+
+  // Reset form when reaching step 4 and refreshing/navigating away
   useEffect(() => {
-    clearValidationErrors();
-  }, [clearValidationErrors]);
+    if (step === 4) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        resetForm();
+        e.preventDefault();
+      };
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }
+  }, [step, resetForm]);
+
+  // Reset form when navigating away from the page
+  useEffect(() => {
+    return () => {
+      if (step === 4) resetForm();
+    };
+  }, [step, resetForm]);
 
   const handleNext = async () => {
-    // Clear validation errors before validating
-    clearValidationErrors();
-    
     const isValid = await validateCurrentStep();
 
     if (!isValid) {
@@ -45,28 +51,20 @@ function ProjectFormContent() {
       return;
     }
 
-    // Check if we're on the documentation step and need to submit first
     if (step === 3) {
-      // Check if documentation has been uploaded to Cloudinary
       if (!formData.cloudinaryDocumentationUrl) {
         toast.error("Upload Required", {
-          description:
-            "Please click the Submit button to upload your documentation before proceeding.",
+          description: "Please click the Submit button to upload your documentation before proceeding.",
         });
         return;
       }
     }
 
-    // Show suggestions after step 2 if needed
     if (step === 2) {
       const needsUiUx =
         formData.developmentAreas.some(
-          (area) =>
-            area.toLowerCase().includes("web") ||
-            area.toLowerCase().includes("mobile") ||
-            area.toLowerCase().includes("app")
+          (area) => area.toLowerCase().includes("web") || area.toLowerCase().includes("mobile") || area.toLowerCase().includes("app")
         ) && formData.uiUxDesigners === 0;
-
       const needsSeniorDev = formData.seniorDevelopers === 0;
       const needsJuniorDev = formData.juniorDevelopers === 0;
 
