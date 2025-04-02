@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
 import { StepsProgress } from "./steps/StepsProgress";
@@ -16,12 +16,26 @@ export function ProjectSubmissionForm() {
 }
 
 function ProjectFormContent() {
-  const { step, nextStep, prevStep, formData, validateCurrentStep } =
-    useProjectFormStore();
-  // const { toast } = useToast();
+  const { 
+    step, 
+    nextStep, 
+    prevStep, 
+    formData, 
+    validateCurrentStep,
+    clearValidationErrors
+  } = useProjectFormStore();
+  
   const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  // Clear validation errors when component mounts
+  useEffect(() => {
+    clearValidationErrors();
+  }, [clearValidationErrors]);
 
   const handleNext = async () => {
+    // Clear validation errors before validating
+    clearValidationErrors();
+    
     const isValid = await validateCurrentStep();
 
     if (!isValid) {
