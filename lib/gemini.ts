@@ -58,56 +58,43 @@ export async function generateImprovedDocumentationFromGeminiAI(
         **Generate a full HTML document with styling and structure, following this format:**
       
         \`\`\`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${projectName} - Project Documentation</title>
-            <style>
-                h1, h2, h3 {
-                    color: #333;
-                    border-bottom: 2px solid #ddd;
-                    padding-bottom: 5px;
-                }
-                ul {
-                    list-style-type: none;
-                    padding: 0;
-                }
-                ul li::before {
-                    content: "✅ ";
-                    color: green;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: 20px 0;
-                    background: #fff;
-                }
-                table, th, td {
-                    border: 1px solid #ddd;
-                }
-                th, td {
-                    padding: 10px;
-                    text-align: left;
-                }
-                pre {
-                    background: #eee;
-                    padding: 10px;
-                    border-radius: 5px;
-                    overflow-x: auto;
-                }
-            </style>
-        </head>
-        <body>
-      
-            <h1>📌 ${projectName} - Project Documentation</h1>
-      
-            <h2>1. Project Overview</h2>
-            <ul>
-                <li><strong>Project Name:</strong> ${projectName}</li>
-              <li><strong>Main Objective:</strong> [Summarize core purpose]</li>
-              <li><strong>Key Features:</strong></li>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Project Documentation</title>
+        <style>
+            h1, h2, h3 {
+                color: #333;
+                border-bottom: 2px solid #ddd;
+                padding-bottom: 5px;
+            }
+            ul {
+                list-style-type: none;
+                padding: 0;
+            }
+            ul li::before {
+                content: "✅ ";
+                color: green;
+            }
+            pre {
+                background: #eee;
+                padding: 10px;
+                border-radius: 5px;
+                overflow-x: auto;
+            }
+        </style>
+    </head>
+    <body>
+
+        <h1>📌 Project Documentation</h1>
+
+        <h2>1. Project Overview</h2>
+        <ul>
+            <li><strong>Project Name:</strong> [Dynamically generate]</li>
+            <li><strong>Main Objective:</strong> [Summarize core purpose]</li>
+            <li><strong>Key Features:</strong></li>
               <ul>
                   <li> [Feature 1]</li>
                   <li> [Feature 2]</li>
