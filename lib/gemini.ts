@@ -55,7 +55,7 @@ export async function generateImprovedDocumentationFromGeminiAI(
         ✅ Each section must dynamically adjust the **number of points** based on project requirements.  
       
         ## **🎯 AI Response: Well-Structured HTML Documentation**  
-        **Generate a full HTML document with styling and structure, following this format:**
+        **Generate content only without any body styling. The HTML will be inserted into an existing page, so do not include any styles for the body element. Follow this format:**
       
         \`\`\`
     <!DOCTYPE html>
@@ -84,6 +84,7 @@ export async function generateImprovedDocumentationFromGeminiAI(
                 border-radius: 5px;
                 overflow-x: auto;
             }
+            /* Do not include any body styles */
         </style>
     </head>
     <body>
@@ -185,6 +186,9 @@ export async function generateImprovedDocumentationFromGeminiAI(
     // Remove patterns like `*?\n\n##` and replace them with `##`
     cleanedResponse = cleanedResponse.replace(/\*?\n\n##/g, "##");
 
+    // Further processing to remove body styling if it's still included
+    cleanedResponse = cleanedResponse.replace(/body\s*{[^}]*}/g, "");
+
     return cleanedResponse;
   } catch (error) {
     console.error("Documentation generation error:", error);
@@ -254,7 +258,7 @@ export async function generateDocumentationFromGeminiAI(
         ✅ Each section must dynamically adjust the **number of points** based on project requirements.  
       
         ## **🎯 AI Response: Well-Structured HTML Documentation**  
-        **Generate a full HTML document with styling and structure, following this format:**
+        **Generate content only without any body styling. The HTML will be inserted into an existing page, so do not include any styles for the body element. Follow this format:**
       
         \`\`\`
         <!DOCTYPE html>
@@ -296,6 +300,7 @@ export async function generateDocumentationFromGeminiAI(
                     border-radius: 5px;
                     overflow-x: auto;
                 }
+                /* Do not include any body styles */
             </style>
         </head>
         <body>
@@ -396,7 +401,9 @@ export async function generateDocumentationFromGeminiAI(
 
     // Remove patterns like `*?\n\n##` and replace them with `##`
     cleanedResponse = cleanedResponse.replace(/\*?\n\n##/g, "##");
-    //  console.log(cleanedResponse);
+
+    // Further processing to remove body styling if it's still included
+    cleanedResponse = cleanedResponse.replace(/body\s*{[^}]*}/g, "");
 
     return cleanedResponse;
   } catch (error) {
