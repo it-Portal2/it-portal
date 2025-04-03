@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { acceptProject, completeProject, rejectProject, restoreProject } from "@/lib/firebase/admin";
+import { acceptProject, completeProject, deleteProject, rejectProject, restoreProject } from "@/lib/firebase/admin";
 
 export async function acceptProjectAction(
   projectId: string,
@@ -62,5 +62,18 @@ export async function restoreProjectAction(
     revalidatePath(redirectPath);
   }
 
+  return result;
+}
+export async function deleteProjectAction(
+  projectId: string,
+  redirectPath: string = "/admin/rejected"
+) {
+  const result = await deleteProject(projectId);
+  
+  if (result.success) {
+    revalidatePath("/admin/rejected");
+    revalidatePath(redirectPath);
+  }
+  
   return result;
 }

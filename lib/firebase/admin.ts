@@ -5,6 +5,7 @@ import {
   query,
   where,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { Project, ProjectStatus } from "../types";
 import { db } from "@/firebase";
@@ -111,5 +112,26 @@ export async function restoreProject(
   } catch (error) {
     console.error("Error restoring project:", error);
     return { success: false, error: "Failed to restore project" };
+  }
+}
+
+export async function deleteProject(
+  projectId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!projectId) {
+      return {
+        success: false,
+        error: "Project ID is required",
+      };
+    }
+    
+    // Delete the project document
+    await deleteDoc(doc(db, "Projects", projectId));
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    return { success: false, error: "Failed to delete project" };
   }
 }

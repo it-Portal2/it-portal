@@ -168,7 +168,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-lg border glassmorphism shadow-sm">
+      <div className="relative overflow-hidden rounded-lg glassmorphism ">
         <Table className="w-full">
           <TableHeader className="bg-muted/50">
             <TableRow>
@@ -243,7 +243,7 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
       </div>
 
       {!loading && totalPages > 1 && (
-        <div className="flex justify-center mt-4">
+        <div className="flex justify-center m-4">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
