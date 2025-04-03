@@ -46,12 +46,12 @@ export default function ProjectOngoingClient({
           />
         </div>
 
-        <div className="w-full sm:w-auto flex justify-end">
+        {/* <div className="w-full sm:w-auto flex justify-end">
           <Button variant="outline" className="gap-2">
             <Download className="h-4 w-4" />
             Export CSV
           </Button>
-        </div>
+        </div> */}
       </div>
 
       <ProjectTable

@@ -18,6 +18,42 @@ export default function ProjectTimeline({ project }: ProjectTimelineProps) {
     },
   ];
 
+  if (project.status === "in-progress" || project.status === "completed") {
+    timelineEvents.push({
+      date: project.startDate || "",
+      title: "Project Started",
+      description: "Development work has begun",
+      status: "completed",
+    });
+  }
+
+  if (project.status === "delayed") {
+    timelineEvents.push({
+      date: project.startDate || "",
+      title: "Project Delayed",
+      description: "Development has been delayed",
+      status: "delayed",
+    });
+  }
+
+  if (project.status === "completed") {
+    timelineEvents.push({
+      date: project.endDate || "",
+      title: "Project Completed",
+      description: "All development work has been completed",
+      status: "completed",
+    });
+  }
+
+  if (project.status === "rejected") {
+    timelineEvents.push({
+      date: project.endDate || "",
+      title: "Project Rejected",
+      description: "Project request was not approved",
+      status: "rejected",
+    });
+  }
+
   // Add conditional events based on project status
   if (project.status === "in-progress" || project.status === "completed") {
     timelineEvents.push({

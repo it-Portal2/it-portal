@@ -51,12 +51,12 @@ export default function ProjectRequestsClient({
           />
         </div>
 
-        <div className="w-full sm:w-auto flex justify-end">
+        {/* <div className="w-full sm:w-auto flex justify-end">
           <Button variant="outline" className="bg-white/80 shadow-sm">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-        </div>
+        </div> */}
       </div>
       <div className="rounded-lg overflow-hidden glassmorphism shadow-md">
         <ProjectTable

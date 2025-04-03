@@ -49,12 +49,12 @@ const ProjectCompletedClient = ({
           />
         </div>
 
-        <div className="w-full sm:w-auto flex justify-end">
+        {/* <div className="w-full sm:w-auto flex justify-end">
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
-        </div>
+        </div> */}
       </div>
 
       <div className="rounded-lg overflow-hidden glassmorphism shadow-sm">

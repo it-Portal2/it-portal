@@ -160,10 +160,10 @@ export default function DeveloperProjectsClient({
                 />
               </div>
 
-              <Button variant="outline" className="flex items-center gap-1">
+              {/* <Button variant="outline" className="flex items-center gap-1">
                 <Filter className="h-4 w-4" />
                 <span className="hidden sm:inline">Filter</span>
-              </Button>
+              </Button> */}
             </div>
           </div>
 
