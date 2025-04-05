@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Download, FileText } from "lucide-react";
+import { CheckCircle, Download, Link as LINK } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ export function FinalStep() {
   const { formData } = useProjectFormStore();
   const [showDocPreview, setShowDocPreview] = useState(false);
   const [showQuotationPreview, setShowQuotationPreview] = useState(false);
- // console.log(formData);
+  // console.log(formData);
   // Determine which documentation URL to use
   const documentationUrl = formData.cloudinaryDocumentationUrl;
   const quotationUrl = formData.cloudinaryQuotationUrl;
@@ -241,14 +241,26 @@ export function FinalStep() {
           </div>
         </div>
       </div>
-
+ 
       <div className="flex flex-wrap justify-center gap-4 pt-4">
+      {formData.hasExistingDesign && formData.designLink && (
+        <div className="flex items-center">
+          
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(formData.designLink || "", "_blank")}
+          >
+         <LINK className="w-5 h-5 text-blue-500 mr-2 " />   View Design
+          </Button>
+        </div>
+      )}
         <Button
           variant="outline"
           className="gap-2"
           onClick={handleQuotationDownloadAndView}
         >
-          <Download className="h-4 w-4" />
+          <Download className="w-5 h-5 text-blue-500" />
           Download Quotation
         </Button>
         <Button
@@ -256,7 +268,7 @@ export function FinalStep() {
           className="gap-2"
           onClick={handleDocumentationDownloadAndView}
         >
-          <Download className="h-4 w-4" />
+          <Download className="w-5 h-5 text-blue-500" />
           Download Documentation
         </Button>
       </div>

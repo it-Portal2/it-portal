@@ -13,12 +13,7 @@ import {
   Phone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
@@ -247,12 +242,23 @@ export default function CompletedProjectDetailClient({
                       </Button>
                     </Link>
                     <Link href={project.cloudinaryDocumentationUrl || ""}>
-                    <Button variant="outline" className="justify-start">
-                      <FileText className="mr-2 h-4 w-4" />
-                      <span className="truncate">Developer Guide</span>
-                      <Download className="ml-auto h-4 w-4" />
-                    </Button>
+                      <Button variant="outline" className="justify-start">
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span className="truncate">Developer Guide</span>
+                        <Download className="ml-auto h-4 w-4" />
+                      </Button>
                     </Link>
+                    {project.hasExistingDesign && project.designLink && (
+                      <Link href={project.designLink}>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start"
+                        >
+                          <FileText className="h-4 w-4" />
+                          View Design
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

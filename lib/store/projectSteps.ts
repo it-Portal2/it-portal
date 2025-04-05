@@ -12,6 +12,8 @@ export interface ProjectFormData {
   seniorDevelopers: number;
   juniorDevelopers: number;
   uiUxDesigners: number;
+  designLink: string | null; // Added design link field
+  hasExistingDesign: boolean; // Added flag to track if user has existing design
   documentationFile: File | null;
   documentationFileContent: string | null;
   documentationFileText: string | null;
@@ -48,6 +50,8 @@ const developmentPreferencesSchema = z
     seniorDevelopers: z.number(),
     juniorDevelopers: z.number(),
     uiUxDesigners: z.number(),
+    hasExistingDesign: z.boolean().optional(),
+    designLink: z.string().nullable().optional(),
   })
   .refine(
     (data) =>
@@ -55,6 +59,19 @@ const developmentPreferencesSchema = z
     {
       message: "At least one team member is required",
       path: ["teamMembers"],
+    }
+  )
+  .refine(
+    (data) => {
+      // If user claims to have existing design but didn't provide a link
+      if (data.hasExistingDesign && !data.designLink) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Please provide a design link",
+      path: ["designLink"],
     }
   );
 
@@ -100,6 +117,8 @@ const defaultFormData: ProjectFormData = {
   seniorDevelopers: 0,
   juniorDevelopers: 0,
   uiUxDesigners: 0,
+  designLink: null, // Added default value
+  hasExistingDesign: false, // Added default value
   documentationFile: null,
   documentationFileContent: null,
   documentationFileText: null,
@@ -158,6 +177,18 @@ export const useProjectFormStore = create<ProjectFormStore>()(
               designer
             );
           }
+          
+          // If user adds UI/UX designer, reset hasExistingDesign flag
+          if (data.uiUxDesigners && data.uiUxDesigners > 0) {
+            newFormData.hasExistingDesign = false;
+            newFormData.designLink = null;
+          }
+          
+          // If user sets hasExistingDesign to false, clear design link
+          if (data.hasExistingDesign === false) {
+            newFormData.designLink = null;
+          }
+          
           return { formData: newFormData };
         }),
 
@@ -264,6 +295,8 @@ export const useProjectFormStore = create<ProjectFormStore>()(
             seniorDevelopers: 0,
             juniorDevelopers: 0,
             uiUxDesigners: 0,
+            designLink: null,
+            hasExistingDesign: false,
           };
         } else if (step === 3) {
           newFormData = {
@@ -286,8 +319,8 @@ export const useProjectFormStore = create<ProjectFormStore>()(
       },
     }),
     {
-      name: "project-form-storage", // Key for localStorage
-      storage: createJSONStorage(() => localStorage),
+      name: "project-form-storage", // Key for sessionStorage
+      storage: createJSONStorage(() => sessionStorage), // Changed from localStorage to sessionStorage
       partialize: (state) => ({
         step: state.step,
         formData: state.formData,

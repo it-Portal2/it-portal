@@ -1,4 +1,3 @@
-
 "use client";
 
 import type React from "react";
@@ -14,6 +13,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
 
 interface DeveloperTypeSelectorProps {
@@ -94,6 +101,9 @@ function DeveloperTypeSelector({
 export function DevelopmentPreferences() {
   const { formData, updateFormData, validationErrors } = useProjectFormStore();
   const [newArea, setNewArea] = useState("");
+  const [showDesignLinkDialog, setShowDesignLinkDialog] = useState(false);
+  const [designLink, setDesignLink] = useState(formData.designLink || "");
+  const [linkError, setLinkError] = useState("");
 
   const addDevelopmentArea = () => {
     if (newArea.trim() && !formData.developmentAreas.includes(newArea.trim())) {
@@ -114,6 +124,27 @@ export function DevelopmentPreferences() {
     if (e.key === "Enter") {
       e.preventDefault();
       addDevelopmentArea();
+    }
+  };
+
+
+  const handleDesignLinkSubmit = () => {
+    if (!designLink.trim()) {
+      setLinkError("Please provide a valid design link");
+      return;
+    }
+
+    // Simple URL validation
+    try {
+      new URL(designLink);
+      updateFormData({
+        hasExistingDesign: true,
+        designLink: designLink.trim(),
+        uiUxDesigners: 0,
+      });
+      setShowDesignLinkDialog(false);
+    } catch (e) {
+      setLinkError("Please enter a valid URL including http:// or https://");
     }
   };
 
@@ -174,7 +205,6 @@ export function DevelopmentPreferences() {
         </div>
 
         <div className="space-y-4">
-
           <div className="space-y-3">
             <DeveloperTypeSelector
               title="Senior Developer"
@@ -215,6 +245,47 @@ export function DevelopmentPreferences() {
           )}
         </div>
       </div>
+
+      {/* Design Link Dialog */}
+      <Dialog
+        open={showDesignLinkDialog}
+        onOpenChange={setShowDesignLinkDialog}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Design Link</DialogTitle>
+            <DialogDescription>
+              Please provide a link to your existing UI/UX designs. This could
+              be a Figma, Adobe XD, or similar design file.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="designLink">Design Link</Label>
+              <Input
+                id="designLink"
+                placeholder="https://..."
+                value={designLink}
+                onChange={(e) => setDesignLink(e.target.value)}
+              />
+              {linkError && (
+                <p className="text-sm text-destructive">{linkError}</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDesignLinkDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleDesignLinkSubmit}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -41,11 +41,11 @@ export default function OngoingProjectDetailsClient({
 
   const isDeadlineSoon = () => {
     if (!project.deadline) return false;
-    
+
     // Check if deadline is a valid date
     const deadline = new Date(project.deadline);
     if (!isValid(deadline)) return false;
-    
+
     const today = new Date();
     const daysLeft = Math.ceil(
       (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
@@ -77,9 +77,12 @@ export default function OngoingProjectDetailsClient({
   const currencySymbol = currencySymbols[project?.currency || "₹"];
 
   // Function to safely format dates
-  const safeFormatDate = (dateString: string | undefined | null, formatPattern: string = "MMMM dd, yyyy") => {
+  const safeFormatDate = (
+    dateString: string | undefined | null,
+    formatPattern: string = "MMMM dd, yyyy"
+  ) => {
     if (!dateString) return "Not set";
-    
+
     const date = new Date(dateString);
     return isValid(date) ? format(date, formatPattern) : "Invalid date";
   };
@@ -87,10 +90,10 @@ export default function OngoingProjectDetailsClient({
   // Calculate days left safely
   const calculateDeadlineStatus = () => {
     if (!project.deadline) return null;
-    
+
     const deadline = new Date(project.deadline);
     if (!isValid(deadline)) return "Invalid deadline";
-    
+
     const today = new Date();
     const daysLeft = Math.ceil(
       (deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
@@ -100,7 +103,7 @@ export default function OngoingProjectDetailsClient({
     if (daysLeft === 0) return "Due today";
     return `${daysLeft} days remaining`;
   };
-  
+
   const deadlineStatus = calculateDeadlineStatus();
 
   return (
@@ -191,6 +194,14 @@ export default function OngoingProjectDetailsClient({
                   View Developer Guide PDF
                 </Button>
               </Link>
+              {project.hasExistingDesign && project.designLink && (
+                <Link href={project.designLink}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <FileText className="h-4 w-4" />
+                    View Design
+                  </Button>
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -239,9 +250,7 @@ export default function OngoingProjectDetailsClient({
 
             <div>
               <p className="text-sm text-muted-foreground mb-1">Date Started</p>
-              <p className="font-medium">
-                {safeFormatDate(project.startDate)}
-              </p>
+              <p className="font-medium">{safeFormatDate(project.startDate)}</p>
             </div>
           </CardContent>
         </Card>

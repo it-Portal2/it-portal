@@ -20,7 +20,6 @@ function ProjectFormContent() {
   const { step, nextStep, prevStep, formData, validateCurrentStep, resetForm } =
     useProjectFormStore();
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const router = useRouter();
 
   // Reset form when reaching step 4 and refreshing/navigating away
   useEffect(() => {
@@ -30,7 +29,8 @@ function ProjectFormContent() {
         e.preventDefault();
       };
       window.addEventListener("beforeunload", handleBeforeUnload);
-      return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+      return () =>
+        window.removeEventListener("beforeunload", handleBeforeUnload);
     }
   }, [step, resetForm]);
 
@@ -54,7 +54,8 @@ function ProjectFormContent() {
     if (step === 3) {
       if (!formData.cloudinaryDocumentationUrl) {
         toast.error("Upload Required", {
-          description: "Please click the Submit button to upload your documentation before proceeding.",
+          description:
+            "Please click the Submit button to upload your documentation before proceeding.",
         });
         return;
       }
@@ -62,9 +63,7 @@ function ProjectFormContent() {
 
     if (step === 2) {
       const needsUiUx =
-        formData.developmentAreas.some(
-          (area) => area.toLowerCase().includes("web") || area.toLowerCase().includes("mobile") || area.toLowerCase().includes("app")
-        ) && formData.uiUxDesigners === 0;
+        formData.uiUxDesigners === 0 && !formData.hasExistingDesign;
       const needsSeniorDev = formData.seniorDevelopers === 0;
       const needsJuniorDev = formData.juniorDevelopers === 0;
 

@@ -47,6 +47,8 @@ export type ProjectStatus =
     cloudinaryDocumentationUrl?: string;
     progressType?: "task-based" | "manual"; // New field to lock tracking method
     isCompleted?: boolean; // Flag to lock edits when progress reaches 100%
+    designLink: string | null; // Added design link field
+    hasExistingDesign: boolean; // Added flag to track if user has existing design
   };
   export type ClientTask = {
     id: string;

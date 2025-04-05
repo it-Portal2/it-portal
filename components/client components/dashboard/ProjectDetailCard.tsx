@@ -145,7 +145,19 @@ export default function ProjectDetailCard({ project }: ProjectDetailCardProps) {
             </Link>
           </div>
         )}
-
+        {project.hasExistingDesign && project.designLink && (
+          <div>
+            <h3 className="text-sm font-medium mb-2">Submitted Design</h3>
+            <Link
+              href={project.designLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline"
+            >
+              View Design
+            </Link>
+          </div>
+        )}
         {project.cloudinaryQuotationUrl && (
           <div>
             <h3 className="text-sm font-medium mb-2">Quotation</h3>

@@ -92,12 +92,19 @@ export default function DeveloperProjectDetailClient({
 
   const deadlineDate = project?.deadline ? new Date(project.deadline) : null;
   const today = new Date();
-  const daysLeft = deadlineDate
-    ? Math.ceil(
-        (deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      )
-    : 0;
+  const ifCompleted = project?.status === "completed"; // Check both possible completed states
+  let timeDifference = 0;
+  let daysLeft = 0;
+  let isDeadlinePassed = false;
+  let daysPastDeadline = 0;
 
+  if (!ifCompleted && deadlineDate) {
+    timeDifference =
+      (deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+    daysLeft = Math.ceil(timeDifference);
+    isDeadlinePassed = daysLeft < 0;
+    daysPastDeadline = isDeadlinePassed ? Math.abs(daysLeft) : 0;
+  }
   // const calculateTaskProgress = (): number => {
   //   if (tasks.length === 0) return 0;
   //   const completedCount = tasks.filter((task) => task.completed).length;
@@ -335,10 +342,22 @@ export default function DeveloperProjectDetailClient({
                     </span>
                   </div>
                   <Badge
-                    variant={daysLeft < 5 ? "destructive" : "outline"}
+                    variant={
+                      !ifCompleted && (isDeadlinePassed || daysLeft < 5)
+                        ? "destructive"
+                        : "outline"
+                    }
                     className="text-xs"
                   >
-                    {daysLeft} days left
+                    {ifCompleted
+                      ? "Project Completed"
+                      : deadlineDate
+                      ? isDeadlinePassed
+                        ? `Deadline crossed (${daysPastDeadline} day${
+                            daysPastDeadline === 1 ? "" : "s"
+                          })`
+                        : `${daysLeft} days left`
+                      : "Not set"}
                   </Badge>
                 </div>
                 {project.progressType === "task-based" && (
@@ -365,16 +384,18 @@ export default function DeveloperProjectDetailClient({
             <CardTitle className="text-lg">Project Files</CardTitle>
           </CardHeader>
           <CardContent>
-            <Link
-              href={project.cloudinaryQuotationUrl || "#"}
-              className="flex justify-between items-center p-2 rounded-md hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm font-medium">View Quotation PDF</p>
-              </div>
-              <Download className="h-4 w-4" />
-            </Link>
+            {project.hasExistingDesign && project.designLink && (
+              <Link
+                href={project.designLink}
+                className="flex justify-between items-center p-2 rounded-md hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium"> View Design</p>
+                </div>
+                <Download className="h-4 w-4" />
+              </Link>
+            )}
             <Link
               href={project.cloudinaryDocumentationUrl || "#"}
               className="flex justify-between items-center p-2 rounded-md hover:bg-muted/50 transition-colors"

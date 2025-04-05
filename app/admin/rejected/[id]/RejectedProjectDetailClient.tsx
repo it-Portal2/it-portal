@@ -187,7 +187,7 @@ export default function RejectedProjectDetailClient({
             <CardHeader>
               <CardTitle>Project Documents</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="flex flex-col gap-2">
               <Link href={project.cloudinaryQuotationUrl || ""}>
                 <Button variant="outline" className="w-full justify-start">
                   <FileText className="mr-2 h-4 w-4" />
@@ -200,6 +200,14 @@ export default function RejectedProjectDetailClient({
                   View Developer Guide
                 </Button>
               </Link>
+              {project.hasExistingDesign && project.designLink && (
+                <Link href={project.designLink}>
+                  <Button variant="outline" className="w-full justify-start">
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Design
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
         </motion.div>

@@ -284,6 +284,8 @@ export function Documentation() {
           cloudinaryQuotationUrl: QuotationUrl || "",
           projectBudget: formData.projectBudget || 0,
           currency: formData.currency || "",
+          hasExistingDesign: formData.hasExistingDesign,
+          designLink: formData.designLink || "",
           startDate: "",
           endDate: "",
           rejectedDate: "",

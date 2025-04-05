@@ -10,7 +10,7 @@ import {
   ArrowLeft,
   Mail,
   Phone,
-  IndianRupee,
+  Link as LINK,
   Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -189,6 +189,13 @@ const ProjectRequestDetail = ({
                     View Developer Guide
                   </Button>
                 </Link>
+                {project.hasExistingDesign && project.designLink && (
+                  <Link href={project.designLink}>
+                    <Button className="flex items-center gap-2 w-full sm:w-auto bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-md">
+                      <LINK className="w-5 h-5 mr-2 " /> View Design
+                    </Button>
+                  </Link>
+                )}
               </div>
             </CardContent>
           </Card>
