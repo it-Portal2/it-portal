@@ -28,7 +28,7 @@ import {
 } from "firebase/auth";
 
 const AdminSettings = () => {
-  const { profile } = useAuthStore();
+  const { profile, setProfile } = useAuthStore();
   const [isLoading, setIsLoading] = useState({
     profile: false,
     password: false,
@@ -98,6 +98,12 @@ const AdminSettings = () => {
       );
 
       if (profileResult.success) {
+        const updatedProfile = {
+          ...profile!,
+          name: profileForm.fullName,
+          phone: profileForm.phone,
+        };
+        setProfile(updatedProfile);
         toast.success("Profile updated successfully");
       } else {
         toast.error("Failed to update profile");
@@ -181,6 +187,12 @@ const AdminSettings = () => {
       );
 
       if (result.success) {
+        // Update the store with new avatar
+        const updatedProfile = {
+          ...profile!,
+          avatar: avatarUrl,
+        };
+        setProfile(updatedProfile);
         toast.success("Avatar updated successfully");
         setProfileForm((prev) => ({ ...prev, photoUrl: avatarUrl }));
       } else {

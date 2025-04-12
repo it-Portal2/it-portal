@@ -12,10 +12,10 @@ export async function uploadToCloudinary(file: File, onProgress?: (progress: num
     const cloudinaryData = new FormData()
     cloudinaryData.append("file", file)
     cloudinaryData.append("upload_preset", "AllPDF")
-    cloudinaryData.append("cloud_name", "dj7nt0s4x")
+    cloudinaryData.append("cloud_name", "db9um0dp4")
     cloudinaryData.append("resource_type", "raw")
     // Upload to Cloudinary with progress tracking
-    const response = await axios.post(`https://api.cloudinary.com/v1_1/dj7nt0s4x/image/upload`, cloudinaryData, {
+    const response = await axios.post(`https://api.cloudinary.com/v1_1/db9um0dp4/image/upload`, cloudinaryData, {
       headers: { "Content-Type": "multipart/form-data" },
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && onProgress) {
@@ -38,12 +38,12 @@ export async function uploadToCloudinaryForTextExtraction(file: File): Promise<s
       const cloudinaryData = new FormData()
       cloudinaryData.append("file", file)
       cloudinaryData.append("upload_preset", "AllPDF")
-        cloudinaryData.append("cloud_name", "dj7nt0s4x")
+        cloudinaryData.append("cloud_name", "db9um0dp4")
         cloudinaryData.append("asset_folder", "textExtractedPdf")
         cloudinaryData.append("resource_type", "raw")
   
       // Upload to Cloudinary with progress tracking
-      const response = await axios.post(`https://api.cloudinary.com/v1_1/dj7nt0s4x/image/upload`, cloudinaryData, {
+      const response = await axios.post(`https://api.cloudinary.com/v1_1/db9um0dp4/image/upload`, cloudinaryData, {
         headers: { "Content-Type": "multipart/form-data" },
       })
   
@@ -68,7 +68,7 @@ export async function uploadToCloudinaryForTextExtraction(file: File): Promise<s
       const cloudinaryData = new FormData();
       cloudinaryData.append("file", file);
       cloudinaryData.append("upload_preset", "AllPDF");
-      cloudinaryData.append("cloud_name", "dj7nt0s4x");
+      cloudinaryData.append("cloud_name", "db9um0dp4");
       
       // Special settings for avatars
       cloudinaryData.append("asset_folder", "avatars");
@@ -77,7 +77,7 @@ export async function uploadToCloudinaryForTextExtraction(file: File): Promise<s
   
       // Upload to Cloudinary with progress tracking
       const response = await axios.post(
-        `https://api.cloudinary.com/v1_1/dj7nt0s4x/image/upload`, 
+        `https://api.cloudinary.com/v1_1/db9um0dp4/image/upload`, 
         cloudinaryData,
         {
           headers: { "Content-Type": "multipart/form-data" },
