@@ -55,7 +55,6 @@ export default function ProjectDetailCard({ project }: ProjectDetailCardProps) {
             {project.projectOverview}
           </p>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <h3 className="text-sm font-medium mb-2">Project Details</h3>
