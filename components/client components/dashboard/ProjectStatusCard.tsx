@@ -1,23 +1,33 @@
-import type React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { ProjectStatus } from "@/lib/types"
-import { Clock, CheckCircle, AlertTriangle, FileQuestion, XCircle, Briefcase } from "lucide-react"
-import Link from "next/link"
-import { cn } from "@/lib/utils"
+import type React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ProjectStatus } from "@/lib/types";
+import {
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  FileQuestion,
+  XCircle,
+  Briefcase,
+} from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface ProjectStatusCardProps {
-  status: ProjectStatus | "all"
-  count: number
+  status: ProjectStatus | "all";
+  count: number;
 }
 
-export default function ProjectStatusCard({ status, count }: ProjectStatusCardProps) {
+export default function ProjectStatusCard({
+  status,
+  count,
+}: ProjectStatusCardProps) {
   const statusConfig: Record<
     ProjectStatus | "all",
     {
-      title: string
-      icon: React.ReactNode
-      color: string
-      href: string
+      title: string;
+      icon: React.ReactNode;
+      color: string;
+      href: string;
     }
   > = {
     all: {
@@ -56,23 +66,22 @@ export default function ProjectStatusCard({ status, count }: ProjectStatusCardPr
       color: "text-orange-500 bg-orange-500/10",
       href: "/client/delayed",
     },
-  }
+  };
 
-  const { title, icon, color, href } = statusConfig[status]
+  const { title, icon, color, href } = statusConfig[status];
 
   return (
-    <Link href={href}>
-      <Card className="transition-all hover:shadow-md hover:border-primary/20">
-        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle className="text-sm font-medium">{title}</CardTitle>
-          <div className={cn("p-2 rounded-full", color)}>{icon}</div>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{count}</div>
-          <p className="text-xs text-muted-foreground">{count === 1 ? "project" : "projects"}</p>
-        </CardContent>
-      </Card>
-    </Link>
-  )
+    <Card className="transition-all hover:shadow-md hover:border-primary/20">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <div className={cn("p-2 rounded-full", color)}>{icon}</div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{count}</div>
+        <p className="text-xs text-muted-foreground">
+          {count === 1 ? "project" : "projects"}
+        </p>
+      </CardContent>
+    </Card>
+  );
 }
-
