@@ -41,13 +41,77 @@ function ProjectFormContent() {
     };
   }, [step, resetForm]);
 
+  // Updated handleNext function for ProjectFormContent component
   const handleNext = async () => {
     const isValid = await validateCurrentStep();
+    const { validationErrors, formData, step } = useProjectFormStore.getState();
 
     if (!isValid) {
-      toast.error("Validation Error", {
-        description: "Please check the form for errors and try again.",
-      });
+      // Create a more descriptive error message based on the current step and validation errors
+      if (step === 1) {
+        if (validationErrors.projectName) {
+          toast.error("Project Name Error", {
+            description: validationErrors.projectName,
+          });
+        } else if (validationErrors.projectOverview) {
+          toast.error("Project Overview Error", {
+            description: validationErrors.projectOverview,
+          });
+        } else if (validationErrors.clientName) {
+          toast.error("Client Name Error", {
+            description:
+              "This client name isn't valid. Please update your profile details in Dashboard → Settings to ensure we have your correct information.",
+          });
+        } else if (validationErrors.clientEmail) {
+          toast.error("Email Address Error", {
+            description: validationErrors.clientEmail,
+          });
+        } else if (validationErrors.clientPhoneNumber) {
+          toast.error("Phone Number Error", {
+            description:
+              "The phone number you provided isn't valid. Please go to Dashboard → Settings and update your profile with a valid phone number.",
+          });
+        } else {
+          toast.error("Project Details Error", {
+            description:
+              "Please complete all required fields in the project details form.",
+          });
+        }
+      } else if (step === 2) {
+        if (validationErrors["developmentAreas"]) {
+          toast.error("Development Areas Error", {
+            description:
+              "Please select at least one development area for your project.",
+          });
+        } else if (validationErrors["teamMembers"]) {
+          toast.error("Team Composition Error", {
+            description:
+              "Your project needs at least one team member. Please add either developers or designers.",
+          });
+        } else if (validationErrors["designLink"]) {
+          toast.error("Design Link Error", {
+            description:
+              "You indicated having an existing design but didn't provide a link. Please add a link to your design.",
+          });
+        } else {
+          toast.error("Development Preferences Error", {
+            description:
+              "Please review your development preferences and ensure all required fields are completed.",
+          });
+        }
+      } else if (step === 3) {
+        if (validationErrors["documentation"]) {
+          toast.error("Documentation Error", {
+            description:
+              "Please either upload a documentation file or generate documentation for your project.",
+          });
+        } else {
+          toast.error("Documentation Error", {
+            description:
+              "There was an issue with your project documentation. Please review and try again.",
+          });
+        }
+      }
       return;
     }
 
@@ -76,7 +140,6 @@ function ProjectFormContent() {
     nextStep();
     setShowSuggestions(false);
   };
-
   return (
     <div className="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
       <div className="flex flex-col h-full">
