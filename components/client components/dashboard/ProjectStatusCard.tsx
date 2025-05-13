@@ -9,7 +9,6 @@ import {
   XCircle,
   Briefcase,
 } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface ProjectStatusCardProps {
@@ -68,7 +67,7 @@ export default function ProjectStatusCard({
     },
   };
 
-  const { title, icon, color, href } = statusConfig[status];
+  const { title, icon, color} = statusConfig[status];
 
   return (
     <Card className="transition-all hover:shadow-md hover:border-primary/20">
