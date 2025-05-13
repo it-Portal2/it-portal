@@ -33,6 +33,7 @@ export default function ProjectDetailCard({ project }: ProjectDetailCardProps) {
     // Add more currencies as needed
   };
 
+  
   const currencySymbol = currencySymbols[project?.currency || "₹"];
 
   return (
