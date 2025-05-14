@@ -1,7 +1,7 @@
 import type { Project } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 interface ProjectTimelineProps {
   project: Project;
@@ -9,90 +9,70 @@ interface ProjectTimelineProps {
 
 export default function ProjectTimeline({ project }: ProjectTimelineProps) {
   // Create timeline events based on project data
-  const timelineEvents = [
-    {
+  const timelineEvents = [];
+  
+  // Helper function to safely format dates
+  const safeFormatDate = (dateString: string | undefined | null) => {
+    if (!dateString) return "No date provided";
+    try {
+      return format(parseISO(dateString), "PPP");
+    } catch (error) {
+      return "Invalid date";
+    }
+  };
+
+  // Add submission event
+  if (project.submittedAt) {
+    timelineEvents.push({
       date: project.submittedAt,
       title: "Project Submitted",
       description: "Project request was submitted for review",
       status: "completed",
-    },
-  ];
+    });
+  }
 
-  if (project.status === "in-progress" || project.status === "completed") {
+  // Add start event
+  if ((project.status === "in-progress" || project.status === "completed") && project.startDate) {
     timelineEvents.push({
-      date: project.startDate || "",
+      date: project.startDate,
       title: "Project Started",
       description: "Development work has begun",
       status: "completed",
     });
   }
 
-  if (project.status === "delayed") {
+  // Add delay event
+  if (project.status === "delayed" && project.startDate) {
     timelineEvents.push({
-      date: project.startDate || "",
+      date: project.startDate,
       title: "Project Delayed",
       description: "Development has been delayed",
       status: "delayed",
     });
   }
 
-  if (project.status === "completed") {
+  // Add completion event
+  if (project.status === "completed" && project.endDate) {
     timelineEvents.push({
-      date: project.endDate || "",
+      date: project.endDate,
       title: "Project Completed",
       description: "All development work has been completed",
       status: "completed",
     });
   }
 
-  if (project.status === "rejected") {
+  // Add rejection event
+  if (project.status === "rejected" && project.rejectedDate) {
     timelineEvents.push({
-      date: project.endDate || "",
+      date: project.rejectedDate,
       title: "Project Rejected",
-      description: "Project request was not approved",
+      description: project.rejectionReason || "Project request was not approved",
       status: "rejected",
     });
   }
 
-  // Add conditional events based on project status
-  if (project.status === "in-progress" || project.status === "completed") {
-    timelineEvents.push({
-      date: project.startDate || "",
-      title: "Project Started",
-      description: "Development work has begun",
-      status: "completed",
-    });
-  }
-
-  if (project.status === "delayed") {
-    timelineEvents.push({
-      date: project.startDate || "",
-      title: "Project Delayed",
-      description: "Development has been delayed",
-      status: "delayed",
-    });
-  }
-
-  if (project.status === "completed") {
-    timelineEvents.push({
-      date: project.endDate || "",
-      title: "Project Completed",
-      description: "All development work has been completed",
-      status: "completed",
-    });
-  }
-
-  if (project.status === "rejected") {
-    timelineEvents.push({
-      date: project.endDate || "",
-      title: "Project Rejected",
-      description: "Project request was not approved",
-      status: "rejected",
-    });
-  }
-
-  // Sort events by date
-  //    timelineEvents.sort((a, b) => a.date.getTime() - b.date.getTime());
+  // Sort events by date if they all have valid dates
+  // We don't need to sort if we have fixed the event addition logic
 
   return (
     <Card>
@@ -104,35 +84,39 @@ export default function ProjectTimeline({ project }: ProjectTimelineProps) {
           {/* Vertical line */}
           <div className="absolute top-0 left-3 bottom-0 w-px bg-border" />
 
-          {timelineEvents.map((event, index) => (
-            <div key={index} className="relative">
-              {/* Timeline dot */}
-              <div
-                className={cn(
-                  "absolute left-[-30px] w-6 h-6 rounded-full border-2 border-background flex items-center justify-center",
-                  event.status === "completed"
-                    ? "bg-green-500"
-                    : event.status === "delayed"
-                    ? "bg-orange-500"
-                    : event.status === "rejected"
-                    ? "bg-red-500"
-                    : "bg-blue-500"
-                )}
-              >
-                <div className="w-2 h-2 rounded-full bg-background" />
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-sm font-medium">{event.title}</div>
-                <div className="text-xs text-muted-foreground">
-                  {format(event.date, "PPP")}
+          {timelineEvents.length > 0 ? (
+            timelineEvents.map((event, index) => (
+              <div key={index} className="relative">
+                {/* Timeline dot */}
+                <div
+                  className={cn(
+                    "absolute left-[-30px] w-6 h-6 rounded-full border-2 border-background flex items-center justify-center",
+                    event.status === "completed"
+                      ? "bg-green-500"
+                      : event.status === "delayed"
+                      ? "bg-orange-500"
+                      : event.status === "rejected"
+                      ? "bg-red-500"
+                      : "bg-blue-500"
+                  )}
+                >
+                  <div className="w-2 h-2 rounded-full bg-background" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {event.description}
-                </p>
+
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">{event.title}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {safeFormatDate(event.date)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {event.description}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="text-sm text-muted-foreground">No timeline events available</div>
+          )}
         </div>
       </CardContent>
     </Card>

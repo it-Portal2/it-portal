@@ -247,6 +247,13 @@ export default function OngoingProjectDetailsClient({
                 {project.projectBudget.toLocaleString()}
               </p>
             </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Final Cost</p>
+              <p className="text-2xl font-bold">
+                {currencySymbol}
+                {(project.finalCost ?? 0).toLocaleString()}
+              </p>
+            </div>
 
             <div>
               <p className="text-sm text-muted-foreground mb-1">Date Started</p>
