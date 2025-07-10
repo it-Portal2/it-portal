@@ -16,6 +16,7 @@ import {
   Briefcase,
   CheckSquare,
   MessageSquare,
+  CreditCard 
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -62,6 +63,11 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       icon: <XCircle size={20} />,
       title: "Rejected Projects",
     },
+    {
+      href: "/admin/payments",
+      icon: <CreditCard size={20} />,
+      title: "All payment details",
+    },
   ];
 
   const developerLinks = [
@@ -75,6 +81,7 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       icon: <Briefcase size={20} />,
       title: "My Projects",
     },
+
   ];
 
   const clientLinks = [
@@ -82,6 +89,11 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       href: "/client",
       icon: <LayoutDashboard size={20} />,
       title: "Dashboard",
+    },
+           {
+      href: "/client/payment",
+      icon: <CreditCard size={20} />,
+      title: "Payment",
     },
     // {
     //   href: "/client/chat",

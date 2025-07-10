@@ -1,8 +1,11 @@
 "use server";
 import {
+  getClientPaymentRecords,
   getClientProjects,
   getProjectsByStatus,
   getRecentProjects,
+  PaymentFormData,
+  submitPaymentRecord,
 } from "@/lib/firebase/client";
 import { ProjectStatus } from "@/lib/types";
 import { revalidatePath } from "next/cache";
@@ -67,3 +70,41 @@ export async function verifyIdToken(idToken: string) {
     return { success: false, error: error.message || "Invalid token" };
   }
 }
+// Submit payment record action
+export async function submitPaymentRecordAction(
+  paymentData: PaymentFormData,
+  path?: string
+) {
+  try {
+    const result = await submitPaymentRecord(paymentData);
+
+    // Revalidate the path if provided
+    if (path) revalidatePath(path);
+
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error("Error submitting payment record:", error);
+    return { success: false, error: error.message || "Failed to submit payment record" };
+  }
+}
+
+// Get client payment records action
+export async function fetchClientPaymentRecordsAction(
+  clientEmail: string,
+  path?: string
+) {
+  try {
+    const paymentRecords = await getClientPaymentRecords(clientEmail);
+
+    if (path) revalidatePath(path);
+
+    return { success: true, data: paymentRecords };
+  } catch (error: any) {
+    console.error("Error fetching client payment records:", error);
+    return { success: false, error: error.message || "Failed to fetch payment records" };
+  }
+}
+
+
+
+

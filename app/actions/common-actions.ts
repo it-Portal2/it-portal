@@ -1,5 +1,5 @@
 "use server"
-import { getAllProjects, getProjectById, ProfileUpdateData, updateUserAvatar, updateUserProfile } from "@/lib/firebase/common";
+import { getAllPaymentDetails, getAllProjects, getProjectById, ProfileUpdateData, updateUserAvatar, updateUserProfile } from "@/lib/firebase/common";
 import { revalidatePath } from "next/cache";
 export async function fetchAllProjects() {
     try {
@@ -64,4 +64,9 @@ export async function updateAvatar(
       error: error.message || "Failed to update avatar",
     };
   }
+}
+
+export async function getAllPaymentDetailsAction() {
+  const result = await getAllPaymentDetails();
+  return result;
 }

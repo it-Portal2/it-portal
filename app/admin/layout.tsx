@@ -45,7 +45,12 @@ const pageMetadata: PageMetadataDict = {
     title: "Settings",
     description: "Manage your account preferences",
   },
+  "/admin/payments": {
+    title: "Payments",
+    description: "View and manage all payment details and receipts",
+  },
 };
+
 
 export default function AdminLayout({
   children,

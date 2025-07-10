@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { Project, ProjectStatus } from "../types";
 import { db } from "@/firebase";
+import { PaymentDetails } from "./admin";
 
 // Get all the projects request for admin to see
 export const getAllProjects = async () => {
@@ -98,4 +99,26 @@ export async function getProjectById(projectId: string) {
       throw new Error(error.message || "Failed to update avatar");
     }
   }
-  
+  export async function getAllPaymentDetails(): Promise<{
+  success: boolean;
+  data?: PaymentDetails[];
+  error?: string;
+}> {
+  try {
+    const paymentCollection = collection(db, "PaymentDetails");
+    const querySnapshot = await getDocs(paymentCollection);
+    
+    const paymentDetails: PaymentDetails[] = [];
+    querySnapshot.forEach((doc) => {
+      paymentDetails.push(doc.data() as PaymentDetails);
+    });
+
+    return {
+      success: true,
+      data: paymentDetails,
+    };
+  } catch (error) {
+    console.error("Error getting all payment details:", error);
+    return { success: false, error: "Failed to get payment details" };
+  }
+}

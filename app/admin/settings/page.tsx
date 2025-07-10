@@ -1,43 +1,62 @@
-"use client"
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Lock, Save, CreditCard, Upload, Trash2, Edit } from "lucide-react"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { motion } from "framer-motion"
-import { Progress } from "@/components/ui/progress"
-import { toast } from "sonner"
-import { uploadAvatarToCloudinary } from "@/lib/cloudinary"
-import { updateAvatar, updateProfile } from "@/app/actions/common-actions"
-import { useAuthStore } from "@/lib/store/userStore"
-import { auth } from "@/firebase"
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth"
-import { Separator } from "@/components/ui/separator"
-
-interface PaymentDetails {
+"use client";
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Lock, Save, CreditCard, Upload, Trash2, Edit } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { motion } from "framer-motion";
+import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
+import {
+  uploadAvatarToCloudinary,
+  uploadUpiQrToCloudinary,
+} from "@/lib/cloudinary";
+import { getAllPaymentDetailsAction, updateAvatar, updateProfile } from "@/app/actions/common-actions";
+import { useAuthStore } from "@/lib/store/userStore";
+import { auth } from "@/firebase";
+import {
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from "firebase/auth";
+import { Separator } from "@/components/ui/separator";
+import {
+  deletePaymentMethodAction,
+  saveBankDetailsAction,
+  savePaypalDetailsAction,
+  saveUpiDetailsAction,
+} from "@/app/actions/admin-actions";
+type PaymentDetailsForm = {
   paypal: {
-    email: string
-    accountName: string
-  }
+    email: string;
+    accountName: string;
+  };
   upi: {
-    upiId: string
-    qrCodeUrl: string
-  }
+    upiId: string;
+    qrCodeUrl: string;
+  };
   bankDetails: {
-    accountHolderName: string
-    accountNumber: string
-    bankName: string
-    ifscCode: string
-    branchName: string
-  }
-}
+    accountHolderName: string;
+    accountNumber: string;
+    bankName: string;
+    ifscCode: string;
+    branchName: string;
+  };
+};
 
 const AdminSettings = () => {
-  const { profile, setProfile } = useAuthStore()
+  const { profile, setProfile } = useAuthStore();
   const [isLoading, setIsLoading] = useState({
     profile: false,
     password: false,
@@ -46,22 +65,22 @@ const AdminSettings = () => {
     upi: false,
     bankDetails: false,
     upiQr: false,
-  })
-  const [uploadProgress, setUploadProgress] = useState(0)
+  });
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [profileForm, setProfileForm] = useState({
     fullName: profile?.name || "Admin User",
     email: profile?.email || "",
     phone: profile?.phone || "",
     photoUrl: profile?.avatar || "",
-  })
+  });
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-  })
+  });
 
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails>({
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsForm>({
     paypal: {
       email: "",
       accountName: "",
@@ -77,7 +96,7 @@ const AdminSettings = () => {
       ifscCode: "",
       branchName: "",
     },
-  })
+  });
 
   useEffect(() => {
     if (profile) {
@@ -86,232 +105,392 @@ const AdminSettings = () => {
         email: profile.email || "",
         phone: profile.phone || "",
         photoUrl: profile.avatar || "",
-      })
+      });
 
-      // Load existing payment details if available
-      // This would typically come from your backend/database
-      // setPaymentDetails(profile.paymentDetails || defaultPaymentDetails);
+      handleLoadPaymentDetails();
     }
-  }, [profile])
+  }, [profile]);
 
   // Handle profile form changes
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+  const handleProfileChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
     if (name !== "email") {
-      setProfileForm((prev) => ({ ...prev, [name]: value }))
+      setProfileForm((prev) => ({ ...prev, [name]: value }));
     }
-  }
+  };
 
   // Handle password form changes
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setPasswordForm((prev) => ({ ...prev, [name]: value }))
-  }
+    const { name, value } = e.target;
+    setPasswordForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   // Handle payment form changes
-  const handlePaymentChange = (section: keyof PaymentDetails, field: string, value: string) => {
+  const handlePaymentChange = (
+    section: keyof PaymentDetailsForm,
+    field: string,
+    value: string
+  ) => {
     setPaymentDetails((prev) => ({
       ...prev,
       [section]: {
         ...prev[section],
         [field]: value,
       },
-    }))
-  }
+    }));
+  };
 
   const handleSaveProfile = async () => {
     if (!profile?.uid) {
-      toast.error("Please sign in to update your profile")
-      return
+      toast.error("Please sign in to update your profile");
+      return;
     }
-    setIsLoading((prev) => ({ ...prev, profile: true }))
+    setIsLoading((prev) => ({ ...prev, profile: true }));
     try {
       const profileData = {
         name: profileForm.fullName,
         phone: profileForm.phone,
-      }
-      const profileResult = await updateProfile(profile.uid, profileData, "/admin/settings")
+      };
+      const profileResult = await updateProfile(
+        profile.uid,
+        profileData,
+        "/admin/settings"
+      );
       if (profileResult.success) {
         const updatedProfile = {
           ...profile!,
           name: profileForm.fullName,
           phone: profileForm.phone,
-        }
-        setProfile(updatedProfile)
-        toast.success("Profile updated successfully")
+        };
+        setProfile(updatedProfile);
+        toast.success("Profile updated successfully");
       } else {
-        toast.error("Failed to update profile")
+        toast.error("Failed to update profile");
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred while updating profile")
+      toast.error(error.message || "An error occurred while updating profile");
     } finally {
-      setIsLoading((prev) => ({ ...prev, profile: false }))
+      setIsLoading((prev) => ({ ...prev, profile: false }));
     }
-  }
+  };
 
   const handleSavePassword = async () => {
     if (!profile?.uid) {
-      toast.error("Please sign in to update your password")
-      return
+      toast.error("Please sign in to update your password");
+      return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast.error("Passwords don't match", {
         description: "New password and confirm password must match.",
-      })
-      return
+      });
+      return;
     }
-    setIsLoading((prev) => ({ ...prev, password: true }))
+    setIsLoading((prev) => ({ ...prev, password: true }));
     try {
       if (!auth.currentUser || !auth.currentUser.email) {
-        throw new Error("No authenticated user found")
+        throw new Error("No authenticated user found");
       }
-      const credential = EmailAuthProvider.credential(auth.currentUser.email, passwordForm.currentPassword)
-      await reauthenticateWithCredential(auth.currentUser, credential)
-      await updatePassword(auth.currentUser, passwordForm.newPassword)
-      toast.success("Password updated successfully")
+      const credential = EmailAuthProvider.credential(
+        auth.currentUser.email,
+        passwordForm.currentPassword
+      );
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await updatePassword(auth.currentUser, passwordForm.newPassword);
+      toast.success("Password updated successfully");
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
-      })
+      });
     } catch (error: any) {
       if (error.code === "auth/wrong-password") {
-        toast.error("Current password is incorrect")
+        toast.error("Current password is incorrect");
       } else if (error.code === "auth/weak-password") {
-        toast.error("New password is too weak")
+        toast.error("New password is too weak");
       } else {
-        toast.error(error.message || "An error occurred while updating password")
+        toast.error(
+          error.message || "An error occurred while updating password"
+        );
       }
     } finally {
-      setIsLoading((prev) => ({ ...prev, password: false }))
+      setIsLoading((prev) => ({ ...prev, password: false }));
     }
-  }
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile?.uid) {
-      toast.error("Please sign in to update your avatar")
-      return
+      toast.error("Please sign in to update your avatar");
+      return;
     }
-    if (!e.target.files || !e.target.files[0]) return
-    setIsLoading((prev) => ({ ...prev, avatar: true }))
-    setUploadProgress(0)
+    if (!e.target.files || !e.target.files[0]) return;
+    setIsLoading((prev) => ({ ...prev, avatar: true }));
+    setUploadProgress(0);
     try {
-      const file = e.target.files[0]
+      const file = e.target.files[0];
       const avatarUrl = await uploadAvatarToCloudinary(file, (progress) => {
-        setUploadProgress(progress)
-      })
-      const result = await updateAvatar(profile.uid, avatarUrl, "/admin/settings")
+        setUploadProgress(progress);
+      });
+      const result = await updateAvatar(
+        profile.uid,
+        avatarUrl,
+        "/admin/settings"
+      );
       if (result.success) {
         const updatedProfile = {
           ...profile!,
           avatar: avatarUrl,
-        }
-        setProfile(updatedProfile)
-        toast.success("Avatar updated successfully")
-        setProfileForm((prev) => ({ ...prev, photoUrl: avatarUrl }))
+        };
+        setProfile(updatedProfile);
+        toast.success("Avatar updated successfully");
+        setProfileForm((prev) => ({ ...prev, photoUrl: avatarUrl }));
       } else {
-        toast.error(result.error || "Failed to update avatar")
+        toast.error(result.error || "Failed to update avatar");
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred while updating avatar")
+      toast.error(error.message || "An error occurred while updating avatar");
     } finally {
-      setIsLoading((prev) => ({ ...prev, avatar: false }))
-      setUploadProgress(0)
+      setIsLoading((prev) => ({ ...prev, avatar: false }));
+      setUploadProgress(0);
     }
-  }
-
+  };
   const handleUpiQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile?.uid) {
-      toast.error("Please sign in to update UPI QR code")
-      return
+      toast.error("Please sign in to update UPI QR code");
+      return;
     }
-    if (!e.target.files || !e.target.files[0]) return
-    setIsLoading((prev) => ({ ...prev, upiQr: true }))
-    setUploadProgress(0)
+    if (!e.target.files || !e.target.files[0]) return;
+
+    setIsLoading((prev) => ({ ...prev, upiQr: true }));
+    setUploadProgress(0);
+
     try {
-      const file = e.target.files[0]
-      const qrCodeUrl = await uploadAvatarToCloudinary(file, (progress) => {
-        setUploadProgress(progress)
-      })
+      const file = e.target.files[0];
+      const qrCodeUrl = await uploadUpiQrToCloudinary(file, (progress) => {
+        setUploadProgress(progress);
+      });
+
       setPaymentDetails((prev) => ({
         ...prev,
         upi: {
           ...prev.upi,
           qrCodeUrl: qrCodeUrl,
         },
-      }))
-      toast.success("UPI QR code uploaded successfully")
-    } catch (error: any) {
-      toast.error(error.message || "An error occurred while uploading QR code")
-    } finally {
-      setIsLoading((prev) => ({ ...prev, upiQr: false }))
-      setUploadProgress(0)
-    }
-  }
+      }));
 
-  const handleDeleteUpiQr = () => {
-    setPaymentDetails((prev) => ({
-      ...prev,
-      upi: {
-        ...prev.upi,
+      toast.success("UPI QR code uploaded successfully");
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred while uploading QR code");
+    } finally {
+      setIsLoading((prev) => ({ ...prev, upiQr: false }));
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDeleteUpiQr = async () => {
+    if (!profile?.uid) {
+      toast.error("Please sign in to delete UPI QR code");
+      return;
+    }
+
+    try {
+      const updatedUpiData = {
+        ...paymentDetails.upi,
         qrCodeUrl: "",
-      },
-    }))
-    toast.success("UPI QR code removed")
-  }
+      };
+
+      const result = await saveUpiDetailsAction(profile.uid, updatedUpiData);
+
+      if (result.success) {
+        setPaymentDetails((prev) => ({
+          ...prev,
+          upi: {
+            ...prev.upi,
+            qrCodeUrl: "",
+          },
+        }));
+        toast.success("UPI QR code removed successfully");
+      } else {
+        toast.error(result.error || "Failed to remove UPI QR code");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred while removing QR code");
+    }
+  };
 
   const handleSavePayPal = async () => {
+    if (!profile?.uid) {
+      toast.error("Please sign in to save PayPal details");
+      return;
+    }
+
     if (!paymentDetails.paypal.email || !paymentDetails.paypal.accountName) {
-      toast.error("Please fill in all PayPal details")
-      return
+      toast.error("Please fill in all PayPal details");
+      return;
     }
-    setIsLoading((prev) => ({ ...prev, paypal: true }))
+
+    setIsLoading((prev) => ({ ...prev, paypal: true }));
+
     try {
-      // Here you would typically save to your backend
-      // await savePaymentDetails(profile.uid, 'paypal', paymentDetails.paypal);
-      toast.success("PayPal details saved successfully")
+      const result = await savePaypalDetailsAction(
+        profile.uid,
+        paymentDetails.paypal
+      );
+
+      if (result.success) {
+        toast.success("PayPal details saved successfully");
+      } else {
+        toast.error(result.error || "Failed to save PayPal details");
+      }
     } catch (error: any) {
-      toast.error(error.message || "Failed to save PayPal details")
+      toast.error(error.message || "Failed to save PayPal details");
     } finally {
-      setIsLoading((prev) => ({ ...prev, paypal: false }))
+      setIsLoading((prev) => ({ ...prev, paypal: false }));
     }
-  }
+  };
 
   const handleSaveUpi = async () => {
+    if (!profile?.uid) {
+      toast.error("Please sign in to save UPI details");
+      return;
+    }
+
     if (!paymentDetails.upi.upiId) {
-      toast.error("Please enter UPI ID")
-      return
+      toast.error("Please enter UPI ID");
+      return;
     }
-    setIsLoading((prev) => ({ ...prev, upi: true }))
+
+    setIsLoading((prev) => ({ ...prev, upi: true }));
+
     try {
-      // Here you would typically save to your backend
-      // await savePaymentDetails(profile.uid, 'upi', paymentDetails.upi);
-      toast.success("UPI details saved successfully")
+      const result = await saveUpiDetailsAction(
+        profile.uid,
+        paymentDetails.upi
+      );
+
+      if (result.success) {
+        toast.success("UPI details saved successfully");
+      } else {
+        toast.error(result.error || "Failed to save UPI details");
+      }
     } catch (error: any) {
-      toast.error(error.message || "Failed to save UPI details")
+      toast.error(error.message || "Failed to save UPI details");
     } finally {
-      setIsLoading((prev) => ({ ...prev, upi: false }))
+      setIsLoading((prev) => ({ ...prev, upi: false }));
     }
-  }
+  };
 
   const handleSaveBankDetails = async () => {
-    const { accountHolderName, accountNumber, bankName, ifscCode, branchName } = paymentDetails.bankDetails
-    if (!accountHolderName || !accountNumber || !bankName || !ifscCode || !branchName) {
-      toast.error("Please fill in all bank details")
-      return
+    if (!profile?.uid) {
+      toast.error("Please sign in to save bank details");
+      return;
     }
-    setIsLoading((prev) => ({ ...prev, bankDetails: true }))
-    try {
-      // Here you would typically save to your backend
-      // await savePaymentDetails(profile.uid, 'bankDetails', paymentDetails.bankDetails);
-      toast.success("Bank details saved successfully")
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save bank details")
-    } finally {
-      setIsLoading((prev) => ({ ...prev, bankDetails: false }))
-    }
-  }
 
+    const { accountHolderName, accountNumber, bankName, ifscCode, branchName } =
+      paymentDetails.bankDetails;
+
+    if (
+      !accountHolderName ||
+      !accountNumber ||
+      !bankName ||
+      !ifscCode ||
+      !branchName
+    ) {
+      toast.error("Please fill in all bank details");
+      return;
+    }
+
+    setIsLoading((prev) => ({ ...prev, bankDetails: true }));
+
+    try {
+      const result = await saveBankDetailsAction(
+        profile.uid,
+        paymentDetails.bankDetails
+      );
+
+      if (result.success) {
+        toast.success("Bank details saved successfully");
+      } else {
+        toast.error(result.error || "Failed to save bank details");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save bank details");
+    } finally {
+      setIsLoading((prev) => ({ ...prev, bankDetails: false }));
+    }
+  };
+
+  // Additional helper functions
+  const handleLoadPaymentDetails = async () => {
+    if (!profile?.uid) return;
+
+    try {
+      const result = await getAllPaymentDetailsAction();
+
+      if (result.success && result.data && result.data.length > 0) {
+        // Take the first payment details object and extract only the needed fields
+        const paymentData = result.data[0];
+        setPaymentDetails({
+          paypal: paymentData.paypal || { email: "", accountName: "" },
+          upi: paymentData.upi || { upiId: "", qrCodeUrl: "" },
+          bankDetails: paymentData.bankDetails || {
+            accountHolderName: "",
+            accountNumber: "",
+            bankName: "",
+            ifscCode: "",
+            branchName: "",
+          },
+        });
+      } else if (result.error && result.error !== "Payment details not found") {
+        toast.error(result.error);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load payment details");
+    }
+  };
+
+const handleDeletePaymentMethod = async (paymentType: keyof PaymentDetailsForm) => {
+  if (!profile?.uid) {
+    toast.error("Please sign in to delete payment method");
+    return;
+  }
+  
+  try {
+    const result = await deletePaymentMethodAction(profile.uid, paymentType);
+    
+    if (result.success) {
+      // Reset the payment method in local state
+      setPaymentDetails((prev) => {
+        const updated = { ...prev };
+        switch (paymentType) {
+          case 'upi':
+            updated.upi = { upiId: "", qrCodeUrl: "" };
+            break;
+          case 'paypal':
+            updated.paypal = { email: "", accountName: "" };
+            break;
+          case 'bankDetails':
+            updated.bankDetails = {
+              accountHolderName: "",
+              accountNumber: "",
+              bankName: "",
+              ifscCode: "",
+              branchName: "",
+            };
+            break;
+        }
+        return updated;
+      });
+      
+      toast.success(`${paymentType.toUpperCase()} details deleted successfully`);
+    } else {
+      toast.error(result.error || "Failed to delete payment method");
+    }
+  } catch (error: any) {
+    toast.error(error.message || "Failed to delete payment method");
+  }
+};
   return (
     <motion.div
       className="space-y-6"
@@ -330,7 +509,9 @@ const AdminSettings = () => {
           <Card>
             <CardHeader>
               <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your account details and public profile</CardDescription>
+              <CardDescription>
+                Update your account details and public profile
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex flex-col md:flex-row gap-6">
@@ -363,14 +544,19 @@ const AdminSettings = () => {
                       variant="outline"
                       size="sm"
                       className="w-full bg-transparent"
-                      onClick={() => document.getElementById("avatar-upload")?.click()}
+                      onClick={() =>
+                        document.getElementById("avatar-upload")?.click()
+                      }
                       disabled={isLoading.avatar}
                     >
                       {isLoading.avatar ? "Uploading..." : "Change Avatar"}
                     </Button>
                     {isLoading.avatar && (
                       <div className="w-full space-y-1">
-                        <Progress value={uploadProgress} className="h-2 w-full" />
+                        <Progress
+                          value={uploadProgress}
+                          className="h-2 w-full"
+                        />
                         <p className="text-xs text-center">{uploadProgress}%</p>
                       </div>
                     )}
@@ -402,14 +588,23 @@ const AdminSettings = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" name="phone" value={profileForm.phone} onChange={handleProfileChange} />
+                      <Input
+                        id="phone"
+                        name="phone"
+                        value={profileForm.phone}
+                        onChange={handleProfileChange}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
             </CardContent>
             <CardFooter className="flex justify-end">
-              <Button className="flex items-center gap-1" onClick={handleSaveProfile} disabled={isLoading.profile}>
+              <Button
+                className="flex items-center gap-1"
+                onClick={handleSaveProfile}
+                disabled={isLoading.profile}
+              >
                 <Save className="h-4 w-4" />
                 {isLoading.profile ? "Saving..." : "Save Changes"}
               </Button>
@@ -421,7 +616,9 @@ const AdminSettings = () => {
           <Card>
             <CardHeader>
               <CardTitle>Change Password</CardTitle>
-              <CardDescription>Update your password to maintain account security</CardDescription>
+              <CardDescription>
+                Update your password to maintain account security
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -469,7 +666,11 @@ const AdminSettings = () => {
               >
                 Reset Fields
               </Button>
-              <Button className="flex items-center gap-1" onClick={handleSavePassword} disabled={isLoading.password}>
+              <Button
+                className="flex items-center gap-1"
+                onClick={handleSavePassword}
+                disabled={isLoading.password}
+              >
                 <Lock className="h-4 w-4" />
                 {isLoading.password ? "Updating..." : "Update Password"}
               </Button>
@@ -485,7 +686,9 @@ const AdminSettings = () => {
                 <CreditCard className="h-5 w-5" />
                 PayPal Details
               </CardTitle>
-              <CardDescription>Configure your PayPal account for payments</CardDescription>
+              <CardDescription>
+                Configure your PayPal account for payments
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -496,7 +699,9 @@ const AdminSettings = () => {
                     type="email"
                     placeholder="your-email@example.com"
                     value={paymentDetails.paypal.email}
-                    onChange={(e) => handlePaymentChange("paypal", "email", e.target.value)}
+                    onChange={(e) =>
+                      handlePaymentChange("paypal", "email", e.target.value)
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -505,13 +710,31 @@ const AdminSettings = () => {
                     id="paypalAccountName"
                     placeholder="Account holder name"
                     value={paymentDetails.paypal.accountName}
-                    onChange={(e) => handlePaymentChange("paypal", "accountName", e.target.value)}
+                    onChange={(e) =>
+                      handlePaymentChange(
+                        "paypal",
+                        "accountName",
+                        e.target.value
+                      )
+                    }
                   />
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button onClick={handleSavePayPal} disabled={isLoading.paypal} className="flex items-center gap-1">
+            <CardFooter className="flex justify-end gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => handleDeletePaymentMethod("paypal")}
+                className="flex items-center gap-1"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete PayPal
+              </Button>
+              <Button
+                onClick={handleSavePayPal}
+                disabled={isLoading.paypal}
+                className="flex items-center gap-1"
+              >
                 <Save className="h-4 w-4" />
                 {isLoading.paypal ? "Saving..." : "Save PayPal Details"}
               </Button>
@@ -525,7 +748,9 @@ const AdminSettings = () => {
                 <CreditCard className="h-5 w-5" />
                 UPI Details
               </CardTitle>
-              <CardDescription>Configure your UPI ID and QR code for payments</CardDescription>
+              <CardDescription>
+                Configure your UPI ID and QR code for payments
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
@@ -534,7 +759,9 @@ const AdminSettings = () => {
                   id="upiId"
                   placeholder="yourname@paytm"
                   value={paymentDetails.upi.upiId}
-                  onChange={(e) => handlePaymentChange("upi", "upiId", e.target.value)}
+                  onChange={(e) =>
+                    handlePaymentChange("upi", "upiId", e.target.value)
+                  }
                 />
               </div>
 
@@ -562,7 +789,9 @@ const AdminSettings = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => document.getElementById("upi-qr-upload")?.click()}
+                        onClick={() =>
+                          document.getElementById("upi-qr-upload")?.click()
+                        }
                         disabled={isLoading.upiQr}
                         className="flex items-center gap-1"
                       >
@@ -591,7 +820,9 @@ const AdminSettings = () => {
                     />
                     <Button
                       variant="outline"
-                      onClick={() => document.getElementById("upi-qr-upload")?.click()}
+                      onClick={() =>
+                        document.getElementById("upi-qr-upload")?.click()
+                      }
                       disabled={isLoading.upiQr}
                       className="flex items-center gap-1"
                     >
@@ -608,8 +839,20 @@ const AdminSettings = () => {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button onClick={handleSaveUpi} disabled={isLoading.upi} className="flex items-center gap-1">
+            <CardFooter className="flex justify-end gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => handleDeletePaymentMethod("upi")}
+                className="flex items-center gap-1"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete UPI
+              </Button>
+              <Button
+                onClick={handleSaveUpi}
+                disabled={isLoading.upi}
+                className="flex items-center gap-1"
+              >
                 <Save className="h-4 w-4" />
                 {isLoading.upi ? "Saving..." : "Save UPI Details"}
               </Button>
@@ -623,17 +866,27 @@ const AdminSettings = () => {
                 <CreditCard className="h-5 w-5" />
                 Bank Details
               </CardTitle>
-              <CardDescription>Configure your bank account details for payments</CardDescription>
+              <CardDescription>
+                Configure your bank account details for payments
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="accountHolderName">Account Holder Name *</Label>
+                  <Label htmlFor="accountHolderName">
+                    Account Holder Name *
+                  </Label>
                   <Input
                     id="accountHolderName"
                     placeholder="Full name as per bank records"
                     value={paymentDetails.bankDetails.accountHolderName}
-                    onChange={(e) => handlePaymentChange("bankDetails", "accountHolderName", e.target.value)}
+                    onChange={(e) =>
+                      handlePaymentChange(
+                        "bankDetails",
+                        "accountHolderName",
+                        e.target.value
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -642,7 +895,13 @@ const AdminSettings = () => {
                     id="accountNumber"
                     placeholder="Bank account number"
                     value={paymentDetails.bankDetails.accountNumber}
-                    onChange={(e) => handlePaymentChange("bankDetails", "accountNumber", e.target.value)}
+                    onChange={(e) =>
+                      handlePaymentChange(
+                        "bankDetails",
+                        "accountNumber",
+                        e.target.value
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -653,7 +912,13 @@ const AdminSettings = () => {
                     id="bankName"
                     placeholder="Name of the bank"
                     value={paymentDetails.bankDetails.bankName}
-                    onChange={(e) => handlePaymentChange("bankDetails", "bankName", e.target.value)}
+                    onChange={(e) =>
+                      handlePaymentChange(
+                        "bankDetails",
+                        "bankName",
+                        e.target.value
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -662,7 +927,13 @@ const AdminSettings = () => {
                     id="ifscCode"
                     placeholder="Bank IFSC code"
                     value={paymentDetails.bankDetails.ifscCode}
-                    onChange={(e) => handlePaymentChange("bankDetails", "ifscCode", e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      handlePaymentChange(
+                        "bankDetails",
+                        "ifscCode",
+                        e.target.value.toUpperCase()
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -672,11 +943,25 @@ const AdminSettings = () => {
                   id="branchName"
                   placeholder="Bank branch name"
                   value={paymentDetails.bankDetails.branchName}
-                  onChange={(e) => handlePaymentChange("bankDetails", "branchName", e.target.value)}
+                  onChange={(e) =>
+                    handlePaymentChange(
+                      "bankDetails",
+                      "branchName",
+                      e.target.value
+                    )
+                  }
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
+            <CardFooter className="flex justify-end gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => handleDeletePaymentMethod("bankDetails")}
+                className="flex items-center gap-1"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Bank Details
+              </Button>
               <Button
                 onClick={handleSaveBankDetails}
                 disabled={isLoading.bankDetails}
@@ -690,7 +975,7 @@ const AdminSettings = () => {
         </TabsContent>
       </Tabs>
     </motion.div>
-  )
-}
+  );
+};
 
-export default AdminSettings
+export default AdminSettings;

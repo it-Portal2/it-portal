@@ -8,6 +8,7 @@ import {
   updateDoc,
   limit,
   setDoc,
+  addDoc
 } from "firebase/firestore";
 import { Project, ProjectStatus, Task } from "../types";
 import { db } from "@/firebase";
@@ -102,4 +103,80 @@ export async function getRecentProjects(clientEmail: string, limitCount = 5) {
     throw error;
   }
 }
+// Types for payment records
+export interface PaymentRecord {
+  id?: string;
+  clientName: string;
+  clientEmail: string;
+  projectName: string;
+  modeOfPayment: string;
+  paidAmount: number;
+  currency: string;
+  receiptUrl: string;
+  status: "pending" | "verified" | "rejected";
+}
+
+export interface PaymentFormData {
+  clientName: string;
+  clientEmail: string;
+  projectName: string;
+  modeOfPayment: string;
+  paidAmount: number;
+  currency: string;
+  receiptUrl: string;
+}
+
+// Submit payment record
+export async function submitPaymentRecord(paymentData: PaymentFormData) {
+  try {
+    const paymentRecord: Omit<PaymentRecord, 'id'> = {
+      ...paymentData,
+      status: "pending",
+    };
+
+    const docRef = await addDoc(collection(db, "ClientPaymentDetails"), paymentRecord);
+    
+    return {
+      success: true,
+      id: docRef.id,
+      data: {
+        id: docRef.id,
+        ...paymentRecord,
+      } as PaymentRecord
+    };
+  } catch (error) {
+    console.error("Error submitting payment record:", error);
+    throw error;
+  }
+}
+
+// Get all payment records for a specific client
+export async function getClientPaymentRecords(clientEmail: string) {
+  try {
+    const paymentRef = collection(db, "ClientPaymentDetails");
+    const q = query(
+      paymentRef,
+      where("clientEmail", "==", clientEmail),
+      orderBy("createdAt", "desc")
+    );
+
+    const querySnapshot = await getDocs(q);
+    const paymentRecords: PaymentRecord[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      paymentRecords.push({
+        id: doc.id,
+        ...data,
+      } as PaymentRecord);
+    });
+
+    return paymentRecords;
+  } catch (error) {
+    console.error("Error fetching client payment records:", error);
+    throw error;
+  }
+}
+
+
 
