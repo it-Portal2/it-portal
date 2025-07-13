@@ -4,13 +4,9 @@ import {
   doc,
   getDoc,
   setDoc,
-  query,
-  where,
   updateDoc,
   deleteDoc,
-  orderBy
 } from "firebase/firestore";
-import { Project, ProjectStatus } from "../types";
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
 
@@ -68,7 +64,6 @@ export async function rejectProject(
   }
 }
 
-//  mark project as completed
 export async function completeProject(
   projectId: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -109,7 +104,7 @@ export async function restoreProject(
     await updateDoc(projectRef, {
       status: "pending",
       rejectionReason: null, // Clear the rejection reason
-      rejectedDate: null,   // Clear the rejected date
+      rejectedDate: null, // Clear the rejected date
     });
 
     return { success: true };
@@ -129,17 +124,16 @@ export async function deleteProject(
         error: "Project ID is required",
       };
     }
-    
-    // Delete the project document
+
     await deleteDoc(doc(db, "Projects", projectId));
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error deleting project:", error);
     return { success: false, error: "Failed to delete project" };
   }
 }
-// Types for payment details
+
 export interface PaymentDetails {
   uid: string;
   upi: {
@@ -149,6 +143,7 @@ export interface PaymentDetails {
   paypal: {
     email: string;
     accountName: string;
+    paypalLink: string;
   };
   bankDetails: {
     accountHolderName: string;
@@ -157,13 +152,18 @@ export interface PaymentDetails {
     ifscCode: string;
     branchName: string;
   };
+  crypto: {
+    walletAddress: string;
+    network: string;
+    qrCodeUrl: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
 
 export async function savePaymentDetails(
   uid: string,
-  paymentType: 'upi' | 'paypal' | 'bankDetails',
+  paymentType: "upi" | "paypal" | "bankDetails" | "crypto",
   paymentData: any
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -176,21 +176,19 @@ export async function savePaymentDetails(
 
     const paymentRef = doc(db, "PaymentDetails", uid);
     const paymentDoc = await getDoc(paymentRef);
-    
+
     const currentTime = new Date().toISOString();
-    
+
     if (paymentDoc.exists()) {
-      // Update existing document
       await updateDoc(paymentRef, {
         [paymentType]: paymentData,
         updatedAt: currentTime,
       });
     } else {
-      // Create new document
       const newPaymentDetails: Partial<PaymentDetails> = {
         uid: uid,
         upi: { upiId: "", qrCodeUrl: "" },
-        paypal: { email: "", accountName: "" },
+        paypal: { email: "", accountName: "", paypalLink: "" },
         bankDetails: {
           accountHolderName: "",
           accountNumber: "",
@@ -198,13 +196,17 @@ export async function savePaymentDetails(
           ifscCode: "",
           branchName: "",
         },
+        crypto: {
+          walletAddress: "",
+          network: "",
+          qrCodeUrl: "",
+        },
         createdAt: currentTime,
         updatedAt: currentTime,
       };
-      
-      // Set the specific payment type data
+
       newPaymentDetails[paymentType] = paymentData;
-      
+
       await setDoc(paymentRef, newPaymentDetails);
     }
 
@@ -262,7 +264,7 @@ export async function deletePaymentDetails(
 
 export async function deletePaymentMethod(
   uid: string,
-  paymentType: 'upi' | 'paypal' | 'bankDetails'
+  paymentType: "upi" | "paypal" | "bankDetails" | "crypto"
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!uid || !paymentType) {
@@ -273,24 +275,23 @@ export async function deletePaymentMethod(
     }
 
     const paymentRef = doc(db, "PaymentDetails", uid);
-    
-    // Reset the specific payment method to empty values
+
     let resetData: any = {};
-    
+
     switch (paymentType) {
-      case 'upi':
+      case "upi":
         resetData = {
           upi: { upiId: "", qrCodeUrl: "" },
           updatedAt: new Date().toISOString(),
         };
         break;
-      case 'paypal':
+      case "paypal":
         resetData = {
           paypal: { email: "", accountName: "" },
           updatedAt: new Date().toISOString(),
         };
         break;
-      case 'bankDetails':
+      case "bankDetails":
         resetData = {
           bankDetails: {
             accountHolderName: "",
@@ -298,6 +299,16 @@ export async function deletePaymentMethod(
             bankName: "",
             ifscCode: "",
             branchName: "",
+          },
+          updatedAt: new Date().toISOString(),
+        };
+        break;
+      case "crypto":
+        resetData = {
+          crypto: {
+            walletAddress: "",
+            network: "",
+            qrCodeUrl: "",
           },
           updatedAt: new Date().toISOString(),
         };
@@ -313,11 +324,9 @@ export async function deletePaymentMethod(
   }
 }
 
-// Get all payment records (for admin use)
-export async function getAllPaymentRecords() {
+export async function getAllPaymentRecords(): Promise<PaymentRecord[]> {
   try {
     const paymentRef = collection(db, "ClientPaymentDetails");
-
     const querySnapshot = await getDocs(paymentRef);
     const paymentRecords: PaymentRecord[] = [];
 
@@ -332,18 +341,16 @@ export async function getAllPaymentRecords() {
     return paymentRecords;
   } catch (error) {
     console.error("Error fetching all payment records:", error);
-    throw error;
+    return []; // Return empty array on error
   }
 }
 
-// Update payment status
 export async function updatePaymentStatus(
   paymentId: string,
   status: "pending" | "verified" | "rejected"
 ) {
   try {
     const paymentRef = doc(db, "ClientPaymentDetails", paymentId);
-    
     await updateDoc(paymentRef, {
       status: status,
     });

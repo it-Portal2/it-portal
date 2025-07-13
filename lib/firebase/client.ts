@@ -105,25 +105,35 @@ export async function getRecentProjects(clientEmail: string, limitCount = 5) {
 }
 // Types for payment records
 export interface PaymentRecord {
-  id?: string;
-  clientName: string;
-  clientEmail: string;
-  projectName: string;
-  modeOfPayment: string;
-  paidAmount: number;
-  currency: string;
-  receiptUrl: string;
-  status: "pending" | "verified" | "rejected";
+  id: string
+  clientName: string
+  clientEmail: string
+  projectName: string
+  modeOfPayment: string
+  paidAmount: number
+  currency: string
+  receiptUrl: string
+  status: "pending" | "verified" | "rejected"
+  createdAt: string
+  paymentType: "full" | "installment"
+  installmentPercentage?: number
+  totalProjectAmount?: number
 }
 
 export interface PaymentFormData {
-  clientName: string;
-  clientEmail: string;
-  projectName: string;
-  modeOfPayment: string;
-  paidAmount: number;
-  currency: string;
-  receiptUrl: string;
+  id?: string
+  clientName: string
+  projectName: string
+  clientEmail: string
+  modeOfPayment: string
+  paidAmount: number
+  currency: string
+  receiptUrl: string
+  status: "pending" | "verified" | "rejected"
+  createdAt: string
+  paymentType: "full" | "installment"
+  installmentPercentage?: number
+  totalProjectAmount?: number
 }
 
 // Submit payment record
@@ -157,7 +167,6 @@ export async function getClientPaymentRecords(clientEmail: string) {
     const q = query(
       paymentRef,
       where("clientEmail", "==", clientEmail),
-      orderBy("createdAt", "desc")
     );
 
     const querySnapshot = await getDocs(q);

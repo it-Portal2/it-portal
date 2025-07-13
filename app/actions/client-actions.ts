@@ -96,7 +96,7 @@ export async function fetchClientPaymentRecordsAction(
   try {
     const paymentRecords = await getClientPaymentRecords(clientEmail);
 
-    if (path) revalidatePath(path);
+     revalidatePath("/client/payment");
 
     return { success: true, data: paymentRecords };
   } catch (error: any) {
