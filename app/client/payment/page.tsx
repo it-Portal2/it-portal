@@ -66,7 +66,7 @@ type PaymentRecord = {
   id?: string
   clientName: string
   projectName: string
-  email: string
+  clientEmail: string
   modeOfPayment: string
   paidAmount: number
   currency: string
