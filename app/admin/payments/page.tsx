@@ -132,7 +132,7 @@ const PaymentDetailsDialog = ({
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Email</Label>
-                  <p className="font-medium">{payment.email}</p>
+                  <p className="font-medium">{payment.clientEmail}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Project</Label>
@@ -302,7 +302,7 @@ const Payments = () => {
         (payment) =>
           payment.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           payment.projectName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          payment.email.toLowerCase().includes(searchQuery.toLowerCase()),
+          payment.clientEmail.toLowerCase().includes(searchQuery.toLowerCase()),
       )
     }
 
@@ -585,7 +585,7 @@ const PaymentTable = ({
   const baseColumns = [
     { header: "Client Name", accessor: "clientName" as keyof PaymentRecord },
     { header: "Project Name", accessor: "projectName" as keyof PaymentRecord },
-    { header: "Email", accessor: "email" as keyof PaymentRecord },
+    { header: "Email", accessor: "clientEmail" as keyof PaymentRecord },
     { header: "Payment Mode", accessor: "modeOfPayment" as keyof PaymentRecord },
     {
       header: "Type",
