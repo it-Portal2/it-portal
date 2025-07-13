@@ -107,7 +107,7 @@ export async function getRecentProjects(clientEmail: string, limitCount = 5) {
 export type PaymentRecord = {
   id: string
   clientName: string
-  email: string
+  clientEmail: string
   projectName: string
   modeOfPayment: string
   paidAmount: number
