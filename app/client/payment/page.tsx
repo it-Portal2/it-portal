@@ -139,7 +139,7 @@ const ViewDetailsDialog = ({ record }: { record: PaymentRecord }) => {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Email</Label>
-                  <p className="font-medium">{record.email}</p>
+                  <p className="font-medium">{record.clientEmail}</p>
                 </div>
               </CardContent>
             </Card>
@@ -901,7 +901,7 @@ const Payment = () => {
               columns={[
                 { header: "Name", accessor: "clientName" },
                 { header: "Project Name", accessor: "projectName" },
-                { header: "Email", accessor: "email" },
+                { header: "Email", accessor: "clientEmail" },
                 { header: "Payment Mode", accessor: "modeOfPayment" },
                 {
                   header: "Type",
