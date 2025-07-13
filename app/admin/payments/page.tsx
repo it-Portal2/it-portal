@@ -25,22 +25,9 @@ import ProjectTable from "@/components/ui-custom/ProjectTable"
 import { toast } from "sonner"
 import { fetchAllPaymentRecordsAction, updatePaymentStatusAction } from "@/app/actions/admin-actions"
 import { Skeleton } from "@/components/ui/skeleton"
+import { PaymentRecord } from "@/lib/firebase/client"
 
-type PaymentRecord = {
-  id: string
-  clientName: string
-  email: string
-  projectName: string
-  modeOfPayment: string
-  paidAmount: number
-  currency: string
-  receiptUrl: string
-  status: "pending" | "verified" | "rejected"
-  createdAt: string
-  paymentType: "full" | "installment"
-  installmentPercentage?: number
-  totalProjectAmount?: number
-}
+
 
 // Enhanced Payment Details Dialog
 const PaymentDetailsDialog = ({
@@ -261,13 +248,14 @@ const Payments = () => {
   const [loading, setLoading] = useState<boolean>(true)
 
   // Fetch payment records with filters
+  // Fetch payment records with filters
   useEffect(() => {
     const fetchPayments = async () => {
       setLoading(true)
       try {
         const result = await fetchAllPaymentRecordsAction()
         if (result.success && result.data) {
-          setPayments(result.data)
+          setPayments(result.data as PaymentRecord[]) // Explicitly cast to PaymentRecord[]
         } else {
           toast.error(result.error || "Failed to fetch payment records")
           setPayments([])

@@ -104,10 +104,10 @@ export async function getRecentProjects(clientEmail: string, limitCount = 5) {
   }
 }
 // Types for payment records
-export interface PaymentRecord {
+export type PaymentRecord = {
   id: string
   clientName: string
-  clientEmail: string
+  email: string
   projectName: string
   modeOfPayment: string
   paidAmount: number
