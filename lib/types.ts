@@ -93,3 +93,97 @@ export type ProjectStatus =
 //   timestamp: string;
 //   read: boolean;
 // }
+export interface ResumeAnalysis {
+  skills: string[];
+  experience: string;
+  education: string;
+  summary: string;
+}
+
+export interface AIQuestion {
+  id: string;
+  question: string;
+  answer?: string;
+}
+export interface AnalysisResult {
+  success: boolean;
+  resumeAnalysis: ResumeAnalysis;
+  questions: AIQuestion[];
+}
+export interface QuestionAndAnswer {
+  question: string;
+  answer: string;
+}
+
+export interface OriginalityScore {
+  question: number;
+  score: number;
+  reasoning: string;
+}
+
+export interface CorrectnessScore {
+  question: number;
+  score: number;
+  reasoning: string;
+}
+export type ApplicationStatus = "pending" | "accepted" | "rejected" | "ai-verdict";
+export type AIAnalysisStatus = "not-analyzed" | "analyzing" | "analyzed";
+export type AIVerdict = "Highly Recommended" | "Recommended" | "Not Recommended" | "Requires Review";
+
+export interface AIAnalysis {
+  originalityScores: OriginalityScore[];
+  correctnessScores: CorrectnessScore[];
+  overallVerdict: AIVerdict;
+  aiRecommendation: string;
+}
+
+export interface Application {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  linkedin?: string;
+  applicationStatus: ApplicationStatus;
+  createdAt: string;
+  startDate: string;
+  stipendExpectation: string;
+  weeklyCommitment: string;
+  trialAccepted: string;
+  additionalComments?: string;
+  aiAnalysisStatus: AIAnalysisStatus;
+  overallScore: number | null;
+  resumeAnalysis: ResumeAnalysis;
+  questionsAndAnswers?: QuestionAndAnswer[];
+  aiAnalysis?: AIAnalysis | null;
+}
+
+// Props interface for the client component
+export interface ApplicationDetailClientProps {
+  applicationDetails: Application;
+  error: string | null;
+}
+
+// API Response types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface InsertApplication {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  linkedin?: string;
+  applicationStatus: string;
+  stipendExpectation: string;
+  startDate: string;
+  createdAt: string;
+  weeklyCommitment: string;
+  trialAccepted: string;
+  overallScore: number | null;
+  aiAnalysisStatus: string;
+  additionalComments?: string;
+  resumeAnalysis: ResumeAnalysis;
+}

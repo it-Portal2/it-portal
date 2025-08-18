@@ -7,7 +7,7 @@ import { completeProjectAction } from "@/app/actions/admin-actions";
 import { ArrowLeft, FileText, Calendar, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format, isValid } from "date-fns"; // Import isValid from date-fns
+import { format, isValid } from "date-fns"; 
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
 import { Project } from "@/lib/types";

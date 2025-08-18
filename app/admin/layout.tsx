@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation"; // Assuming you're using Next.js
 import { useAuthStore } from "@/lib/store/userStore";
 import { User } from "@/lib/types";
 
-
 interface PageMetadata {
   title: string;
   description: string;
@@ -37,6 +36,10 @@ const pageMetadata: PageMetadataDict = {
     title: "Rejected Projects",
     description: "View and manage rejected project requests",
   },
+  "/admin/intern-application": {
+    title: "Intern Applications",
+    description: "Review, accept, or reject internship applications",
+  },
   "/admin/team": {
     title: "Team Management",
     description: "Manage developers and designers",
@@ -51,7 +54,6 @@ const pageMetadata: PageMetadataDict = {
   },
 };
 
-
 export default function AdminLayout({
   children,
 }: {
@@ -59,6 +61,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const { profile } = useAuthStore();
+
   // Get metadata for current path or use defaults
   const metadata = pageMetadata[pathname] || {
     title: "Admin Dashboard",
@@ -67,7 +70,7 @@ export default function AdminLayout({
 
   return (
     <Layout
-      user={profile || {} as User}
+      user={profile || ({} as User)}
       title={metadata.title}
       description={metadata.description}
     >
