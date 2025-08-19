@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { analyzeCompleteApplicationOptimized } from "@/lib/gemini"; // Adjust path as needed
 
-export const maxDuration = 30; // Set to 30 seconds
+export const maxDuration = 60; // Set to 60 seconds
 
 export async function POST(request: Request) {
   try {
