@@ -694,7 +694,7 @@ export async function analyzeCompleteApplicationOptimized(candidateData: Applica
       const result = await model.generateContent(prompt);
       const response = await result.response.text();
       
-      // ✅ IMPROVED JSON PARSING with robust cleaning
+      // JSON PARSING with robust cleaning
       const cleanedResponse = cleanJsonResponse(response);
       
       let analysisResult: FullAIAnalysisResult;
