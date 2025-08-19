@@ -38,6 +38,7 @@ import {
   updateApplicationStatusAction,
 } from "@/app/actions/admin-actions";
 import { analyzeCompleteApplicationOptimized } from "@/lib/gemini";
+import axios from "axios";
 
 const StatusBadge = ({ status }: { status: ApplicationStatus }) => {
   const statusConfig = {
@@ -144,41 +145,50 @@ export default function ApplicationDetailPageClient({
         setAnalysisProgress((prev) => Math.min(prev + 15, 85));
       }, 800);
 
-      const analysisResult = await analyzeCompleteApplicationOptimized(
-        applicationDetails
-      );
+      // Make API call with correct payload structure
+      const response = await axios.post("/api/admin/application-analysis", {
+        applicationDetails: applicationDetails, // Make sure this matches the destructuring in API route
+      });
 
       clearInterval(progressInterval);
       setAnalysisProgress(100);
 
-      const response = await updateApplicationAIAnalysisAction(
-        applicationDetails.id,
-        analysisResult.aiAnalysis,
-        analysisResult.overallScore
-      );
+      // Check if the API call was successful
+      if (response.data.success) {
+        // Use the returned data from the API
+        const updateResponse = await updateApplicationAIAnalysisAction(
+          applicationDetails.id,
+          response.data.aiAnalysis,
+          response.data.overallScore
+        );
 
-      if (response.success) {
-        setHasAnalyzed(true);
+        if (updateResponse.success) {
+          setHasAnalyzed(true);
 
-        toast.success("🤖 AI analysis completed successfully!", {
-          duration: 3000,
-        });
+          toast.success("🤖 AI analysis completed successfully!", {
+            duration: 3000,
+          });
 
-        // Auto-scroll to results
-        setTimeout(() => {
-          const aiResultsSection = document.getElementById(
-            "ai-analysis-results"
+          // Auto-scroll to results
+          setTimeout(() => {
+            const aiResultsSection = document.getElementById(
+              "ai-analysis-results"
+            );
+            if (aiResultsSection) {
+              aiResultsSection.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+                inline: "nearest",
+              });
+            }
+          }, 500);
+        } else {
+          throw new Error(
+            updateResponse.error || "Failed to update application"
           );
-          if (aiResultsSection) {
-            aiResultsSection.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-              inline: "nearest",
-            });
-          }
-        }, 500);
+        }
       } else {
-        throw new Error(response.error || "Analysis failed");
+        throw new Error(response.data.message || "API call failed");
       }
     } catch (error) {
       console.error("Error performing AI analysis:", error);
@@ -188,11 +198,24 @@ export default function ApplicationDetailPageClient({
       if (error instanceof Error) {
         if (error.message.includes("JSON")) {
           errorMessage = "AI response parsing failed. Please try again.";
-        } else if (error.message.includes("API")) {
+        } else if (
+          error.message.includes("API") ||
+          error.message.includes("timeout")
+        ) {
           errorMessage =
             "AI service temporarily unavailable. Please try again.";
         } else {
           errorMessage = error.message;
+        }
+      } else if (axios.isAxiosError(error)) {
+        if (error.code === "ECONNABORTED") {
+          errorMessage =
+            "Request timeout. The analysis is taking longer than expected.";
+        } else if (error.response?.status === 500) {
+          errorMessage =
+            "Server error occurred during analysis. Please try again.";
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
         }
       }
 
@@ -533,7 +556,8 @@ export default function ApplicationDetailPageClient({
                       </span>
                       <p className="text-sm font-semibold text-gray-900 mt-1">
                         {applicationDetails?.createdAt
-                          ? convertFirebaseTimestamp((applicationDetails.createdAt)
+                          ? convertFirebaseTimestamp(
+                              applicationDetails.createdAt
                             ).toLocaleDateString()
                           : "N/A"}
                       </p>
