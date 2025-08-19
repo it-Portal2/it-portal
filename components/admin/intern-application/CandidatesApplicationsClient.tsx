@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Search,
   Eye,
@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { toast } from "sonner";
 import ProjectTable from "@/components/ui-custom/ProjectTable";
-import { InsertApplication } from "@/lib/types";
+import { Application} from "@/lib/types";
+import { deleteApplicationAction } from "@/app/actions/admin-actions";
 
 type ApplicationStatus = "Pending" | "Accepted" | "Rejected";
 
@@ -55,7 +57,15 @@ const StatusBadge = ({ status }: { status: ApplicationStatus }) => {
 };
 
 const ScoreBadge = ({ score }: { score: number | null }) => {
-  if (score === null) return <span className="text-muted-foreground">-</span>;
+  if (score === null || score === undefined)
+    return (
+      <Badge
+        variant="outline"
+        className="font-mono bg-gray-100 text-gray-600 border-gray-200"
+      >
+        N/A
+      </Badge>
+    );
 
   const getScoreColor = (score: number) => {
     if (score >= 8) return "bg-green-100 text-green-800 border-green-200";
@@ -65,23 +75,55 @@ const ScoreBadge = ({ score }: { score: number | null }) => {
 
   return (
     <Badge variant="outline" className={cn("font-mono", getScoreColor(score))}>
-      {score.toFixed(1)}
+      {score?.toFixed(1)}
     </Badge>
   );
 };
 
-const CandidatesApplicationsClient = ({ candidatesData, }: {
-  candidatesData:InsertApplication[]
+const CandidatesApplicationsClient = ({
+  candidatesData,
+}: {
+  candidatesData: Application[] | undefined;
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
     "all"
   );
-  const [filteredData, setFilteredData] = useState(candidatesData);
+  const candidates = candidatesData ?? [];
+  const [filteredData, setFilteredData] = useState<Application[]>(candidates);
+
+
+  const handleDelete = async (applicationId: string, applicantName: string) => {
+
+    try {
+      const result = await deleteApplicationAction(applicationId);
+      
+      if (result.success) {
+        toast.success("Application deleted successfully!", {
+          description: `${applicantName}'s application has been removed.`,
+          duration: 4000,
+        });
+        
+        // Update local state to remove the deleted item
+        setFilteredData(prev => prev.filter(app => app.id !== applicationId));
+      } else {
+        toast.error("Failed to delete application", {
+          description: result.error || "Please try again later.",
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting application:", error);
+      toast.error("Error deleting application", {
+        description: "An unexpected error occurred. Please try again.",
+        duration: 5000,
+      });
+    }
+  };
 
   // Filter data based on search and status
   React.useEffect(() => {
-    let filtered = candidatesData;
+    let filtered = candidates;
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -99,13 +141,13 @@ const CandidatesApplicationsClient = ({ candidatesData, }: {
     }
 
     setFilteredData(filtered);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, candidates]);
 
   const columns = [
     {
       header: "Applicant",
       accessor: "fullName",
-      cell: (row: any) => (
+      cell: (row: Application) => (
         <div className="space-y-1">
           <div className="font-medium">{row.fullName}</div>
           <div className="text-sm text-muted-foreground">{row.email}</div>
@@ -116,33 +158,54 @@ const CandidatesApplicationsClient = ({ candidatesData, }: {
     {
       header: "Status",
       accessor: "applicationStatus",
-      cell: (row: any) => <StatusBadge status={row.applicationStatus} />,
+      cell: (row: Application) => <StatusBadge status={row.applicationStatus} />,
     },
     {
       header: "AI Score",
       accessor: "overallScore",
-      cell: (row: any) => <ScoreBadge score={row.overallScore} />,
+      cell: (row: Application) => <ScoreBadge score={row.overallScore} />,
     },
     {
       header: "Applied",
       accessor: "createdAt",
-      cell: (row: any) => (
-        <div className="text-sm">
-          {new Date(row.createdAt).toLocaleDateString()}
-        </div>
-      ),
+      cell: (row: Application) => {
+        // Convert Firebase timestamp to JavaScript Date
+        const convertFirebaseTimestamp = (timestamp: any) => {
+          if (timestamp && timestamp.seconds) {
+            return new Date(
+              timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000
+            );
+          }
+          // Fallback for regular date strings
+          return new Date(timestamp);
+        };
+
+        const date = convertFirebaseTimestamp(row.createdAt);
+
+        return (
+          <div className="text-sm">
+            <div>{date.toLocaleDateString()}</div>
+            <div className="text-xs text-muted-foreground">
+              {date.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
+        );
+      },
     },
     {
       header: "Experience",
       accessor: "experience",
-      cell: (row: any) => (
-        <div className="text-sm">{row.resumeAnalysis.experience}</div>
+      cell: (row: Application) => (
+        <div className="text-sm">{row.resumeAnalysis?.experience}</div>
       ),
     },
     {
       header: "Actions",
       accessor: "actions",
-      cell: (row: any) => (
+      cell: (row: Application) => (
         <div className="flex items-center gap-2">
           <Link href={`/admin/intern-application/${row.id}`}>
             <Button
@@ -154,13 +217,16 @@ const CandidatesApplicationsClient = ({ candidatesData, }: {
               View Details
             </Button>
           </Link>
+          {/* ✅ UPDATED: Delete button with proper handler */}
           {row.applicationStatus === "Rejected" && (
             <Button
-              variant="outline"
+              variant="destructive"
               size="sm"
-              className="flex items-center gap-1 bg-red-50 text-red-600 hover:text-red-700 border-red-200 "
+              onClick={() => handleDelete(row.id, row.fullName)}
+              className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 border-red-200 hover:text-red-700"
             >
-              <Trash2 className="h-4 w-4" /> Delete
+              <Trash2 className="h-4 w-4" />
+              Delete
             </Button>
           )}
         </div>
@@ -169,17 +235,14 @@ const CandidatesApplicationsClient = ({ candidatesData, }: {
   ];
 
   const stats = {
-    total: candidatesData.length,
-    pending: candidatesData.filter((c) => c.applicationStatus === "pending")
-      .length,
-    accepted: candidatesData.filter((c) => c.applicationStatus === "accepted")
-      .length,
-    rejected: candidatesData.filter((c) => c.applicationStatus === "rejected")
-      .length,
+    total: candidates.length,
+    pending: candidates.filter((c) => c.applicationStatus === "Pending").length,
+    accepted: candidates.filter((c) => c.applicationStatus === "Accepted").length,
+    rejected: candidates.filter((c) => c.applicationStatus === "Rejected").length,
   };
 
   return (
-    <div className=" space-y-6">
+    <div className="space-y-6">
       {/* Header Section */}
       <div className="space-y-4">
         {/* Stats Cards */}
@@ -280,7 +343,6 @@ const CandidatesApplicationsClient = ({ candidatesData, }: {
         </CardContent>
       </Card>
 
-      {/* Table Section */}
       <div className="rounded-lg border shadow-sm">
         <ProjectTable
           data={filteredData}

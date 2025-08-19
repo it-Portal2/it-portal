@@ -126,7 +126,7 @@ export interface CorrectnessScore {
   score: number;
   reasoning: string;
 }
-export type ApplicationStatus = "pending" | "accepted" | "rejected" | "ai-verdict";
+export type ApplicationStatus = "Pending" | "Accepted" | "Rejected";
 export type AIAnalysisStatus = "not-analyzed" | "analyzing" | "analyzed";
 export type AIVerdict = "Highly Recommended" | "Recommended" | "Not Recommended" | "Requires Review";
 
@@ -153,7 +153,7 @@ export interface Application {
   aiAnalysisStatus: AIAnalysisStatus;
   overallScore: number | null;
   resumeAnalysis: ResumeAnalysis;
-  questionsAndAnswers?: QuestionAndAnswer[];
+  aiQuestions?: QuestionAndAnswer[];
   aiAnalysis?: AIAnalysis | null;
 }
 

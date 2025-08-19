@@ -4,13 +4,19 @@ import { revalidatePath } from "next/cache";
 import {
   acceptProject,
   completeProject,
+  deleteApplication,
   deletePaymentDetails,
   deletePaymentMethod,
   deleteProject,
+  getAllApplications,
   getAllPaymentRecords,
+  getApplicationById,
+  getApplicationsByStatus,
   rejectProject,
   restoreProject,
   savePaymentDetails,
+  updateApplicationAIAnalysis,
+  updateApplicationStatus,
   updatePaymentDetails,
   updatePaymentStatus,
 } from "@/lib/firebase/admin";
@@ -225,4 +231,104 @@ export async function fetchAllPaymentRecordsAction(path?: "/admin/payments") {
     console.error("Error fetching all payment records:", error);
     return { success: false, error: error.message || "Failed to fetch payment records" };
   }
+}
+
+// Fetch all applications (with optional revalidation)
+export async function fetchAllApplicationsAction(
+  path?:  "/admin/intern-application"
+) {
+  try {
+    const applications = await getAllApplications();
+
+    if (path) revalidatePath(path);
+
+    return { success: true, data: applications };
+  } catch (error) {
+    console.error("Error fetching all applications:", error);
+    return { success: false, error: "Failed to fetch applications" };
+  }
+}
+
+export async function fetchApplicationById(id: string) {
+  try {
+    const application = await getApplicationById(id);
+    if (!application) {
+      return { success: false, error: "Application not found" };
+    }
+    return { success: true, data: application };
+  } catch (error) {
+    console.error("Error fetching application:", error);
+    return { success: false, error: "Failed to fetch application" };
+  }
+}
+// Fetch applications by status
+export async function fetchApplicationsByStatusAction(
+  status: "Pending" | "Accepted" | "Rejected",
+  path: string = "/admin/intern-application"
+) {
+  try {
+    const applications = await getApplicationsByStatus(status);
+
+    if (path) revalidatePath(path);
+
+    return { success: true, data: applications };
+  } catch (error: any) {
+    console.error("Error fetching applications by status:", error);
+    return { success: false, error: error.message || "Failed to fetch applications" };
+  }
+}
+
+//  Update application status (Accept / Reject)
+
+export async function updateApplicationStatusAction(
+  applicationId: string,
+  status: "Accepted" | "Rejected",
+  redirectPath: string = "/admin/intern-application"
+) {
+  const result = await updateApplicationStatus(applicationId, status);
+
+  if (result.success) {
+    revalidatePath("/admin/intern-application"); 
+    revalidatePath(`/admin/intern-application/${applicationId}`); 
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+// Delete application
+export async function deleteApplicationAction(
+  applicationId: string,
+  redirectPath: string = "/admin/intern-application"
+) {
+  const result = await deleteApplication(applicationId);
+
+  if (result.success) {
+    revalidatePath("/admin/intern-application");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+//  Update AI analysis
+export async function updateApplicationAIAnalysisAction(
+  applicationId: string,
+  aiAnalysis: any,
+  overallScore: number,
+  redirectPath: string = "/admin/intern-application"
+) {
+  const result = await updateApplicationAIAnalysis(
+    applicationId,
+    aiAnalysis,
+    overallScore
+  );
+
+  if (result.success) {
+    revalidatePath("/admin/intern-application");
+    revalidatePath(`/admin/intern-application/${applicationId}`);
+    revalidatePath(redirectPath);
+  }
+
+  return result;
 }

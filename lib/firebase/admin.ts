@@ -6,9 +6,12 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  where,
+  query,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
+import { Application } from "../types";
 
 export async function acceptProject(
   projectId: string,
@@ -359,5 +362,184 @@ export async function updatePaymentStatus(
   } catch (error) {
     console.error("Error updating payment status:", error);
     throw error;
+  }
+}
+
+/**
+ * Get all applications from Firebase
+ */
+export async function getAllApplications(){
+  try {
+    const applicationsRef = collection(db, "applications");
+
+    const querySnapshot = await getDocs(applicationsRef);
+    const applications: Application[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      applications.push({
+        id: doc.id,
+        ...data,
+      } as Application);
+    });
+
+    return applications;
+  } catch (error) {
+    console.error("Error fetching all applications:", error);
+    return []; 
+  }
+}
+
+/**
+ * Get application details by ID
+ */
+export async function getApplicationById(
+  applicationId: string
+) {
+  try {
+    if (!applicationId) {
+      return {
+        success: false,
+        error: "Application ID is required",
+      };
+    }
+
+    const applicationRef = doc(db, "applications", applicationId);
+    const applicationSnap = await getDoc(applicationRef);
+
+     if (applicationSnap.exists()) {
+        const data = applicationSnap.data();
+        return {
+          id: applicationSnap.id,
+          ...data,
+        } as Application;
+      } else {
+        throw new Error("Application not found");
+      }
+    } catch (error) {
+      console.error("Error fetching application:", error);
+      throw error;
+    }
+}
+
+/**
+ * Get applications filtered by status
+ * @param status - Application status to filter by
+ * @returns Promise<Application[]> - Array of filtered applications
+ */
+export async function getApplicationsByStatus(
+  status: "Pending" | "Accepted" | "Rejected" 
+): Promise<Application[]> {
+  try {
+    const applicationsRef = collection(db, "applications");
+    const q = query(
+      applicationsRef, 
+      where("applicationStatus", "==", status),
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const applications: Application[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      applications.push({
+        id: doc.id,
+        ...data,
+      } as Application);
+    });
+
+    return applications;
+  } catch (error) {
+    console.error(`Error fetching applications with status ${status}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Delete application
+ * @param applicationId - The ID of the application to delete
+ * @returns Promise<{ success: boolean; error?: string }>
+ */
+export async function deleteApplication(
+  applicationId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!applicationId) {
+      return {
+        success: false,
+        error: "Application ID is required",
+      };
+    }
+
+    await deleteDoc(doc(db, "applications", applicationId));
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting application:", error);
+    return { success: false, error: "Failed to delete application" };
+  }
+}
+/**
+ * Update application status
+ * @param applicationId - The ID of the application
+ * @param status - The status to update ("Accepted" | "Rejected"  etc.)
+ * @returns Promise<{ success: boolean; error?: string }>
+ */
+export async function updateApplicationStatus(
+  applicationId: string,
+  status: "Accepted" | "Rejected" 
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!applicationId) {
+      return {
+        success: false,
+        error: "Application ID is required",
+      };
+    }
+
+    const applicationRef = doc(db, "applications", applicationId);
+    await updateDoc(applicationRef, {
+      applicationStatus: status,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating application status:", error);
+    return { success: false, error: "Failed to update application status" };
+  }
+}
+
+
+/**
+ * Update AI analysis for application
+ * @param applicationId - The ID of the application
+ * @param aiAnalysis - The AI analysis data
+ * @param overallScore - Overall score from AI analysis
+ * @returns Promise<{ success: boolean; error?: string }>
+ */
+export async function updateApplicationAIAnalysis(
+  applicationId: string,
+  aiAnalysis: any,
+  overallScore: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!applicationId || !aiAnalysis || overallScore === undefined) {
+      return {
+        success: false,
+        error: "Application ID, AI analysis, and overall score are required",
+      };
+    }
+
+    const applicationRef = doc(db, "applications", applicationId);
+    await updateDoc(applicationRef, {
+      aiAnalysis: aiAnalysis,
+      overallScore: overallScore,
+      aiAnalysisStatus: "analyzed",
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating AI analysis:", error);
+    return { success: false, error: "Failed to update AI analysis" };
   }
 }
