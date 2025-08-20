@@ -698,24 +698,21 @@ export default function ApplicationDetailPageClient({
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {applicationDetails?.aiQuestions?.length ? (
-                    // i want only 4 and 2 index question see
-                    applicationDetails.aiQuestions
-                      .filter((_, index) => [2, 4].includes(index))
-                      .map((qa, index) => (
-                        <div key={index} className="">
-                          <h4 className="font-semibold text-sm mb-4 text-indigo-900 flex items-start gap-3">
-                            <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">
-                              {index + 1}
-                            </span>
-                            {qa.question}
-                          </h4>
-                          <div className="ml-9 p-4 bg-white rounded-lg border-2 border-gray-100">
-                            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line break-words">
-                              {safeDisplay(qa.answer)}
-                            </p>
-                          </div>
+                    applicationDetails.aiQuestions.map((qa, index) => (
+                      <div key={index} className="">
+                        <h4 className="font-semibold text-sm mb-4 text-indigo-900 flex items-start gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">
+                            {index + 1}
+                          </span>
+                          {qa.question}
+                        </h4>
+                        <div className="ml-9 p-4 bg-white rounded-lg border-2 border-gray-100">
+                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line break-words">
+                            {safeDisplay(qa.answer)}
+                          </p>
                         </div>
-                      ))
+                      </div>
+                    ))
                   ) : (
                     <p className="text-center text-gray-500 py-8">
                       No interview responses available
