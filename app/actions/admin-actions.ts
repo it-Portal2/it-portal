@@ -15,10 +15,12 @@ import {
   rejectProject,
   restoreProject,
   savePaymentDetails,
-  updateApplicationAIAnalysis,
   updateApplicationStatus,
   updatePaymentDetails,
   updatePaymentStatus,
+  updateApplicationOriginality,
+  updateApplicationCorrectness,
+  updateApplicationAIAnalysis,
 } from "@/lib/firebase/admin";
 
 export async function acceptProjectAction(
@@ -311,16 +313,52 @@ export async function deleteApplicationAction(
   return result;
 }
 
-//  Update AI analysis
+// Originality update action
+export async function updateApplicationOriginalityAction(
+  applicationId: string,
+  originalityScores: any,
+  redirectPath: string = "/admin/intern-application"
+) {
+  const result = await updateApplicationOriginality(applicationId, originalityScores);
+
+  if (result.success) {
+    revalidatePath("/admin/intern-application");
+    revalidatePath(`/admin/intern-application/${applicationId}`);
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+// Correctness update action
+export async function updateApplicationCorrectnessAction(
+  applicationId: string,
+  correctnessScores: any,
+  redirectPath: string = "/admin/intern-application"
+) {
+  const result = await updateApplicationCorrectness(applicationId, correctnessScores);
+
+  if (result.success) {
+    revalidatePath("/admin/intern-application");
+    revalidatePath(`/admin/intern-application/${applicationId}`);
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+// Holistic final assessment action
 export async function updateApplicationAIAnalysisAction(
   applicationId: string,
-  aiAnalysis: any,
+  overallVerdict: any, // AIVerdict type
+  aiRecommendation: string,
   overallScore: number,
   redirectPath: string = "/admin/intern-application"
 ) {
   const result = await updateApplicationAIAnalysis(
     applicationId,
-    aiAnalysis,
+    overallVerdict,
+    aiRecommendation,
     overallScore
   );
 
@@ -332,3 +370,4 @@ export async function updateApplicationAIAnalysisAction(
 
   return result;
 }
+

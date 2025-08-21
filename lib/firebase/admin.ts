@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
-import { Application } from "../types";
+import { AIAnalysis, AIVerdict, Application, CorrectnessScore, OriginalityScore } from "../types";
 
 export async function acceptProject(
   projectId: string,
@@ -517,22 +517,76 @@ export async function updateApplicationStatus(
  * @param overallScore - Overall score from AI analysis
  * @returns Promise<{ success: boolean; error?: string }>
  */
-export async function updateApplicationAIAnalysis(
+
+
+export async function updateApplicationOriginality(
   applicationId: string,
-  aiAnalysis: any,
-  overallScore: number
+  originalityScores: OriginalityScore[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!applicationId || !aiAnalysis || overallScore === undefined) {
+    if (!applicationId || !originalityScores) {
       return {
         success: false,
-        error: "Application ID, AI analysis, and overall score are required",
+        error: "Application ID and originality scores are required",
       };
     }
 
     const applicationRef = doc(db, "applications", applicationId);
     await updateDoc(applicationRef, {
-      aiAnalysis: aiAnalysis,
+      "aiAnalysis.originalityScores": originalityScores,
+      aiAnalysisStatus: "originality-complete",
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating originality scores:", error);
+    return { success: false, error: "Failed to update originality scores" };
+  }
+}
+
+export async function updateApplicationCorrectness(
+  applicationId: string,
+  correctnessScores: CorrectnessScore[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!applicationId || !correctnessScores) {
+      return {
+        success: false,
+        error: "Application ID and correctness scores are required",
+      };
+    }
+
+    const applicationRef = doc(db, "applications", applicationId);
+    await updateDoc(applicationRef, {
+      "aiAnalysis.correctnessScores": correctnessScores,
+      aiAnalysisStatus: "correctness-complete",
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating correctness scores:", error);
+    return { success: false, error: "Failed to update correctness scores" };
+  }
+}
+
+export async function updateApplicationAIAnalysis(
+  applicationId: string,
+  overallVerdict: AIVerdict,
+  aiRecommendation: string,
+  overallScore: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!applicationId || !overallVerdict || !aiRecommendation || overallScore === undefined) {
+      return {
+        success: false,
+        error: "Application ID, verdict, recommendation, and overall score are required",
+      };
+    }
+
+    const applicationRef = doc(db, "applications", applicationId);
+    await updateDoc(applicationRef, {
+      "aiAnalysis.overallVerdict": overallVerdict,
+      "aiAnalysis.aiRecommendation": aiRecommendation,
       overallScore: overallScore,
       aiAnalysisStatus: "analyzed",
     });
@@ -543,3 +597,4 @@ export async function updateApplicationAIAnalysis(
     return { success: false, error: "Failed to update AI analysis" };
   }
 }
+

@@ -127,7 +127,15 @@ export interface CorrectnessScore {
   reasoning: string;
 }
 export type ApplicationStatus = "Pending" | "Accepted" | "Rejected";
-export type AIAnalysisStatus = "not-analyzed" | "analyzing" | "analyzed";
+export type AIAnalysisStatus =
+  | "not-analyzed"
+  | "originality-analyzing"
+  | "originality-complete"
+  | "correctness-analyzing"
+  | "correctness-complete"
+  | "holistic-analyzing"
+  | "analyzed";
+
 export type AIVerdict = "Highly Recommended" | "Recommended" | "Not Recommended" | "Requires Review";
 
 export interface AIAnalysis {
