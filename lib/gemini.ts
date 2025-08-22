@@ -10,7 +10,6 @@ import {
   ClientTask,
   CorrectnessScore,
   OriginalityScore,
-  ResumeAnalysis,
 } from "./types";
 import {
   extractQuestionTypeFromId,
@@ -66,7 +65,7 @@ const MAX_EXECUTION_TIME = 55000; // 55s total limit (increased for generous tim
 const FIRST_TIMEOUT = 25000; // 25s for first attempt (generous start)
 const SECOND_TIMEOUT = 30000; // 30s for second attempt (more generous)
 const FINAL_TIMEOUT = 40000; // 40s for final attempt (maximum patience)
-
+const DEFAULT_ERROR_MESSAGE = "An unexpected error occurred";
 // Progressive timeout strategy array
 const TIMEOUT_STRATEGY = [FIRST_TIMEOUT, SECOND_TIMEOUT, FINAL_TIMEOUT];
 
