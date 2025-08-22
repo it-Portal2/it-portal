@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
-import { AIAnalysis, AIVerdict, Application, CorrectnessScore, OriginalityScore } from "../types";
+import {  Application, CorrectnessScore, OriginalityScore } from "../types";
 
 export async function acceptProject(
   projectId: string,
@@ -569,24 +569,58 @@ export async function updateApplicationCorrectness(
   }
 }
 
+// export async function updateApplicationAIAnalysis(
+//   applicationId: string,
+//   overallVerdict: AIVerdict,
+//   aiRecommendation: string,
+//   overallScore: number
+// ): Promise<{ success: boolean; error?: string }> {
+//   try {
+//     if (!applicationId || !overallVerdict || !aiRecommendation || overallScore === undefined) {
+//       return {
+//         success: false,
+//         error: "Application ID, verdict, recommendation, and overall score are required",
+//       };
+//     }
+
+//     const applicationRef = doc(db, "applications", applicationId);
+//     await updateDoc(applicationRef, {
+//       "aiAnalysis.overallVerdict": overallVerdict,
+//       "aiAnalysis.aiRecommendation": aiRecommendation,
+//       overallScore: overallScore,
+//       aiAnalysisStatus: "analyzed",
+//     });
+
+//     return { success: true };
+//   } catch (error) {
+//     console.error("Error updating AI analysis:", error);
+//     return { success: false, error: "Failed to update AI analysis" };
+//   }
+// }
+
+/**
+ * Update AI analysis for application
+ * @param applicationId - The ID of the application
+ * @param aiAnalysis - The AI analysis data
+ * @param overallScore - Overall score from AI analysis
+ * @returns Promise<{ success: boolean; error?: string }>
+ */
 export async function updateApplicationAIAnalysis(
   applicationId: string,
-  overallVerdict: AIVerdict,
-  aiRecommendation: string,
+  aiAnalysis: any,
   overallScore: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!applicationId || !overallVerdict || !aiRecommendation || overallScore === undefined) {
+    if (!applicationId || !aiAnalysis || overallScore === undefined) {
       return {
         success: false,
-        error: "Application ID, verdict, recommendation, and overall score are required",
+        error: "Application ID, AI analysis, and overall score are required",
       };
     }
 
     const applicationRef = doc(db, "applications", applicationId);
     await updateDoc(applicationRef, {
-      "aiAnalysis.overallVerdict": overallVerdict,
-      "aiAnalysis.aiRecommendation": aiRecommendation,
+      aiAnalysis: aiAnalysis,
       overallScore: overallScore,
       aiAnalysisStatus: "analyzed",
     });
@@ -597,4 +631,3 @@ export async function updateApplicationAIAnalysis(
     return { success: false, error: "Failed to update AI analysis" };
   }
 }
-

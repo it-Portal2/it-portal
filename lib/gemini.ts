@@ -1,3 +1,5 @@
+
+
 "use server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
@@ -10,69 +12,547 @@ import {
   OriginalityScore,
   ResumeAnalysis,
 } from "./types";
+import {
+  extractQuestionTypeFromId,
+  validateQuestionStructure,
+} from "./analysis-utils"; // Import utilities
 
-// Type definitions
+// ===============================
+// Interfaces
+// ===============================
+
 interface APIError extends Error {
   status?: number;
   headers?: Record<string, string>;
 }
 
-// Constants
-const MODEL_NAME = "gemini-2.5-flash";
-const DEFAULT_ERROR_MESSAGE = "An unexpected error occurred";
+interface HolisticAssessmentResult {
+  overallScore: number; // 0.0 - 10.0
+  verdict: "recommend" | "proceed-with-caution" | "not-recommended";
+  resumeAlignmentScore: number; // 0 - 10
+  rationale: string; // comprehensive reasoning
+}
 
-// API keys configuration
+interface QuestionAnalysisResult {
+  questionId: string;
+  question: string;
+  answer: string;
+  questionType: "technical" | "behavioral" | "scenario" | "leadership";
+  originalityScore: number; // 0 - 100
+  originalityReasoning: string;
+  correctnessScore: number; // 0.0 - 10.0
+  correctnessReasoning: string;
+  classification:
+    | "human-written"
+    | "potentially-copied"
+    | "likely-ai-generated";
+}
+
+interface FullAIAnalysisResult {
+  candidateId: string;
+  questionAnalyses: QuestionAnalysisResult[];
+  holisticAssessment: HolisticAssessmentResult;
+  timestamp: string;
+  analysisVersion: number;
+}
+
+// ===============================
+// Enhanced Constants with Generous Timeout Strategy
+// ===============================
+const MODEL_NAME = "gemini-2.0-flash";
+const MAX_EXECUTION_TIME = 55000; // 55s total limit (increased for generous timeouts)
+
+// Progressive timeout strategy - start generous, then increase
+const FIRST_TIMEOUT = 25000; // 25s for first attempt (generous start)
+const SECOND_TIMEOUT = 30000; // 30s for second attempt (more generous)
+const FINAL_TIMEOUT = 40000; // 40s for final attempt (maximum patience)
+
+// Progressive timeout strategy array
+const TIMEOUT_STRATEGY = [FIRST_TIMEOUT, SECOND_TIMEOUT, FINAL_TIMEOUT];
+
+// API keys with health tracking
 const API_KEYS = [
   process.env.GOOGLE_API_KEY_1 || "",
   process.env.GOOGLE_API_KEY_2 || "",
   process.env.GOOGLE_API_KEY_3 || "",
 ].filter((key) => key !== "");
 
-/**
- * Attempts to execute an AI generation function with multiple API keys
- * @param generateFunction - The function to execute with a specific API key
- * @returns The result of the successful function execution
- */
-async function tryWithMultipleKeys<T>(
+// ===============================
+// Enhanced Timeout Wrapper with Better Error Context
+// ===============================
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  context: string = "Operation"
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(
+      () => reject(new Error(`${context} timed out after ${timeoutMs}ms`)),
+      timeoutMs
+    );
+  });
+  return Promise.race([promise, timeoutPromise]);
+}
+
+// ===============================
+// Smart Retry Strategy with Progressive Generous Timeouts
+// ===============================
+async function tryWithMultipleKeysOptimized<T>(
   generateFunction: (genAI: GoogleGenerativeAI, model: any) => Promise<T>
 ): Promise<T> {
   if (API_KEYS.length === 0) {
     throw new Error("No Google API keys are configured");
   }
 
+  const startTime = Date.now();
   let lastError: Error | null = null;
+  const attemptResults: Array<{
+    keyIndex: number;
+    error: string;
+    duration: number;
+    timeout: number;
+  }> = [];
 
-  // Try each API key until one works
-  for (const apiKey of API_KEYS) {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-      return await generateFunction(genAI, model);
-    } catch (error) {
+  for (let i = 0; i < API_KEYS.length; i++) {
+    const attemptStartTime = Date.now();
+    const timeElapsed = attemptStartTime - startTime;
+
+    // Get timeout for this attempt (25s -> 30s -> 40s)
+    const timeoutForAttempt = TIMEOUT_STRATEGY[i] || FINAL_TIMEOUT;
+
+    // Check if we have enough time for this attempt (with 3s buffer)
+    if (timeElapsed > MAX_EXECUTION_TIME - timeoutForAttempt - 3000) {
       console.warn(
-        `API key attempt failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
+        `⏰ Skipping API key ${
+          i + 1
+        } due to insufficient time. Elapsed: ${timeElapsed}ms, Need: ${timeoutForAttempt}ms`
       );
+      break;
+    }
+
+    const apiKey = API_KEYS[i];
+
+    try {
+      console.log(
+        `🔄 Attempting API key ${i + 1}/${
+          API_KEYS.length
+        } (generous timeout: ${timeoutForAttempt}ms, elapsed: ${timeElapsed}ms)`
+      );
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: MODEL_NAME,
+        generationConfig: {
+          temperature: 0.1,
+          // Keep consistent token count since we're using generous timeouts
+          maxOutputTokens: 5120,
+        },
+      });
+
+      const result = await withTimeout(
+        generateFunction(genAI, model),
+        timeoutForAttempt,
+        `API key ${i + 1} (${timeoutForAttempt}ms timeout)`
+      );
+
+      const totalTime = Date.now() - startTime;
+      console.log(
+        `✅ Success with API key ${i + 1} in ${
+          Date.now() - attemptStartTime
+        }ms (total: ${totalTime}ms)`
+      );
+      return result;
+    } catch (error) {
+      const attemptDuration = Date.now() - attemptStartTime;
+      const totalElapsed = Date.now() - startTime;
+
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      attemptResults.push({
+        keyIndex: i + 1,
+        error: errorMessage,
+        duration: attemptDuration,
+        timeout: timeoutForAttempt,
+      });
+
+      console.warn(
+        `❌ API key ${
+          i + 1
+        } failed in ${attemptDuration}ms (timeout: ${timeoutForAttempt}ms, total: ${totalElapsed}ms): ${errorMessage}`
+      );
+
       lastError = error instanceof Error ? error : new Error(String(error));
-      // Continue to the next API key
+
+      // Quick decision: if this was a timeout and we have more keys, continue immediately
+      if (errorMessage.includes("timed out") && i < API_KEYS.length - 1) {
+        console.log(`🔄 Moving to next API key immediately due to timeout...`);
+        continue;
+      }
+
+      // For non-timeout errors, add a small delay before retry
+      if (i < API_KEYS.length - 1) {
+        console.log(`⏳ Waiting 1s before trying next API key...`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
   }
 
-  // If we get here, all API keys failed
-  throw lastError || new Error("All API keys failed without specific errors");
+  // Enhanced error context with timeout information
+  const summaryError = `All ${
+    API_KEYS.length
+  } API keys failed. Attempts: ${attemptResults
+    .map(
+      (r) =>
+        `Key${r.keyIndex}(${r.duration}ms/${r.timeout}ms: ${
+          r.error.includes("timed out") ? "TIMEOUT" : r.error.split(" ")[0]
+        })`
+    )
+    .join(", ")}`;
+
+  console.error(`💥 Final failure summary: ${summaryError}`);
+  throw lastError || new Error(summaryError);
 }
 
-/**
- * Generates structured project documentation using Google's Generative AI.
- * @param textContent - Raw project details provided by the client.
- * @returns Generated developer-friendly documentation in HTML format.
- */
+// ===============================
+// Enhanced Main Analysis Function
+// ===============================
+export async function analyzeCompleteApplicationOptimized(
+  candidateData: Application
+): Promise<{
+  aiAnalysis: AIAnalysis;
+  overallScore: number;
+}> {
+  const analysisStartTime = Date.now();
+
+  try {
+    // Pre-validation
+    if (!candidateData.aiQuestions || candidateData.aiQuestions.length === 0) {
+      throw new Error("No questions available for analysis");
+    }
+
+    if (!validateQuestionStructure(candidateData.aiQuestions)) {
+      throw new Error("Invalid question format detected");
+    }
+
+    console.log(
+      `🚀 Starting AI analysis for candidate: ${
+        candidateData.fullName || "Unknown"
+      }`
+    );
+    console.log(
+      `📊 Analyzing ${candidateData.aiQuestions.length} Q&A pairs with generous timeouts (${FIRST_TIMEOUT}ms → ${SECOND_TIMEOUT}ms → ${FINAL_TIMEOUT}ms)`
+    );
+
+    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
+      // Parse questions with type detection from ID
+      const questionAnswerPairs =
+        candidateData.aiQuestions
+          ?.map((qa, index) => {
+            const questionType = extractQuestionTypeFromId(
+              qa.id || `q${index + 1}`
+            );
+            return `${qa.id} [${questionType.toUpperCase()}]: ${
+              qa.question
+            }\nANSWER: ${qa.answer}`;
+          })
+          .join("\n\n") || "No questions answered";
+
+      // Count questions by type for context
+      const questionCounts =
+        candidateData.aiQuestions?.reduce((acc, qa) => {
+          const type = extractQuestionTypeFromId(qa.id || "");
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>) || {};
+
+      // Your existing optimized prompt (unchanged)
+      // Your existing optimized prompt with word limits
+      const OPTIMIZED_PROMPT = `Evaluate this cybersecurity candidate. Return ONLY valid JSON.
+
+CANDIDATE PROFILE:
+Education: ${candidateData.resumeAnalysis?.education || "N/A"}
+Experience: ${candidateData.resumeAnalysis?.experience || "N/A"}  
+Skills: ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
+
+QUESTION BREAKDOWN: ${JSON.stringify(questionCounts)}
+
+QUESTIONS & ANSWERS:
+${questionAnswerPairs}
+
+EVALUATION FRAMEWORK:
+
+TECHNICAL (${questionCounts.technical || 0} questions):
+- Correctness: Technical accuracy, depth of knowledge, practical understanding
+- Focus: Vulnerability assessment, penetration testing, network security tools
+
+BEHAVIORAL (${questionCounts.behavioral || 0} questions):  
+- Correctness: Authenticity, specific examples, learning approach, self-awareness
+- Focus: Personal experiences, learning methods, time management
+
+SCENARIO (${questionCounts.scenario || 0} questions):
+- Correctness: Problem-solving logic, practical solutions, structured approach
+- Focus: Client communication, security implementation, risk assessment
+
+LEADERSHIP (${questionCounts.leadership || 0} questions):
+- Correctness: Team management, continuous learning, ethical guidelines
+- Focus: Staying current, leading teams, maintaining standards
+
+SCORING RULES:
+Originality (0-100):
+- 90-100: Highly personal, specific examples, unique insights
+- 70-89: Mostly original with some common elements  
+- 50-69: Mix of personal and generic content
+- 30-49: Mostly templated/common responses
+- 0-29: Copied/AI-generated/inappropriate
+
+Correctness (0.0-10.0) - Type-specific:
+- Technical: Accuracy of technical concepts and tools
+- Behavioral: Quality of examples and self-reflection
+- Scenario: Effectiveness of proposed solutions  
+- Leadership: Strength of management and learning approaches
+
+Classification:
+- human-written: ≥70 originality, personal voice
+- potentially-copied: 30-69 originality, templated feel
+- likely-ai-generated: <30 originality, generic/AI patterns
+
+OVERALL ASSESSMENT:
+- recommend: ≥8.0 (strong technical + good behavioral/leadership)
+- proceed-with-caution: 6.0-7.9 (decent but has concerns)
+- not-recommended: <6.0 (significant weaknesses)
+
+RESPONSE REQUIREMENTS:
+- originalityReasoning: Maximum 60 words, focus on specific indicators
+- correctnessReasoning: Exactly 60 words, detailed type-specific assessment
+- rationale: Maximum 100 words, detailed overall evaluation
+
+JSON OUTPUT:
+{
+  "questionAnalyses": [
+    {
+      "questionId": "question_id",
+      "question": "question_text",
+      "answer": "answer_text",
+      "questionType": "technical/behavioral/scenario/leadership",
+      "originalityScore": 0-100,
+      "originalityReasoning": "brief specific analysis (max 60 words)",
+      "correctnessScore": 0.0-10.0,
+      "correctnessReasoning": "detailed type-specific assessment (exactly 60 words)",
+      "classification": "human-written/potentially-copied/likely-ai-generated"
+    }
+  ],
+  "holisticAssessment": {
+    "overallScore": 0.0-10.0,
+    "verdict": "recommend/proceed-with-caution/not-recommended",
+    "resumeAlignmentScore": 0-10,
+    "rationale": "concise assessment focusing on technical competency and overall fit (max 100 words)"
+  }
+}`;
+
+      const result = await model.generateContent(OPTIMIZED_PROMPT);
+      const response = await result.response.text();
+
+      // Enhanced JSON parsing with better error recovery
+      const cleanedResponse = cleanJsonResponse(response);
+      let analysisResult: any;
+
+      try {
+        analysisResult = JSON.parse(cleanedResponse);
+
+        if (
+          !analysisResult.questionAnalyses ||
+          !analysisResult.holisticAssessment
+        ) {
+          throw new Error("Missing required analysis sections");
+        }
+      } catch (parseError) {
+        console.error("🔧 JSON Parse Error - attempting recovery:", parseError);
+        console.error(
+          "📝 Response preview:",
+          cleanedResponse.substring(0, 500)
+        );
+
+        // Advanced JSON recovery techniques
+        const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            // Try fixing common JSON issues
+            let fixedJson = jsonMatch[0]
+              .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
+              .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":') // Quote keys
+              .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g, ': "$1"$2'); // Quote unquoted string values
+
+            analysisResult = JSON.parse(fixedJson);
+          } catch (recoveryError) {
+            throw new Error(
+              `JSON parsing failed even after recovery attempts: ${recoveryError}`
+            );
+          }
+        } else {
+          throw new Error("No valid JSON structure found in AI response");
+        }
+      }
+
+      // Validate and clean the analysis result
+      if (
+        analysisResult.questionAnalyses.length !==
+        (candidateData.aiQuestions?.length || 0)
+      ) {
+        console.warn(
+          `⚠️  Expected ${candidateData.aiQuestions?.length} analyses, got ${analysisResult.questionAnalyses.length}`
+        );
+      }
+
+      // Map scores efficiently with validation
+      const originalityScores: OriginalityScore[] =
+        analysisResult.questionAnalyses.map((analysis: any, index: number) => ({
+          question: index + 1,
+          score: Math.max(0, Math.min(100, analysis.originalityScore || 0)),
+          reasoning: analysis.originalityReasoning || "Analysis not available",
+        }));
+
+      const correctnessScores: CorrectnessScore[] =
+        analysisResult.questionAnalyses.map((analysis: any, index: number) => ({
+          question: index + 1,
+          score: Math.max(0, Math.min(10, analysis.correctnessScore || 0)),
+          reasoning: analysis.correctnessReasoning || "Analysis not available",
+        }));
+
+      // Efficient verdict mapping with score validation
+      const score = Math.max(
+        0,
+        Math.min(10, analysisResult.holisticAssessment.overallScore || 0)
+      );
+      let overallVerdict: AIVerdict;
+
+      if (score >= 8.5) {
+        overallVerdict = "Highly Recommended";
+      } else if (score >= 8.0) {
+        overallVerdict = "Recommended";
+      } else if (score >= 6.0) {
+        overallVerdict = "Requires Review";
+      } else {
+        overallVerdict = "Not Recommended";
+      }
+
+      const aiAnalysis: AIAnalysis = {
+        originalityScores,
+        correctnessScores,
+        overallVerdict,
+        aiRecommendation:
+          analysisResult.holisticAssessment.rationale ||
+          "Analysis completed successfully",
+      };
+
+      const totalAnalysisTime = Date.now() - analysisStartTime;
+      console.log(
+        `✅ Analysis completed successfully in ${totalAnalysisTime}ms`
+      );
+
+      return {
+        aiAnalysis,
+        overallScore: score,
+      };
+    });
+  } catch (error) {
+    const totalTime = Date.now() - analysisStartTime;
+    console.error(
+      `❌ Error analyzing complete application after ${totalTime}ms:`,
+      error
+    );
+
+    // Enhanced error categorization and user-friendly messages
+    if (error instanceof Error) {
+      const errorMessage = error.message.toLowerCase();
+
+      if (errorMessage.includes("timed out")) {
+        throw new Error(
+          "⏰ Analysis timed out despite generous timeouts - AI service is heavily loaded. Please wait 60 seconds and try again."
+        );
+      } else if (
+        errorMessage.includes("json") ||
+        errorMessage.includes("parse")
+      ) {
+        throw new Error(
+          "🔧 AI response processing failed. The analysis was interrupted - please retry."
+        );
+      } else if (
+        errorMessage.includes("api key") ||
+        (errorMessage.includes("all") && errorMessage.includes("failed"))
+      ) {
+        throw new Error(
+          "🔑 All AI service endpoints temporarily unavailable. Please try again in 30-60 seconds."
+        );
+      } else if (
+        errorMessage.includes("no questions") ||
+        errorMessage.includes("invalid")
+      ) {
+        throw new Error(
+          "📝 Invalid application data. Please check the candidate's responses."
+        );
+      } else if (errorMessage.includes("no google api keys")) {
+        throw new Error(
+          "🔧 AI analysis service is not properly configured. Please contact support."
+        );
+      }
+    }
+
+    // Fallback error
+    throw new Error(
+      error instanceof Error
+        ? `Analysis failed: ${error.message}`
+        : "Analysis failed due to an unexpected error"
+    );
+  }
+}
+// ===============================
+// Optimized JSON Cleaning
+// ===============================
+function cleanJsonResponse(response: string): string {
+  // Remove markdown and code blocks efficiently
+  let cleaned = response
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .replace(/`+/g, "")
+    .trim();
+
+  // Extract JSON object quickly
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  // Remove trailing commas and fix common JSON issues
+  cleaned = cleaned
+    .replace(/,(\s*[}\]])/g, "$1")
+    .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Quote unquoted keys if needed
+
+  return cleaned;
+}
+
+// ===============================
+// Quick Analysis Function - SERVER ACTION
+// ===============================
+export async function quickAnalyze(
+  candidateData: Application
+): Promise<AIVerdict> {
+  try {
+    const result = await analyzeCompleteApplicationOptimized(candidateData);
+    return result.aiAnalysis.overallVerdict;
+  } catch (error) {
+    console.error("Quick analysis failed:", error);
+    return "Requires Review";
+  }
+}
+
+// Keep your existing functions for documentation generation...
 export async function generateImprovedDocumentationFromGeminiAI(
   textContent: string
 ): Promise<any> {
   try {
-    return await tryWithMultipleKeys(async (genAI, model) => {
+    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
       const PROMPT = `
       🔹 **You are an expert Project Architect & Senior Developer.**
       Your task is to **analyze, improve, and structure** the client's developer document into a **clear, comprehensive, and developer-friendly format in fully structured HTML.** Additionally, you will create a detailed one-month project plan, breaking down tasks, targets, and achievements for each week.
@@ -221,13 +701,8 @@ export async function generateImprovedDocumentationFromGeminiAI(
       const response = await result.response.text();
 
       // Remove any unnecessary AI-generated intro
-      // Remove the ```html at the start and ``` at the end
       let cleanedResponse = response.replace(/^```html\s*|\s*```$/g, "").trim();
-
-      // Remove patterns like `*?\n\n##` and replace them with `##`
       cleanedResponse = cleanedResponse.replace(/\*?\n\n##/g, "##");
-
-      // Further processing to remove body styling if it's still included
       cleanedResponse = cleanedResponse.replace(/body\s*{[^}]*}/g, "");
 
       return cleanedResponse;
@@ -261,7 +736,8 @@ export async function generateDocumentationFromGeminiAI(
   developmentAreas: string[]
 ): Promise<any> {
   try {
-    return await tryWithMultipleKeys(async (genAI, model) => {
+    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
+      // Your existing prompt for documentation generation
       const PROMPT = `
         🔹 **You are an expert Project Architect & Senior Developer.**  
         Your task is to **analyze, improve, and structure** the client's given project name, project overview, and development areas into a **clear, comprehensive, and developer-friendly format in fully structured HTML.**  
@@ -434,14 +910,8 @@ export async function generateDocumentationFromGeminiAI(
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
-      // Remove any unnecessary AI-generated intro
-      // Remove the ```html at the start and ``` at the end
       let cleanedResponse = response.replace(/^```html\s*|\s*```$/g, "").trim();
-
-      // Remove patterns like `*?\n\n##` and replace them with `##`
       cleanedResponse = cleanedResponse.replace(/\*?\n\n##/g, "##");
-
-      // Further processing to remove body styling if it's still included
       cleanedResponse = cleanedResponse.replace(/body\s*{[^}]*}/g, "");
 
       return cleanedResponse;
@@ -473,7 +943,7 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
   textContent: string
 ): Promise<ClientTask[]> {
   try {
-    return await tryWithMultipleKeys(async (genAI, model) => {
+    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
       const PROMPT = `
         🔹 **You are an expert Project Architect & Senior Developer.**
         Your task is to analyze the provided developer documentation text and generate a concise, actionable list of tasks for a developer to implement the project. The tasks should be specific, clear, and focused on development work.
@@ -514,13 +984,11 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
-      // Clean and parse the response
       const cleanedResponse = response
         .replace(/^```json\s*|\s*```$/g, "")
         .trim();
       const tasks: ClientTask[] = JSON.parse(cleanedResponse);
 
-      // Validate the parsed tasks
       if (
         !Array.isArray(tasks) ||
         tasks.some((t) => !t.id || !t.name || typeof t.completed !== "boolean")
@@ -536,434 +1004,6 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
       `Task generation failed: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
-    );
-  }
-}
-// Additional types for AI analysis
-
-interface HolisticAssessmentResult {
-  overallScore: number;
-  verdict: "recommend" | "proceed-with-caution" | "not-recommended";
-  resumeAlignmentScore: number;
-  strengths: string[];
-  weaknesses: string[];
-  rationale: string;
-}
-
-interface HolisticAssessmentResult {
-  overallScore: number;
-  verdict: "recommend" | "proceed-with-caution" | "not-recommended";
-  resumeAlignmentScore: number;
-  strengths: string[];
-  weaknesses: string[];
-  rationale: string;
-}
-// Additional type imports for the new functions
-interface OriginalityAnalysisResult {
-  classification:
-    | "human-written"
-    | "potentially-copied"
-    | "likely-ai-generated";
-  originalityScore: number;
-  reasoning: string;
-}
-
-interface CorrectnessAnalysisResult {
-  correctnessScore: number;
-  reasoning: string;
-}
-
-interface HolisticAssessmentResult {
-  overallScore: number;
-  verdict: "recommend" | "proceed-with-caution" | "not-recommended";
-  rationale: string;
-}
-
-
-// ✅ ROBUST JSON CLEANING FUNCTION
-function cleanJsonResponse(response: string): string {
-  // Remove any markdown code blocks
-  let cleaned = response.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
-
-  // Remove any trailing backticks
-  cleaned = cleaned.replace(/`+$/g, "");
-
-  // Remove any leading/trailing whitespace
-  cleaned = cleaned.trim();
-
-  // If response starts with text before JSON, try to extract JSON
-  const jsonStart = cleaned.indexOf("{");
-  const jsonEnd = cleaned.lastIndexOf("}");
-
-  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-    cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
-  }
-
-  return cleaned;
-}
-
-
-// Optimized Strict Originality Analysis Prompt
-const ORIGINALITY_PROMPT = `
-You are an expert plagiarism detector and AI content classifier. Evaluate the following Q&A pair for originality and human authenticity with STRICT standards.
-
-Question: {question}
-Answer: {answer}
-
-EVALUATION CRITERIA:
-
-1. CONTENT QUALITY:
-   - Relevant, coherent, professional?
-   - Any gibberish, random text, or abusive language?
-   - Too short/vague (e.g., "I don't know", "yes/no")?
-
-2. PLAGIARISM CHECK:
-   - Exact matches with tutorials/docs?
-   - Paraphrased or templated content (Stack Overflow, guides)?
-   - Repetitive boilerplate or style inconsistencies?
-
-3. AI-GENERATION SIGNS:
-   - Overly polished grammar/structure.
-   - Generic, non-specific examples.
-   - No personal context or challenges.
-   - AI filler phrases: "In conclusion", "Furthermore", "It's important to note".
-
-4. HUMAN MARKERS:
-   - Specific projects or authentic examples.
-   - Natural flow with minor imperfections.
-   - Unique reasoning/problem-solving steps.
-   - Real learning experiences.
-
-SCORING SCALE:
-- 90–100: Strongly original, personal, authentic.
-- 70–89: Mostly original, some generic parts.
-- 50–69: Mix of original + templated/copied.
-- 30–49: Likely copied, little originality.
-- 10–29: Clearly AI/plagiarized, no authenticity.
-- 0–9: Gibberish, abusive, irrelevant.
-
-CLASSIFICATION:
-- "human-written": Score ≥70, authentic human voice.
-- "potentially-copied": Score 30–69, templated or familiar phrasing.
-- "likely-ai-generated": Score 0–29, or gibberish/irrelevant.
-
-OUTPUT JSON ONLY:
-{
-  "classification": "[human-written/potentially-copied/likely-ai-generated]",
-  "originalityScore": [0-100],
-  "reasoning": "EXPLANATION (≤80 words): Specific evidence: copied phrases if any, AI style markers, quality/authenticity checks, and justification of score also if you find source add source."
-}
-`;
-
-// Strict Correctness Analysis Prompt
-
-const CORRECTNESS_PROMPT = `
-You are an expert interviewer and evaluator with senior-level expertise across technical, behavioral, scenario-based, and leadership assessments. 
-Evaluate the given answer STRICTLY by the type of question.
-
-Question: {question}
-Answer: {answer}
-
-QUESTION TYPES & FOCUS:
-- Technical: Correctness, accuracy, best practices, implementation depth.
-- Behavioral: Authenticity, STAR structure (Situation, Task, Action, Result), self-awareness.
-- Scenario: Reasoning clarity, problem-solving, trade-offs, feasibility.
-- Leadership: Vision, team management, empathy, accountability, decision impact.
-
-EVALUATION CRITERIA:
-
-1. CONTENT VALIDITY: Is it relevant, meaningful, non-gibberish?
-2. ACCURACY & RELEVANCE: Correctness depends on type (tech/behavioral/scenario/leadership).
-3. COMPLETENESS: Covers key aspects with enough detail?
-4. PRACTICALITY & AUTHENTICITY: Realistic, experience-driven, not generic.
-5. COMMUNICATION: Clear, structured, professional, logical flow. STAR visible when applicable.
-
-SCORING (STRICT):
-- 9.0–10.0: Exceptional, comprehensive, insightful.
-- 8.0–8.9: Excellent, strong, minor gaps.
-- 7.0–7.9: Good, adequate, lacks some depth.
-- 6.0–6.9: Acceptable, partial coverage.
-- 4.0–5.9: Below average, weak or generic.
-- 2.0–3.9: Poor, irrelevant or flawed.
-- 0.0–1.9: Unacceptable, gibberish or inappropriate.
-
-PENALTIES:
-- Gibberish/random: 0.0
-- Abusive: 0.0
-- "I don’t know": max 1.0
-- Irrelevant: max 0.5
-- Major misconceptions: max 3.0
-
-IMPORTANT: Return ONLY the JSON object below. Do NOT use markdown code blocks or backticks.
-OUTPUT FORMAT (JSON ONLY):
-{
-  "correctnessScore": [0.0-10.0],
-  "reasoning": "DETAILED ANALYSIS (≤80 words): Specific evidence tied to the question type. Point out strengths, weaknesses, and justify score."
-}
-`;
-
-//  Comprehensive Holistic Assessment Prompt
-// Optimized Comprehensive Holistic Assessment Prompt
-const HOLISTIC_ASSESSMENT_PROMPT = `
-You are a senior hiring manager with 15+ years of experience. Perform a STRICT holistic evaluation of the candidate across Technical, Behavioral, Scenario-based, and Leadership aspects.
-
-Candidate Resume Summary:
-Education: {education}
-Experience: {experience}
-Skills: {skills}
-Professional Summary: {summary}
-
-Question-Answer Analysis Results:
-{analysisResults}
-
-ASSESSMENT CRITERIA:
-
-1. TECHNICAL COMPETENCY:
-   - Depth, correctness, and real-world application.
-   - Alignment of answers with claimed experience/skills.
-
-2. AUTHENTICITY:
-   - No plagiarism or templated/AI signs.
-   - Consistent personal voice, realistic experiences.
-
-3. BEHAVIORAL & SOFT SKILLS:
-   - Clear communication, STAR usage.
-   - Emotional intelligence, adaptability, confidence.
-
-4. PROBLEM-SOLVING & DECISION-MAKING:
-   - Scenario: structured, logical, creative.
-   - Leadership: vision, accountability, people-focus.
-   - Handles trade-offs and risks.
-
-5. PROFESSIONALISM:
-   - Respectful, clear tone.
-   - Can explain to both technical & non-technical.
-
-6. ROLE FIT:
-   - Skills + mindset vs job needs.
-   - Balance of hard/soft skills.
-   - Growth potential, cultural fit.
-
-SCORING:
-- 9.0–10.0: Exceptional – Strong across all areas
-- 8.0–8.9: Strong – Very good overall, minor gaps
-- 7.0–7.9: Solid – Adequate, some concerns
-- 6.0–6.9: Average – Meets basics, multiple improvement needs
-- 4.0–5.9: Below expectations – Major concerns
-- 2.0–3.9: Poor – Serious red flags
-- 0.0–1.9: Unacceptable – Plagiarism, gibberish, or no relevant skills
-
-VERDICT:
-- "recommend": ≥8.0, authentic, strong technical + soft skills
-- "proceed-with-caution": 6.0–7.9, potential with concerns
-- "not-recommended": ≤5.9, major skill/authenticity/professionalism issues
-
-SPECIAL RULES:
-- Heavy penalty: plagiarism, irrelevant/gibberish answers
-- Resume vs performance must align
-- Multiple weak responses = lack of preparation
-- "I don’t know"/nonsense = red flag
-
-IMPORTANT: Return ONLY the JSON object below. Do NOT use markdown code blocks or backticks:
-
-OUTPUT JSON ONLY:
-{
-  "overallScore": [0.0-10.0],
-  "verdict": "[recommend/proceed-with-caution/not-recommended]",
-  "resumeAlignmentScore": [0-10],
-  "strengths": ["Specific strength 1", "Specific strength 2"],
-  "weaknesses": ["Specific weakness 1", "Specific weakness 2"],
-  "rationale": "COMPREHENSIVE ANALYSIS (≤120 words): Evidence-based explanation: how answers align with resume, technical & soft-skill performance, authenticity check, concerns/positives, and why the final verdict was given."
-}
-`;
-
-// ✅ ANALYSIS FUNCTION 1: ORIGINALITY (Uses API Key 1)
-export async function analyzeOriginality(candidateData: Application): Promise<{
-  originalityScores: OriginalityScore[];
-}> {
-  try {
-    // Use first API key specifically
-    const apiKey = API_KEYS[0];
-    if (!apiKey) {
-      throw new Error("First API key not configured");
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-    const originalityScores: OriginalityScore[] = [];
-
-    if (candidateData.aiQuestions && candidateData.aiQuestions.length > 0) {
-      for (let i = 0; i < candidateData.aiQuestions.length; i++) {
-        const qa = candidateData.aiQuestions[i];
-
-        const prompt = ORIGINALITY_PROMPT.replace(
-          "{question}",
-          qa.question
-        ).replace("{answer}", qa.answer);
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response.text();
-
-        const cleanedResponse = cleanJsonResponse(response);
-        const analysisResult: OriginalityAnalysisResult =
-          JSON.parse(cleanedResponse);
-
-        originalityScores.push({
-          question: i + 1,
-          score: analysisResult.originalityScore,
-          reasoning: analysisResult.reasoning,
-        });
-      }
-    }
-
-    return { originalityScores };
-  } catch (error) {
-    console.error("Error analyzing originality:", error);
-    throw new Error(
-      error instanceof Error
-        ? `Originality analysis failed: ${error.message}`
-        : "Failed to analyze originality"
-    );
-  }
-}
-
-// ✅ ANALYSIS FUNCTION 2: CORRECTNESS (Uses API Key 2)
-export async function analyzeCorrectness(candidateData: Application): Promise<{
-  correctnessScores: CorrectnessScore[];
-}> {
-  try {
-    // Use second API key specifically
-    const apiKey = API_KEYS[1];
-    if (!apiKey) {
-      throw new Error("Second API key not configured");
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-    const correctnessScores: CorrectnessScore[] = [];
-
-    if (candidateData.aiQuestions && candidateData.aiQuestions.length > 0) {
-      for (let i = 0; i < candidateData.aiQuestions.length; i++) {
-        const qa = candidateData.aiQuestions[i];
-
-        const prompt = CORRECTNESS_PROMPT.replace(
-          "{question}",
-          qa.question
-        ).replace("{answer}", qa.answer);
-
-        const result = await model.generateContent(prompt);
-        const response = await result.response.text();
-
-        const cleanedResponse = cleanJsonResponse(response);
-        const analysisResult: CorrectnessAnalysisResult =
-          JSON.parse(cleanedResponse);
-
-        correctnessScores.push({
-          question: i + 1,
-          score: analysisResult.correctnessScore,
-          reasoning: analysisResult.reasoning,
-        });
-      }
-    }
-
-    return { correctnessScores };
-  } catch (error) {
-    console.error("Error analyzing correctness:", error);
-    throw new Error(
-      error instanceof Error
-        ? `Correctness analysis failed: ${error.message}`
-        : "Failed to analyze correctness"
-    );
-  }
-}
-
-// ✅ ANALYSIS FUNCTION 3: HOLISTIC ASSESSMENT (Uses API Key 3)
-export async function analyzeHolistic(
-  candidateData: Application,
-  originalityScores: OriginalityScore[],
-  correctnessScores: CorrectnessScore[]
-): Promise<{
-  overallVerdict: AIVerdict;
-  aiRecommendation: string;
-  overallScore: number;
-}> {
-  try {
-    // Use third API key specifically
-    const apiKey = API_KEYS[2];
-    if (!apiKey) {
-      throw new Error("Third API key not configured");
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-    // Prepare analysis results for the prompt
-    const analysisResults =
-      candidateData.aiQuestions
-        ?.map(
-          (qa, index) =>
-            `Q${index + 1}: ${qa.question}
-Originality: ${originalityScores[index]?.score || 0}/100
-Correctness: ${correctnessScores[index]?.score || 0}/10
-Originality Reasoning: ${originalityScores[index]?.reasoning || "N/A"}
-Correctness Reasoning: ${correctnessScores[index]?.reasoning || "N/A"}`
-        )
-        .join("\n\n") || "No questions analyzed";
-
-    const prompt = HOLISTIC_ASSESSMENT_PROMPT.replace(
-      "{education}",
-      candidateData.resumeAnalysis?.education || "N/A"
-    )
-      .replace(
-        "{experience}",
-        candidateData.resumeAnalysis?.experience || "N/A"
-      )
-      .replace(
-        "{skills}",
-        candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"
-      )
-      .replace("{summary}", candidateData.resumeAnalysis?.summary || "N/A")
-      .replace("{analysisResults}", analysisResults);
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response.text();
-
-    const cleanedResponse = cleanJsonResponse(response);
-    const assessmentResult: HolisticAssessmentResult =
-      JSON.parse(cleanedResponse);
-
-    // Map verdict to AIVerdict type
-    let overallVerdict: AIVerdict;
-    switch (assessmentResult.verdict) {
-      case "recommend":
-        overallVerdict =
-          assessmentResult.overallScore >= 8
-            ? "Highly Recommended"
-            : "Recommended";
-        break;
-      case "proceed-with-caution":
-        overallVerdict = "Requires Review";
-        break;
-      case "not-recommended":
-        overallVerdict = "Not Recommended";
-        break;
-      default:
-        overallVerdict = "Requires Review";
-    }
-
-    return {
-      overallVerdict,
-      aiRecommendation: assessmentResult.rationale,
-      overallScore: assessmentResult.overallScore,
-    };
-  } catch (error) {
-    console.error("Error performing holistic assessment:", error);
-    throw new Error(
-      error instanceof Error
-        ? `Holistic assessment failed: ${error.message}`
-        : "Failed to perform holistic assessment"
     );
   }
 }

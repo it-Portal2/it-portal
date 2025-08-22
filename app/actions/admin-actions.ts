@@ -347,18 +347,39 @@ export async function updateApplicationCorrectnessAction(
   return result;
 }
 
-// Holistic final assessment action
+// // Holistic final assessment action
+// export async function updateApplicationAIAnalysisAction(
+//   applicationId: string,
+//   overallVerdict: any, // AIVerdict type
+//   aiRecommendation: string,
+//   overallScore: number,
+//   redirectPath: string = "/admin/intern-application"
+// ) {
+//   const result = await updateApplicationAIAnalysis(
+//     applicationId,
+//     overallVerdict,
+//     aiRecommendation,
+//     overallScore
+//   );
+
+//   if (result.success) {
+//     revalidatePath("/admin/intern-application");
+//     revalidatePath(`/admin/intern-application/${applicationId}`);
+//     revalidatePath(redirectPath);
+//   }
+
+//   return result;
+// }
+//  Update AI analysis
 export async function updateApplicationAIAnalysisAction(
   applicationId: string,
-  overallVerdict: any, // AIVerdict type
-  aiRecommendation: string,
+  aiAnalysis: any,
   overallScore: number,
   redirectPath: string = "/admin/intern-application"
 ) {
   const result = await updateApplicationAIAnalysis(
     applicationId,
-    overallVerdict,
-    aiRecommendation,
+    aiAnalysis,
     overallScore
   );
 
@@ -370,4 +391,3 @@ export async function updateApplicationAIAnalysisAction(
 
   return result;
 }
-

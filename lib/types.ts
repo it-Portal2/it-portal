@@ -111,6 +111,7 @@ export interface AnalysisResult {
   questions: AIQuestion[];
 }
 export interface QuestionAndAnswer {
+  id?: string;
   question: string;
   answer: string;
 }
