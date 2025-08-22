@@ -23,9 +23,7 @@ import {
   updateApplicationAIAnalysis,
   createSubadmin,
   getAllSubadmins,
-  getSubadminById,
   updateSubadmin,
-  updateSubadminPassword,
   toggleSubadminStatus,
   deleteSubadmin,
 } from "@/lib/firebase/admin";
