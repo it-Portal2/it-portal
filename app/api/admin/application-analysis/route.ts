@@ -12,7 +12,6 @@ export async function POST(request: Request) {
   const startTime = Date.now();
   
   try {
-    // Parse request body first (this is fast, no need to wrap in timeout)
     const { applicationDetails } = await request.json();
     
     if (!applicationDetails) {
@@ -45,8 +44,8 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log(`🚀 Starting AI analysis for candidate: ${applicationDetails.fullName || 'Unknown'}`);
-    console.log(`📊 Analyzing ${applicationDetails.aiQuestions.length} Q&A pairs`);
+    // console.log(`🚀 Starting AI analysis for candidate: ${applicationDetails.fullName || 'Unknown'}`);
+    // console.log(`📊 Analyzing ${applicationDetails.aiQuestions.length} Q&A pairs`);
 
     // Create timeout promise
     const timeoutPromise = new Promise<never>((_, reject) =>
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
     const analysisResult = await Promise.race([analysisPromise, timeoutPromise]);
     
     const processingTime = Date.now() - startTime;
-    console.log(`✅ Analysis completed successfully in ${processingTime}ms`);
+    // console.log(`✅ Analysis completed successfully in ${processingTime}ms`);
 
     return NextResponse.json({ 
       success: true, 
@@ -72,7 +71,7 @@ export async function POST(request: Request) {
 
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`❌ Error in API route after ${processingTime}ms:`, error);
+    console.error(` Error in API route after ${processingTime}ms:`, error);
     
     // Enhanced error response based on error type
     let errorMessage = "Failed to analyze application";

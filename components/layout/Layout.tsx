@@ -1,7 +1,7 @@
 import { User } from "@/lib/types";
 import Header from "./Header";
 import SideBar from "./Sidebar";
-import { useAuth } from "@/lib/hooks/useAuth";
+import { useAuthStore } from "@/lib/store/userStore";
 
 interface LayoutProps {
   user: User;
@@ -10,13 +10,13 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 const Layout = ({ user, title, description, children }: LayoutProps) => {
-  const { profile, isAuthenticated } = useAuth();
+   const { profile, isAuthenticated} = useAuthStore();
   return (
     <div className="flex h-screen overflow-hidden">
       <div>
         {isAuthenticated && profile && (
           <SideBar
-            role={profile.role}
+            role={profile.role} 
             userName={profile.name}
             userAvatar={profile.avatar}
           />

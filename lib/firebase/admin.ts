@@ -12,6 +12,7 @@ import {
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
 import {  Application, CorrectnessScore, OriginalityScore } from "../types";
+import { adminAuth } from "@/firebaseAdmin";
 
 export async function acceptProject(
   projectId: string,
@@ -629,5 +630,247 @@ export async function updateApplicationAIAnalysis(
   } catch (error) {
     console.error("Error updating AI analysis:", error);
     return { success: false, error: "Failed to update AI analysis" };
+  }
+}
+
+// Subadmin Management Functions
+export interface SubadminProfile {
+  uid: string;
+  email: string;
+  password: string; // Store for viewing purposes
+  name: string;
+  role: "subadmin";
+  isActive: boolean;
+  avatar?: string;
+  createdAt: string;
+  lastLogin: string;
+  createdBy: string;
+}
+
+/**
+ * Create a new subadmin user
+ */
+export async function createSubadmin(
+  email: string,
+  password: string,
+  name: string,
+  createdBy: string
+): Promise<{ success: boolean; error?: string; uid?: string }> {
+  try {
+    if (!email || !password || !name || !createdBy) {
+      return {
+        success: false,
+        error: "Email, password, name, and createdBy are required",
+      };
+    }
+
+    console.log(`Creating subadmin: ${email}`);
+
+    // Create user in Firebase Auth
+    const userRecord = await adminAuth.createUser({
+      email,
+      password,
+      displayName: name,
+      disabled: false,
+    });
+
+    console.log(`User created in Firebase Auth: ${userRecord.uid}`);
+
+    // Set custom claims - subadmin role
+    await adminAuth.setCustomUserClaims(userRecord.uid, { role: "subadmin" });
+    console.log(`Custom claims set for: ${userRecord.uid}`);
+
+    // Revoke refresh tokens to force immediate token refresh
+    await adminAuth.revokeRefreshTokens(userRecord.uid);
+    console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
+
+    // Create user profile in Firestore
+    const subadminProfile: SubadminProfile = {
+      uid: userRecord.uid,
+      email,
+      password, // Store password for admin viewing
+      name,
+      role: "subadmin",
+      isActive: true,
+      avatar: "",
+      createdAt: new Date().toISOString(),
+      lastLogin: "Never",
+      createdBy,
+    };
+
+    await setDoc(doc(db, "users", userRecord.uid), subadminProfile);
+    console.log(`Subadmin profile created in Firestore: ${userRecord.uid}`);
+
+    return { success: true, uid: userRecord.uid };
+  } catch (error: any) {
+    console.error("Error creating subadmin:", error);
+    
+    // Handle specific Firebase Auth errors
+    if (error.code === "auth/email-already-exists") {
+      return { success: false, error: "Email already exists" };
+    }
+    if (error.code === "auth/weak-password") {
+      return { success: false, error: "Password is too weak" };
+    }
+    if (error.code === "auth/invalid-email") {
+      return { success: false, error: "Invalid email format" };
+    }
+
+    return { success: false, error: "Failed to create subadmin" };
+  }
+}
+
+/**
+ * Get all subadmins
+ */
+export async function getAllSubadmins(): Promise<SubadminProfile[]> {
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(
+      usersRef,
+      where("role", "==", "subadmin")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const subadmins: SubadminProfile[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      subadmins.push({
+        uid: doc.id,
+        ...data,
+      } as SubadminProfile);
+    });
+
+    console.log(`Retrieved ${subadmins.length} subadmins`);
+    return subadmins;
+  } catch (error) {
+    console.error("Error fetching subadmins:", error);
+    return [];
+  }
+}
+
+/**
+ * Update subadmin profile
+ */
+export async function updateSubadmin(
+  uid: string,
+  updates: {
+    email?: string;
+    password?: string;
+    name?: string;
+    avatar?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid) {
+      return {
+        success: false,
+        error: "UID is required",
+      };
+    }
+
+    console.log(`Updating subadmin: ${uid}`);
+
+    const updateData: any = {
+      ...updates,
+      lastLogin: new Date().toISOString(),
+    };
+
+    // Update Firebase Auth if email, name, or password is being changed
+    const authUpdates: any = {};
+    if (updates.email) authUpdates.email = updates.email;
+    if (updates.name) authUpdates.displayName = updates.name;
+    if (updates.password) authUpdates.password = updates.password;
+    
+    if (Object.keys(authUpdates).length > 0) {
+      await adminAuth.updateUser(uid, authUpdates);
+      console.log(`Firebase Auth updated for: ${uid}`);
+    }
+
+    // Revoke refresh tokens to apply changes immediately
+    await adminAuth.revokeRefreshTokens(uid);
+    console.log(`Refresh tokens revoked for updated subadmin: ${uid}`);
+
+    // Update Firestore document
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, updateData);
+    console.log(`Firestore updated for: ${uid}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating subadmin:", error);
+    
+    if (error.code === "auth/email-already-exists") {
+      return { success: false, error: "Email already exists" };
+    }
+    if (error.code === "auth/invalid-email") {
+      return { success: false, error: "Invalid email format" };
+    }
+
+    return { success: false, error: "Failed to update subadmin" };
+  }
+}
+
+/**
+ * Toggle subadmin active status
+ */
+export async function toggleSubadminStatus(
+  uid: string,
+  isActive: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid) {
+      return {
+        success: false,
+        error: "UID is required",
+      };
+    }
+
+    console.log(`Toggling status for subadmin: ${uid} to ${isActive}`);
+
+    // Update Firebase Auth disabled status (opposite of isActive)
+    await adminAuth.updateUser(uid, { disabled: !isActive });
+
+    // Revoke refresh tokens to apply changes immediately
+    await adminAuth.revokeRefreshTokens(uid);
+
+    // Update Firestore document
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, { isActive });
+
+    console.log(`Status toggled for subadmin: ${uid}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error toggling subadmin status:", error);
+    return { success: false, error: "Failed to update status" };
+  }
+}
+
+/**
+ * Delete subadmin
+ */
+export async function deleteSubadmin(uid: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid) {
+      return {
+        success: false,
+        error: "UID is required",
+      };
+    }
+
+    console.log(`Deleting subadmin: ${uid}`);
+
+    // Delete from Firebase Auth
+    await adminAuth.deleteUser(uid);
+
+    // Delete from Firestore
+    await deleteDoc(doc(db, "users", uid));
+
+    console.log(`Subadmin deleted: ${uid}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting subadmin:", error);
+    return { success: false, error: "Failed to delete subadmin" };
   }
 }

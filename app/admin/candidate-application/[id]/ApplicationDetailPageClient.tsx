@@ -104,7 +104,7 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
               Error Loading Application
             </h2>
             <p className="text-gray-600 mb-4">{error}</p>
-            <Link href="/admin/intern-application">
+            <Link href="/admin/candidate-application">
               <Button variant="outline">Back to Applications</Button>
             </Link>
           </CardContent>
@@ -125,8 +125,8 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
       if (response.success) {
         toast.success(
           status === "Accepted"
-            ? "✅ Application accepted successfully!"
-            : "❌ Application rejected successfully!"
+            ? "Application accepted successfully!"
+            : "Application rejected successfully!"
         );
       } else {
         toast.error(`Error: ${response.error}`);
@@ -184,9 +184,9 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
       }, 800);
 
       try {
-        console.log(
-          `🚀 Starting AI analysis attempt ${currentAttempt}/${maxAttempts}`
-        );
+        // console.log(
+        //   `🚀 Starting AI analysis attempt ${currentAttempt}/${maxAttempts}`
+        // );
 
         // Create axios request with shorter timeout than server timeout
         const analysisPromise = axios.post(
@@ -216,7 +216,7 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
           if (updateResponse.success) {
             setHasAnalyzed(true);
 
-            toast.success("🤖 AI analysis completed successfully!", {
+            toast.success(" AI analysis completed successfully!", {
               description: `Processed in ${
                 response.data.processingTime || "unknown"
               }ms`,
@@ -249,7 +249,7 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
         setAnalysisProgress(0);
         setAnalysisPhase("");
 
-        console.error(`❌ Analysis attempt ${currentAttempt} failed:`, error);
+      //  console.error(`❌ Analysis attempt ${currentAttempt} failed:`, error);
 
         // Determine if we should retry
         const shouldRetry = currentAttempt < maxAttempts;
@@ -423,30 +423,6 @@ const generateReport = useCallback(async () => {
     ).toFixed(1);
   };
 
-  const getQuestionTypeFromId = (questionId: string): string => {
-    const lowerQId = questionId.toLowerCase();
-    if (lowerQId.includes("technical")) return "Technical";
-    if (lowerQId.includes("behavioral")) return "Behavioral";
-    if (lowerQId.includes("scenario")) return "Scenario";
-    if (lowerQId.includes("leadership")) return "Leadership";
-    return "General";
-  };
-
-  const getQuestionTypeColor = (type: string): string => {
-    switch (type) {
-      case "Technical":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "Behavioral":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "Scenario":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "Leadership":
-        return "bg-orange-100 text-orange-800 border-orange-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
   return (
     <>
       {/* Enhanced Analysis Progress Dialog */}
@@ -508,7 +484,7 @@ const generateReport = useCallback(async () => {
 
       {/* Back Button */}
       <div className="mb-4">
-        <Link href="/admin/intern-application">
+        <Link href="/admin/candidate-application">
           <Button variant="ghost" size="sm" className="gap-2 hover:bg-white/60">
             <ArrowLeft className="h-4 w-4" />
             Back to Applications
@@ -614,37 +590,6 @@ const generateReport = useCallback(async () => {
           </div>
         </div>
 
-        {/* Analysis Status Indicator */}
-        {(isAnalyzing || currentAttempt > 1) && !hasAnalyzed && (
-          <Card className="border-violet-200 bg-violet-50">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-violet-100 rounded-lg">
-                  <Brain className="h-4 w-4 text-violet-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-violet-900">
-                    {isAnalyzing
-                      ? "AI Analysis in Progress"
-                      : "Ready for Analysis"}
-                  </p>
-                  <p className="text-xs text-violet-700">
-                    {isAnalyzing
-                      ? `${analysisPhase} (Attempt ${currentAttempt}/${maxAttempts})`
-                      : `Previous attempts: ${
-                          currentAttempt - 1
-                        }. Click retry to continue.`}
-                  </p>
-                </div>
-                {analysisProgress > 0 && (
-                  <div className="text-sm font-mono text-violet-700">
-                    {analysisProgress}%
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* AI Analysis Results Summary Cards */}
         {applicationDetails?.aiAnalysis && (
@@ -933,17 +878,11 @@ const generateReport = useCallback(async () => {
                     <MessageSquare className="h-5 w-5 text-blue-600" />
                   </div>
                   Technical Interview Responses
-                  {applicationDetails?.aiQuestions?.length && (
-                    <Badge variant="outline" className="ml-auto">
-                      {applicationDetails.aiQuestions.length} Questions
-                    </Badge>
-                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 {applicationDetails?.aiQuestions?.length ? (
                   applicationDetails.aiQuestions.map((qa, index) => {
-                    const questionType = getQuestionTypeFromId(qa.id || "");
                     return (
                       <div key={index} className="space-y-3">
                         <div className="flex items-start gap-3">
@@ -955,15 +894,6 @@ const generateReport = useCallback(async () => {
                               <h4 className="font-semibold text-sm text-indigo-900">
                                 {qa.question}
                               </h4>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-xs font-medium",
-                                  getQuestionTypeColor(questionType)
-                                )}
-                              >
-                                {questionType}
-                              </Badge>
                             </div>
                           </div>
                         </div>
@@ -991,7 +921,7 @@ const generateReport = useCallback(async () => {
                     <div className="p-2 bg-violet-100 rounded-lg">
                       <Brain className="h-5 w-5 text-violet-600" />
                     </div>
-                    ⚡ Comprehensive AI Assessment Results
+                    ⚡ AI Assessment Results
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-8">

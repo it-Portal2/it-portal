@@ -20,7 +20,6 @@ import { Separator } from "@/components/ui/separator";
 import { UserIcon, ShieldIcon, CodeIcon } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { UserRole } from "@/lib/store/userStore";
 
 export default function AuthPage() {
   const { signUp, login, googleLogin, isLoading, error } = useAuth();
@@ -90,6 +89,12 @@ export default function AuthPage() {
       return;
     }
 
+    if (clientSignupForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      setIsSigningUp(false);
+      return;
+    }
+
     try {
       const success = await signUp(
         clientSignupForm.email,
@@ -100,6 +105,13 @@ export default function AuthPage() {
 
       if (success) {
         toast.success("Account created successfully!");
+        setClientSignupForm({
+          name: "",
+          email: "",
+          phone: "",
+          password: "",
+          confirmPassword: "",
+        });
       }
     } catch (error) {
       console.error("Signup error:", error);
@@ -108,8 +120,8 @@ export default function AuthPage() {
     }
   };
 
-  // Handle login (for all roles)
-  const handleLogin = async (e: React.FormEvent, role: UserRole) => {
+  // Handle admin/subadmin login - both use same admin role check
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Prevent multiple clicks
@@ -118,10 +130,34 @@ export default function AuthPage() {
     setIsLoggingIn(true);
 
     try {
-      const success = await login(loginForm.email, loginForm.password, role);
+      const success = await login(loginForm.email, loginForm.password, "admin");
 
       if (success) {
-        toast.success(`Welcome back, ${role}!`);
+        toast.success(`Welcome back!`);
+        setLoginForm({ email: "", password: "" });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Handle developer login
+  const handleDeveloperLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Prevent multiple clicks
+    if (isLoggingIn || isLoading) return;
+
+    setIsLoggingIn(true);
+
+    try {
+      const success = await login(loginForm.email, loginForm.password, "developer");
+
+      if (success) {
+        toast.success(`Welcome back!`);
+        setLoginForm({ email: "", password: "" });
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -192,14 +228,6 @@ export default function AuthPage() {
         animate="visible"
         variants={containerVariants}
       >
-        {/* Main heading */}
-        {/* <motion.div className="text-center mb-8" variants={itemVariants}>
-          <h1 className="text-4xl font-bold text-blue-700">
-            Welcome to Our Platform
-          </h1>
-          <p className="text-gray-600 mt-2">Sign up or log in to get started</p>
-        </motion.div> */}
-
         {/* Toggle between client and staff sections */}
         <motion.div
           className="flex justify-center mb-8"
@@ -345,6 +373,7 @@ export default function AuthPage() {
                               placeholder="Name"
                               value={clientSignupForm.name}
                               onChange={handleClientSignupChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -356,6 +385,7 @@ export default function AuthPage() {
                               placeholder="Email"
                               value={clientSignupForm.email}
                               onChange={handleClientSignupChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -367,6 +397,7 @@ export default function AuthPage() {
                               placeholder="Phone"
                               value={clientSignupForm.phone}
                               onChange={handleClientSignupChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -380,6 +411,7 @@ export default function AuthPage() {
                               placeholder="Password"
                               value={clientSignupForm.password}
                               onChange={handleClientSignupChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
@@ -393,12 +425,13 @@ export default function AuthPage() {
                               placeholder="Confirm password"
                               value={clientSignupForm.confirmPassword}
                               onChange={handleClientSignupChange}
+                              disabled={isButtonDisabled}
                               required
                             />
                           </div>
                           <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: isButtonDisabled ? 1 : 1.02 }}
+                            whileTap={{ scale: isButtonDisabled ? 1 : 0.98 }}
                           >
                             <Button
                               type="submit"
@@ -426,8 +459,8 @@ export default function AuthPage() {
                         </div>
 
                         <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                          whileHover={{ scale: isButtonDisabled ? 1 : 1.02 }}
+                          whileTap={{ scale: isButtonDisabled ? 1 : 0.98 }}
                         >
                           <Button
                             variant="outline"
@@ -439,7 +472,7 @@ export default function AuthPage() {
                               src="/google.png"
                               width={500}
                               height={500}
-                              alt="Picture of the author"
+                              alt="Google"
                               className="h-4 w-4"
                             />
                             {isGoogleSigningIn
@@ -453,7 +486,7 @@ export default function AuthPage() {
                     {/* Client Login Tab */}
                     <TabsContent value="login">
                       <motion.form
-                        onSubmit={(e) => handleLogin(e, "client")}
+                        onSubmit={(e) => handleAdminLogin(e)}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3 }}
@@ -484,8 +517,8 @@ export default function AuthPage() {
                             />
                           </div>
                           <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: isButtonDisabled ? 1 : 1.02 }}
+                            whileTap={{ scale: isButtonDisabled ? 1 : 0.98 }}
                           >
                             <Button
                               type="submit"
@@ -526,7 +559,7 @@ export default function AuthPage() {
                               src="/google.png"
                               width={500}
                               height={500}
-                              alt="Picture of the author"
+                              alt="Google"
                               className="h-4 w-4"
                             />
                             {isGoogleSigningIn
@@ -606,10 +639,10 @@ export default function AuthPage() {
                       </TabsTrigger>
                     </TabsList>
 
-                    {/* Admin Login Tab */}
+                    {/* Admin Login Tab - Both Admin and Subadmin use this */}
                     <TabsContent value="admin">
                       <motion.form
-                        onSubmit={(e) => handleLogin(e, "admin")}
+                        onSubmit={handleAdminLogin}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3 }}
@@ -620,7 +653,7 @@ export default function AuthPage() {
                             <Input
                               id="email"
                               type="email"
-                              placeholder="Admin Email"
+                              placeholder="Admin or Subadmin Email"
                               value={loginForm.email}
                               onChange={handleLoginChange}
                               disabled={isButtonDisabled}
@@ -640,15 +673,15 @@ export default function AuthPage() {
                             />
                           </div>
                           <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: isButtonDisabled ? 1 : 1.02 }}
+                            whileTap={{ scale: isButtonDisabled ? 1 : 0.98 }}
                           >
                             <Button
                               type="submit"
                               className="w-full"
                               disabled={isButtonDisabled}
                             >
-                              {isLoading ? "Logging in..." : "Login as Admin"}
+                              {isLoggingIn ? "Logging in..." : "Login to Admin Panel"}
                             </Button>
                           </motion.div>
                         </div>
@@ -658,7 +691,7 @@ export default function AuthPage() {
                     {/* Developer Login Tab */}
                     <TabsContent value="developer">
                       <motion.form
-                        onSubmit={(e) => handleLogin(e, "developer")}
+                        onSubmit={handleDeveloperLogin}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3 }}
@@ -691,15 +724,15 @@ export default function AuthPage() {
                             />
                           </div>
                           <motion.div
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={{ scale: isButtonDisabled ? 1 : 1.02 }}
+                            whileTap={{ scale: isButtonDisabled ? 1 : 0.98 }}
                           >
                             <Button
                               type="submit"
                               className="w-full"
                               disabled={isButtonDisabled}
                             >
-                              {isLoading
+                              {isLoggingIn
                                 ? "Logging in..."
                                 : "Login as Developer"}
                             </Button>

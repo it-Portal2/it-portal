@@ -21,6 +21,13 @@ import {
   updateApplicationOriginality,
   updateApplicationCorrectness,
   updateApplicationAIAnalysis,
+  createSubadmin,
+  getAllSubadmins,
+  getSubadminById,
+  updateSubadmin,
+  updateSubadminPassword,
+  toggleSubadminStatus,
+  deleteSubadmin,
 } from "@/lib/firebase/admin";
 
 export async function acceptProjectAction(
@@ -386,6 +393,88 @@ export async function updateApplicationAIAnalysisAction(
   if (result.success) {
     revalidatePath("/admin/intern-application");
     revalidatePath(`/admin/intern-application/${applicationId}`);
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+// Updated Subadmin Management Actions - Only for subadmins
+
+export async function createSubadminAction(
+  email: string,
+  password: string,
+  name: string,
+  createdBy: string,
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await createSubadmin(email, password, name, createdBy);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+
+export async function fetchAllSubadminsAction(path: string = "/admin/settings") {
+  try {
+    const subadmins = await getAllSubadmins();
+
+    revalidatePath(path);
+
+    return { success: true, data: subadmins };
+  } catch (error: any) {
+    console.error("Error fetching subadmins:", error);
+    return { success: false, error: error.message || "Failed to fetch subadmins" };
+  }
+}
+
+export async function updateSubadminAction(
+  uid: string,
+  updates: {
+    email?: string;
+    password?: string;
+    name?: string;
+    avatar?: string;
+  },
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await updateSubadmin(uid, updates);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+export async function toggleSubadminStatusAction(
+  uid: string,
+  isActive: boolean,
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await toggleSubadminStatus(uid, isActive);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+export async function deleteSubadminAction(
+  uid: string,
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await deleteSubadmin(uid);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
     revalidatePath(redirectPath);
   }
 

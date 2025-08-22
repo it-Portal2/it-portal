@@ -7,27 +7,25 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Users,
   Settings,
   Menu,
   Home,
   X,
   LogOut,
   Briefcase,
-  CheckSquare,
-  MessageSquare,
   CreditCard,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useAuthStore } from "@/lib/store/userStore";
 import { toast } from "sonner";
 
 interface SidebarProps {
-  role: "admin" | "developer" | "client";
+  role: "admin" | "developer" | "client" | "subadmin";
   userName: string | null;
   userAvatar: string | null;
 }
@@ -35,9 +33,28 @@ interface SidebarProps {
 const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { logout, isAuthenticated } = useAuth();
+  const { logout } = useAuth();
+  const { isAuthenticated, profile } = useAuthStore();
 
-  if (!isAuthenticated || !role) {
+  // Debug logs
+  useEffect(() => {
+    console.log("Sidebar render - isAuthenticated:", isAuthenticated);
+    console.log("Sidebar render - role:", role);
+    console.log("Sidebar render - profile:", profile);
+  }, [isAuthenticated, role, profile]);
+
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    console.log("Sidebar not rendering - user not authenticated");
+    return null;
+  }
+
+  // Use profile role if available, fallback to prop
+  const userRole = profile?.role || role;
+  
+  // Don't render if no role
+  if (!userRole) {
+    console.log("Sidebar not rendering - no role available");
     return null;
   }
 
@@ -64,9 +81,9 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       title: "Rejected Projects",
     },
     {
-      href: "/admin/intern-application",
+      href: "/admin/candidate-application",
       icon: <Briefcase size={20} />,
-      title: "Intern Applications",
+      title: "Candidate Applications",
     },
     {
       href: "/admin/payments",
@@ -99,64 +116,85 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       icon: <CreditCard size={20} />,
       title: "Payment",
     },
-    // {
-    //   href: "/client/chat",
-    //   icon: <MessageSquare size={20} />,
-    //   title: "Support Chat",
-    // },
   ];
 
+  // Both admin and subadmin use admin links
   const links =
-    role === "admin"
+    userRole === "admin" || userRole === "subadmin"
       ? adminLinks
-      : role === "developer"
+      : userRole === "developer"
       ? developerLinks
       : clientLinks;
 
   const handleLogout = async () => {
-    await logout();
-    toast.success("You have been successfully logged out.");
-    setIsMobileMenuOpen(false);
+    try {
+      await logout();
+      toast.success("You have been successfully logged out.");
+      setIsMobileMenuOpen(false);
+    } catch (error) {
+      toast.error("Failed to logout");
+    }
   };
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isMobileMenuOpen && !target.closest('[data-sidebar]')) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMobileMenuOpen]);
 
   return (
     <>
-      {/* Mobile Menu Toggle Button */}
-      {!isMobileMenuOpen && (
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed top-4 left-4 z-50 lg:hidden" // Fixed here
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-      )}
-
-      {/* Sidebar */}
-      <div
+      {/* Mobile Menu Toggle Button - Fixed positioning with high z-index */}
+      <Button
+        variant="outline"
+        size="icon"
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 bg-card transform transition-transform duration-300 ease-in-out",
-          "border-r flex flex-col h-screen",
-          "lg:static lg:translate-x-0",
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed top-4 left-4 z-[9999] lg:hidden transition-all duration-300",
+          isMobileMenuOpen && "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setIsMobileMenuOpen(true)}
+      >
+        <Menu className="h-6 w-6" />
+      </Button>
+
+      {/* Sidebar Container */}
+      <div
+        data-sidebar
+        className={cn(
+          "fixed inset-y-0 left-0 z-[9998] w-64 bg-card shadow-lg transform transition-all duration-300 ease-in-out",
+          "border-r border-border flex flex-col h-screen",
+          // Desktop: always visible
+          "lg:static lg:translate-x-0 lg:shadow-none",
+          // Mobile: slide in/out
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
-        <div className="p-6 flex items-center justify-between">
+        {/* Header */}
+        <div className="p-6 flex items-center justify-between border-b border-border">
           <Link
             href={
-              role === "admin"
+              userRole === "admin" || userRole === "subadmin"
                 ? "/admin"
-                : role === "developer"
+                : userRole === "developer"
                 ? "/developer"
                 : "/client"
             }
             className="flex items-center gap-2"
+            onClick={() => setIsMobileMenuOpen(false)}
           >
             <div className="rounded-md bg-primary p-1">
               <Home className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="font-bold capitalize">{role} Portal</h1>
+            <h1 className="font-bold capitalize">
+              {userRole === "subadmin" ? "Admin" : userRole} Portal
+            </h1>
           </Link>
           <Button
             variant="ghost"
@@ -168,6 +206,7 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
           </Button>
         </div>
 
+        {/* Navigation Links */}
         <div className="flex-1 overflow-auto py-2">
           <nav className="grid items-start px-4 text-sm">
             {links.map((link, index) => (
@@ -176,7 +215,7 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-accent/50",
                   pathname === link.href && "bg-accent text-primary font-medium"
                 )}
               >
@@ -189,34 +228,39 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
 
         <Separator />
 
+        {/* User Info and Actions */}
         <div className="p-4">
           <div className="flex items-center gap-3 rounded-lg px-3 py-2">
             <div className="relative h-9 w-9">
               <img
                 src={
                   userAvatar ||
+                  profile?.avatar ||
                   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS8oghbsuzggpkknQSSU-Ch_xep_9v3m6EeBQ&s"
                 }
-                alt={userName || ""}
+                alt={userName || profile?.name || "User"}
                 className="absolute inset-0 h-full w-full rounded-full object-cover"
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium">{userName}</span>
+              <span className="text-sm font-medium">
+                {userName || profile?.name || "User"}
+              </span>
               <span className="text-xs capitalize text-muted-foreground">
-                {role}
+                {userRole === "subadmin" ? "Sub Admin" : userRole}
               </span>
             </div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Link
               href={
-                role === "admin"
+                userRole === "admin" || userRole === "subadmin"
                   ? "/admin/settings"
-                  : role === "developer"
+                  : userRole === "developer"
                   ? "/developer/settings"
                   : "/client/settings"
               }
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               <Button
                 variant="outline"
@@ -243,7 +287,7 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-[9997] bg-black/50 lg:hidden"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}

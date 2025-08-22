@@ -3,6 +3,7 @@ import { adminAuth } from "./firebaseAdmin";
 
 const roleRoutes = {
   admin: ["/admin"],
+  subadmin: ["/admin"], // Allow subadmin to access admin panel
   developer: ["/developer"],
   client: ["/client"],
 };
@@ -15,6 +16,8 @@ export const config = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  console.log(`Middleware: Processing request for ${pathname}`);
+
   // Check for token in cookie first, then URL
   const cookieToken = request.cookies.get("firebaseToken")?.value;
   const urlToken = request.nextUrl.searchParams.get("token");
@@ -22,6 +25,7 @@ export async function middleware(request: NextRequest) {
 
   // If no token, redirect to login
   if (!token) {
+    console.log("Middleware: No token found, redirecting to login");
     return NextResponse.redirect(new URL("/", request.url));
   }
 
@@ -29,6 +33,8 @@ export async function middleware(request: NextRequest) {
     // Verify token once
     const decodedToken = await adminAuth.verifyIdToken(token);
     const role = decodedToken.role || null;
+
+    console.log(`Middleware: User role from token: ${role}`);
 
     // Determine required role
     let requiredRole: string | null = null;
@@ -39,27 +45,36 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Role check
-    if (requiredRole && role !== requiredRole) {
+    console.log(`Middleware: Required role for ${pathname}: ${requiredRole}`);
+
+    // Role check - Allow both admin and subadmin to access admin panel
+    if (requiredRole === "admin" && role !== "admin" && role !== "subadmin") {
+      console.log(`Middleware: Access denied. User role ${role} cannot access admin panel`);
+      return NextResponse.redirect(new URL("/", request.url));
+    } else if (requiredRole && requiredRole !== "admin" && role !== requiredRole) {
+      console.log(`Middleware: Access denied. User role ${role} does not match required role ${requiredRole}`);
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // Set cookie from URL token if needed
+    console.log(`Middleware: Access granted for role ${role} to ${pathname}`);
+
+    // Set cookie from URL token if needed with longer expiry
     if (urlToken && !cookieToken) {
       const response = NextResponse.next();
       response.cookies.set("firebaseToken", urlToken, {
         httpOnly: true,
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
         path: "/",
-        maxAge: 86400, // 24 hours (1 day)
+        maxAge: 7 * 24 * 60 * 60, // 7 days
       });
+      console.log("Middleware: Set cookie from URL token");
       return response;
     }
 
     return NextResponse.next();
   } catch (error) {
-    console.error("Auth error:", error);
+    console.error("Middleware: Auth error:", error);
     const response = NextResponse.redirect(new URL("/", request.url));
     response.cookies.delete("firebaseToken");
     return response;

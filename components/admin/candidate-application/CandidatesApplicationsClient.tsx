@@ -5,20 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Search,
-  Eye,
-  Trash2,
-  Users,
-  Clock,
-  CheckCircle,
-  XCircle,
-} from "lucide-react";
+import { Search, Eye, Trash2, Clock, CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
 import ProjectTable from "@/components/ui-custom/ProjectTable";
-import { Application} from "@/lib/types";
+import { Application } from "@/lib/types";
 import { deleteApplicationAction } from "@/app/actions/admin-actions";
 
 type ApplicationStatus = "Pending" | "Accepted" | "Rejected";
@@ -92,20 +84,20 @@ const CandidatesApplicationsClient = ({
   const candidates = candidatesData ?? [];
   const [filteredData, setFilteredData] = useState<Application[]>(candidates);
 
-
   const handleDelete = async (applicationId: string, applicantName: string) => {
-
     try {
       const result = await deleteApplicationAction(applicationId);
-      
+
       if (result.success) {
         toast.success("Application deleted successfully!", {
           description: `${applicantName}'s application has been removed.`,
           duration: 4000,
         });
-        
+
         // Update local state to remove the deleted item
-        setFilteredData(prev => prev.filter(app => app.id !== applicationId));
+        setFilteredData((prev) =>
+          prev.filter((app) => app.id !== applicationId)
+        );
       } else {
         toast.error("Failed to delete application", {
           description: result.error || "Please try again later.",
@@ -158,7 +150,9 @@ const CandidatesApplicationsClient = ({
     {
       header: "Status",
       accessor: "applicationStatus",
-      cell: (row: Application) => <StatusBadge status={row.applicationStatus} />,
+      cell: (row: Application) => (
+        <StatusBadge status={row.applicationStatus} />
+      ),
     },
     {
       header: "AI Score",
@@ -207,7 +201,7 @@ const CandidatesApplicationsClient = ({
       accessor: "actions",
       cell: (row: Application) => (
         <div className="flex items-center gap-2">
-          <Link href={`/admin/intern-application/${row.id}`}>
+          <Link href={`/admin/candidate-application/${row.id}`}>
             <Button
               variant="outline"
               size="sm"
@@ -237,77 +231,17 @@ const CandidatesApplicationsClient = ({
   const stats = {
     total: candidates.length,
     pending: candidates.filter((c) => c.applicationStatus === "Pending").length,
-    accepted: candidates.filter((c) => c.applicationStatus === "Accepted").length,
-    rejected: candidates.filter((c) => c.applicationStatus === "Rejected").length,
+    accepted: candidates.filter((c) => c.applicationStatus === "Accepted")
+      .length,
+    rejected: candidates.filter((c) => c.applicationStatus === "Rejected")
+      .length,
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="space-y-4">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-sm bg-white/60 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-slate-100 rounded-lg">
-                  <Users className="h-5 w-5 text-slate-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm bg-white/60 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.pending}</p>
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm bg-white/60 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.accepted}</p>
-                  <p className="text-sm text-muted-foreground">Accepted</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm bg-white/60 backdrop-blur-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stats.rejected}</p>
-                  <p className="text-sm text-muted-foreground">Rejected</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
+    <div className="space-y-3">
       {/* Filters Section */}
-      <Card className="border-0 shadow-sm bg-white/60 backdrop-blur-sm">
-        <CardContent>
+      <Card className="border-0 py-4  shadow-sm  backdrop-blur-sm">
+        <CardContent className="px-3">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -321,21 +255,58 @@ const CandidatesApplicationsClient = ({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {["all", "Pending", "Accepted", "Rejected"].map((status) => (
+              {[
+                {
+                  key: "all",
+                  label: "All",
+                  count: stats.total,
+                  color: "bg-gray-100 text-gray-700",
+                },
+                {
+                  key: "Pending",
+                  label: "Pending",
+                  count: stats.pending,
+                  color: "bg-yellow-100 text-yellow-800",
+                },
+                {
+                  key: "Accepted",
+                  label: "Accepted",
+                  count: stats.accepted,
+                  color: "bg-green-100 text-green-800",
+                },
+                {
+                  key: "Rejected",
+                  label: "Rejected",
+                  count: stats.rejected,
+                  color: "bg-red-100 text-red-800",
+                },
+              ].map((statusObj) => (
                 <Button
-                  key={status}
-                  variant={statusFilter === status ? "default" : "outline"}
+                  key={statusObj.key}
+                  variant={
+                    statusFilter === statusObj.key ? "default" : "outline"
+                  }
                   size="sm"
                   onClick={() =>
-                    setStatusFilter(status as ApplicationStatus | "all")
+                    setStatusFilter(statusObj.key as ApplicationStatus | "all")
                   }
                   className={cn(
-                    "capitalize",
-                    statusFilter === status &&
-                      "bg-gradient-to-r from-blue-600 to-indigo-600"
+                    "capitalize flex items-center gap-2",
+                    statusFilter === statusObj.key &&
+                      "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
                   )}
                 >
-                  {status === "all" ? "All" : status.replace("-", " ")}
+                  <span>{statusObj.label}</span>
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "text-xs px-1 py-0.5 rounded-full",
+                      statusObj.color,
+                      statusFilter === statusObj.key && "bg-white/20 text-white"
+                    )}
+                  >
+                    {statusObj.count}
+                  </Badge>
                 </Button>
               ))}
             </div>
@@ -348,7 +319,7 @@ const CandidatesApplicationsClient = ({
           data={filteredData}
           columns={columns}
           emptyMessage="No applications found matching your criteria"
-          itemsPerPage={10}
+          itemsPerPage={5}
         />
       </div>
     </div>

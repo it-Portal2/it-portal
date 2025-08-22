@@ -1,6 +1,5 @@
-
-
 "use server";
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import {
@@ -14,57 +13,48 @@ import {
 import {
   extractQuestionTypeFromId,
   validateQuestionStructure,
-} from "./analysis-utils"; // Import utilities
+} from "./analysis-utils"; 
 
-// ===============================
+
 // Interfaces
-// ===============================
 
 interface APIError extends Error {
   status?: number;
   headers?: Record<string, string>;
 }
 
-interface HolisticAssessmentResult {
-  overallScore: number; // 0.0 - 10.0
-  verdict: "recommend" | "proceed-with-caution" | "not-recommended";
-  resumeAlignmentScore: number; // 0 - 10
-  rationale: string; // comprehensive reasoning
-}
+// interface HolisticAssessmentResult {
+//   overallScore: number; 
+//   verdict: "recommend" | "proceed-with-caution" | "not-recommended";
+//   resumeAlignmentScore: number; 
+//   rationale: string; 
+// }
 
-interface QuestionAnalysisResult {
-  questionId: string;
-  question: string;
-  answer: string;
-  questionType: "technical" | "behavioral" | "scenario" | "leadership";
-  originalityScore: number; // 0 - 100
-  originalityReasoning: string;
-  correctnessScore: number; // 0.0 - 10.0
-  correctnessReasoning: string;
-  classification:
-    | "human-written"
-    | "potentially-copied"
-    | "likely-ai-generated";
-}
+// interface QuestionAnalysisResult {
+//   questionId: string;
+//   question: string;
+//   answer: string;
+//   questionType: "technical" | "behavioral" | "scenario" | "leadership";
+//   originalityScore: number; 
+//   originalityReasoning: string;
+//   correctnessScore: number; 
+//   correctnessReasoning: string;
+//   classification:
+//     | "human-written"
+//     | "potentially-copied"
+//     | "likely-ai-generated";
+// }
 
-interface FullAIAnalysisResult {
-  candidateId: string;
-  questionAnalyses: QuestionAnalysisResult[];
-  holisticAssessment: HolisticAssessmentResult;
-  timestamp: string;
-  analysisVersion: number;
-}
 
-// ===============================
 // Enhanced Constants with Generous Timeout Strategy
-// ===============================
+
 const MODEL_NAME = "gemini-2.0-flash";
-const MAX_EXECUTION_TIME = 55000; // 55s total limit (increased for generous timeouts)
+const MAX_EXECUTION_TIME = 55000; // 55s total limit 
 
 // Progressive timeout strategy - start generous, then increase
-const FIRST_TIMEOUT = 25000; // 25s for first attempt (generous start)
-const SECOND_TIMEOUT = 30000; // 30s for second attempt (more generous)
-const FINAL_TIMEOUT = 40000; // 40s for final attempt (maximum patience)
+const FIRST_TIMEOUT = 25000; 
+const SECOND_TIMEOUT = 30000; 
+const FINAL_TIMEOUT = 40000; 
 const DEFAULT_ERROR_MESSAGE = "An unexpected error occurred";
 // Progressive timeout strategy array
 const TIMEOUT_STRATEGY = [FIRST_TIMEOUT, SECOND_TIMEOUT, FINAL_TIMEOUT];
@@ -76,9 +66,8 @@ const API_KEYS = [
   process.env.GOOGLE_API_KEY_3 || "",
 ].filter((key) => key !== "");
 
-// ===============================
 // Enhanced Timeout Wrapper with Better Error Context
-// ===============================
+
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -93,9 +82,8 @@ async function withTimeout<T>(
   return Promise.race([promise, timeoutPromise]);
 }
 
-// ===============================
 // Smart Retry Strategy with Progressive Generous Timeouts
-// ===============================
+
 async function tryWithMultipleKeysOptimized<T>(
   generateFunction: (genAI: GoogleGenerativeAI, model: any) => Promise<T>
 ): Promise<T> {
@@ -154,16 +142,16 @@ async function tryWithMultipleKeysOptimized<T>(
         `API key ${i + 1} (${timeoutForAttempt}ms timeout)`
       );
 
-      const totalTime = Date.now() - startTime;
-      console.log(
-        `✅ Success with API key ${i + 1} in ${
-          Date.now() - attemptStartTime
-        }ms (total: ${totalTime}ms)`
-      );
+     // const totalTime = Date.now() - startTime;
+      // console.log(
+      //   `✅ Success with API key ${i + 1} in ${
+      //     Date.now() - attemptStartTime
+      //   }ms (total: ${totalTime}ms)`
+      // );
       return result;
     } catch (error) {
       const attemptDuration = Date.now() - attemptStartTime;
-      const totalElapsed = Date.now() - startTime;
+   //   const totalElapsed = Date.now() - startTime;
 
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -174,23 +162,23 @@ async function tryWithMultipleKeysOptimized<T>(
         timeout: timeoutForAttempt,
       });
 
-      console.warn(
-        `❌ API key ${
-          i + 1
-        } failed in ${attemptDuration}ms (timeout: ${timeoutForAttempt}ms, total: ${totalElapsed}ms): ${errorMessage}`
-      );
+      // console.warn(
+      //   `❌ API key ${
+      //     i + 1
+      //   } failed in ${attemptDuration}ms (timeout: ${timeoutForAttempt}ms, total: ${totalElapsed}ms): ${errorMessage}`
+      // );
 
       lastError = error instanceof Error ? error : new Error(String(error));
 
       // Quick decision: if this was a timeout and we have more keys, continue immediately
       if (errorMessage.includes("timed out") && i < API_KEYS.length - 1) {
-        console.log(`🔄 Moving to next API key immediately due to timeout...`);
+        console.log(` Moving to next API key immediately due to timeout...`);
         continue;
       }
 
       // For non-timeout errors, add a small delay before retry
       if (i < API_KEYS.length - 1) {
-        console.log(`⏳ Waiting 1s before trying next API key...`);
+        console.log(` Waiting 1s before trying next API key...`);
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
@@ -208,7 +196,7 @@ async function tryWithMultipleKeysOptimized<T>(
     )
     .join(", ")}`;
 
-  console.error(`💥 Final failure summary: ${summaryError}`);
+  console.error(`Final failure summary: ${summaryError}`);
   throw lastError || new Error(summaryError);
 }
 
@@ -233,14 +221,14 @@ export async function analyzeCompleteApplicationOptimized(
       throw new Error("Invalid question format detected");
     }
 
-    console.log(
-      `🚀 Starting AI analysis for candidate: ${
-        candidateData.fullName || "Unknown"
-      }`
-    );
-    console.log(
-      `📊 Analyzing ${candidateData.aiQuestions.length} Q&A pairs with generous timeouts (${FIRST_TIMEOUT}ms → ${SECOND_TIMEOUT}ms → ${FINAL_TIMEOUT}ms)`
-    );
+    // console.log(
+    //   `🚀 Starting AI analysis for candidate: ${
+    //     candidateData.fullName || "Unknown"
+    //   }`
+    // );
+    // console.log(
+    //   `📊 Analyzing ${candidateData.aiQuestions.length} Q&A pairs with generous timeouts (${FIRST_TIMEOUT}ms → ${SECOND_TIMEOUT}ms → ${FINAL_TIMEOUT}ms)`
+    // );
 
     return await tryWithMultipleKeysOptimized(async (genAI, model) => {
       // Parse questions with type detection from ID
@@ -264,9 +252,8 @@ export async function analyzeCompleteApplicationOptimized(
           return acc;
         }, {} as Record<string, number>) || {};
 
-      // Your existing optimized prompt (unchanged)
       // Your existing optimized prompt with word limits
-      const OPTIMIZED_PROMPT = `Evaluate this cybersecurity candidate. Return ONLY valid JSON.
+      const PROMPT = `Evaluate this cybersecurity candidate. Return ONLY valid JSON.
 
 CANDIDATE PROFILE:
 Education: ${candidateData.resumeAnalysis?.education || "N/A"}
@@ -278,23 +265,25 @@ QUESTION BREAKDOWN: ${JSON.stringify(questionCounts)}
 QUESTIONS & ANSWERS:
 ${questionAnswerPairs}
 
+
 EVALUATION FRAMEWORK:
 
 TECHNICAL (${questionCounts.technical || 0} questions):
-- Correctness: Technical accuracy, depth of knowledge, practical understanding
-- Focus: Vulnerability assessment, penetration testing, network security tools
+- Correctness: Accuracy of concepts, depth of knowledge, clarity, and ability to apply subject matter expertise
+- Focus: Demonstrating relevant problem-solving using appropriate methods, tools, or frameworks for the given domain
 
 BEHAVIORAL (${questionCounts.behavioral || 0} questions):  
-- Correctness: Authenticity, specific examples, learning approach, self-awareness
-- Focus: Personal experiences, learning methods, time management
+- Correctness: Authenticity, relevance of experiences, ability to reflect, and structured communication
+- Focus: Showcasing adaptability, collaboration, personal growth, and professional work habits
 
 SCENARIO (${questionCounts.scenario || 0} questions):
-- Correctness: Problem-solving logic, practical solutions, structured approach
-- Focus: Client communication, security implementation, risk assessment
+- Correctness: Logical reasoning, practicality of solutions, clarity in steps, and alignment with real-world feasibility
+- Focus: Applying structured problem-solving, analyzing constraints, and delivering actionable recommendations
 
 LEADERSHIP (${questionCounts.leadership || 0} questions):
-- Correctness: Team management, continuous learning, ethical guidelines
-- Focus: Staying current, leading teams, maintaining standards
+- Correctness: Demonstrated ability in guiding others, maintaining standards, and fostering growth
+- Focus: Decision-making, accountability, continuous learning, ethical practices, and motivating teams
+
 
 SCORING RULES:
 Originality (0-100):
@@ -348,7 +337,7 @@ JSON OUTPUT:
   }
 }`;
 
-      const result = await model.generateContent(OPTIMIZED_PROMPT);
+      const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
       // Enhanced JSON parsing with better error recovery
@@ -371,15 +360,14 @@ JSON OUTPUT:
           cleanedResponse.substring(0, 500)
         );
 
-        // Advanced JSON recovery techniques
         const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           try {
             // Try fixing common JSON issues
             let fixedJson = jsonMatch[0]
-              .replace(/,(\s*[}\]])/g, "$1") // Remove trailing commas
-              .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":') // Quote keys
-              .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g, ': "$1"$2'); // Quote unquoted string values
+              .replace(/,(\s*[}\]])/g, "$1") 
+              .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+              .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g, ': "$1"$2'); 
 
             analysisResult = JSON.parse(fixedJson);
           } catch (recoveryError) {
@@ -392,15 +380,15 @@ JSON OUTPUT:
         }
       }
 
-      // Validate and clean the analysis result
-      if (
-        analysisResult.questionAnalyses.length !==
-        (candidateData.aiQuestions?.length || 0)
-      ) {
-        console.warn(
-          `⚠️  Expected ${candidateData.aiQuestions?.length} analyses, got ${analysisResult.questionAnalyses.length}`
-        );
-      }
+
+      // if (
+      //   analysisResult.questionAnalyses.length !==
+      //   (candidateData.aiQuestions?.length || 0)
+      // ) {
+      //   console.warn(
+      //     `⚠️  Expected ${candidateData.aiQuestions?.length} analyses, got ${analysisResult.questionAnalyses.length}`
+      //   );
+      // }
 
       // Map scores efficiently with validation
       const originalityScores: OriginalityScore[] =
@@ -443,10 +431,10 @@ JSON OUTPUT:
           "Analysis completed successfully",
       };
 
-      const totalAnalysisTime = Date.now() - analysisStartTime;
-      console.log(
-        `✅ Analysis completed successfully in ${totalAnalysisTime}ms`
-      );
+      // const totalAnalysisTime = Date.now() - analysisStartTime;
+      // console.log(
+      //   `✅ Analysis completed successfully in ${totalAnalysisTime}ms`
+      // );
 
       return {
         aiAnalysis,
@@ -454,11 +442,11 @@ JSON OUTPUT:
       };
     });
   } catch (error) {
-    const totalTime = Date.now() - analysisStartTime;
-    console.error(
-      `❌ Error analyzing complete application after ${totalTime}ms:`,
-      error
-    );
+    // const totalTime = Date.now() - analysisStartTime;
+    // console.error(
+    //   `❌ Error analyzing complete application after ${totalTime}ms:`,
+    //   error
+    // );
 
     // Enhanced error categorization and user-friendly messages
     if (error instanceof Error) {
@@ -466,32 +454,32 @@ JSON OUTPUT:
 
       if (errorMessage.includes("timed out")) {
         throw new Error(
-          "⏰ Analysis timed out despite generous timeouts - AI service is heavily loaded. Please wait 60 seconds and try again."
+          "Analysis timed out despite generous timeouts - AI service is heavily loaded. Please wait 60 seconds and try again."
         );
       } else if (
         errorMessage.includes("json") ||
         errorMessage.includes("parse")
       ) {
         throw new Error(
-          "🔧 AI response processing failed. The analysis was interrupted - please retry."
+          " AI response processing failed. The analysis was interrupted - please retry."
         );
       } else if (
         errorMessage.includes("api key") ||
         (errorMessage.includes("all") && errorMessage.includes("failed"))
       ) {
         throw new Error(
-          "🔑 All AI service endpoints temporarily unavailable. Please try again in 30-60 seconds."
+          " All AI service endpoints temporarily unavailable. Please try again in 30-60 seconds."
         );
       } else if (
         errorMessage.includes("no questions") ||
         errorMessage.includes("invalid")
       ) {
         throw new Error(
-          "📝 Invalid application data. Please check the candidate's responses."
+          " Invalid application data. Please check the candidate's responses."
         );
       } else if (errorMessage.includes("no google api keys")) {
         throw new Error(
-          "🔧 AI analysis service is not properly configured. Please contact support."
+          "AI analysis service is not properly configured. Please contact support."
         );
       }
     }
@@ -504,9 +492,9 @@ JSON OUTPUT:
     );
   }
 }
-// ===============================
+
 // Optimized JSON Cleaning
-// ===============================
+
 function cleanJsonResponse(response: string): string {
   // Remove markdown and code blocks efficiently
   let cleaned = response
@@ -526,14 +514,14 @@ function cleanJsonResponse(response: string): string {
   // Remove trailing commas and fix common JSON issues
   cleaned = cleaned
     .replace(/,(\s*[}\]])/g, "$1")
-    .replace(/([{,]\s*)(\w+):/g, '$1"$2":'); // Quote unquoted keys if needed
+    .replace(/([{,]\s*)(\w+):/g, '$1"$2":');
 
   return cleaned;
 }
 
-// ===============================
-// Quick Analysis Function - SERVER ACTION
-// ===============================
+
+// Quick Analysis Function
+
 export async function quickAnalyze(
   candidateData: Application
 ): Promise<AIVerdict> {
@@ -546,7 +534,8 @@ export async function quickAnalyze(
   }
 }
 
-// Keep your existing functions for documentation generation...
+//  For documentation generation...
+
 export async function generateImprovedDocumentationFromGeminiAI(
   textContent: string
 ): Promise<any> {
