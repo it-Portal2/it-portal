@@ -385,7 +385,7 @@ const SubadminsTab = () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-0 sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <UserPlus className="h-5 w-5" />

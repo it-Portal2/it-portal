@@ -9,51 +9,78 @@ import { useAuthStore } from "@/lib/store/userStore"
 
 const AdminSettings = () => {
   const { profile } = useAuthStore()
-  
-  // Check if user is subadmin
   const isSubadmin = profile?.role === "subadmin"
-  
+
   return (
     <motion.div
-      className="container mx-auto"
-      initial={{ opacity: 0, y: 20 }}
+      className="w-full"
+      initial={{ opacity: 0, y:20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className={`grid ${isSubadmin ? 'grid-cols-1' : 'grid-cols-4'} w-full md:w-auto`}>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
+        {/* Responsive TabsList using flex instead of grid */}
+        <TabsList 
+          className={`
+            flex flex-col sm:flex-row 
+            ${isSubadmin ? 'w-auto' : 'w-full'} 
+            h-auto sm:h-10 
+            p-1 
+            gap-1 sm:gap-0
+            mb-6
+          `}
+        >
+          <TabsTrigger 
+            value="profile" 
+            className="w-full sm:w-auto justify-center"
+          >
+            Profile
+          </TabsTrigger>
           
-          {/* Only show these tabs if user is NOT a subadmin */}
           {!isSubadmin && (
             <>
-              <TabsTrigger value="password">Password</TabsTrigger>
-              <TabsTrigger value="payment">Payment Details</TabsTrigger>
-              <TabsTrigger value="subadmins">Manage Subadmins</TabsTrigger>
+              <TabsTrigger 
+                value="password" 
+                className="w-full sm:w-auto justify-center"
+              >
+                Password
+              </TabsTrigger>
+              <TabsTrigger 
+                value="payment" 
+                className="w-full sm:w-auto justify-center"
+              >
+                Payment Details
+              </TabsTrigger>
+              <TabsTrigger 
+                value="subadmins" 
+                className="w-full sm:w-auto justify-center"
+              >
+                Manage Subadmins
+              </TabsTrigger>
             </>
           )}
         </TabsList>
 
-        <TabsContent value="profile" className="space-y-6 mt-6">
-          <ProfileTab />
-        </TabsContent>
+        {/* Tab Contents - proper spacing to avoid overlap */}
+        <div className="mt-6">
+          <TabsContent value="profile" className="space-y-6">
+            <ProfileTab />
+          </TabsContent>
 
-        {/* Only render these tabs if user is NOT a subadmin */}
-        {!isSubadmin && (
-          <>
-            <TabsContent value="password" className="space-y-6 mt-6">
-              <PasswordTab />
-            </TabsContent>
-
-            <TabsContent value="payment" className="space-y-6 mt-6">
-              <PaymentTab />
-            </TabsContent>
-
-            <TabsContent value="subadmins" className="space-y-6 mt-6">
-              <SubadminsTab />
-            </TabsContent>
-          </>
-        )}
+          {!isSubadmin && (
+            <>
+              <TabsContent value="password" className="space-y-6">
+                <PasswordTab />
+              </TabsContent>
+              <TabsContent value="payment" className="space-y-6">
+                <PaymentTab />
+              </TabsContent>
+              <TabsContent value="subadmins" className="space-y-6">
+                <SubadminsTab />
+              </TabsContent>
+            </>
+          )}
+        </div>
       </Tabs>
     </motion.div>
   )
