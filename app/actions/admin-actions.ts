@@ -26,6 +26,11 @@ import {
   updateSubadmin,
   toggleSubadminStatus,
   deleteSubadmin,
+  getAllAIKeys,
+  deleteAIKey,
+  toggleAIKeyStatus,
+  updateAIKey,
+  createAIKey,
 } from "@/lib/firebase/admin";
 
 export async function acceptProjectAction(
@@ -477,4 +482,88 @@ export async function deleteSubadminAction(
   }
 
   return result;
+}
+
+// Updated AI Key Management Actions
+
+export async function createAIKeyAction(
+  aiID: string,
+  keyName: string,
+  apiKey: string,
+  provider: string,
+  priority: number,
+  status: "active" | "inactive" = "active",
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await createAIKey(aiID, keyName, apiKey, provider, priority, status);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+export async function updateAIKeyAction(
+  docId: string,
+  updates: {
+    aiID?: string;
+    keyName?: string;
+    apiKey?: string;
+    provider?: string;
+    priority?: number;
+    status?: "active" | "inactive";
+  },
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await updateAIKey(docId, updates);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+export async function toggleAIKeyStatusAction(
+  docId: string,
+  currentStatus: "active" | "inactive",
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await toggleAIKeyStatus(docId, currentStatus);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+export async function deleteAIKeyAction(
+  docId: string,
+  redirectPath: string = "/admin/settings"
+) {
+  const result = await deleteAIKey(docId);
+
+  if (result.success) {
+    revalidatePath("/admin/settings");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+// Keep the existing fetch action
+export async function fetchAllAIKeysAction(path: string = "/admin/settings") {
+  try {
+    const aiKeys = await getAllAIKeys();
+    revalidatePath(path);
+    return { success: true, data: aiKeys };
+  } catch (error: any) {
+    console.error("Error fetching AI keys:", error);
+    return { success: false, error: error.message || "Failed to fetch AI keys" };
+  }
 }

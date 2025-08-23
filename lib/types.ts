@@ -196,3 +196,62 @@ export interface InsertApplication {
   additionalComments?: string;
   resumeAnalysis: ResumeAnalysis;
 }
+// AI Key Database Types
+export interface AIKeyFromDB {
+  aiId: string;        // Unique identifier (replaces Firebase doc id)
+  apiKey: string;      // The actual API key
+  priority: number;    // Priority order (1 = highest)
+  status: "active" | "inactive";  // Key status
+}
+
+// Retry Strategy Types
+export interface RetryAttempt {
+  keyIndex: number;
+  timeout: number;
+  rotation: number;
+}
+
+// Error Classification Types
+export type AIErrorType = 
+  | 'timeout' 
+  | 'auth' 
+  | 'quota' 
+  | 'network' 
+  | 'parsing' 
+  | 'validation' 
+  | 'database'
+  | 'configuration'
+  | 'unknown';
+
+export interface ClassifiedError {
+  type: AIErrorType;
+  shouldRetryImmediately: boolean;
+  userMessage: string;
+  technicalMessage: string;
+  originalError: Error;
+}
+
+export interface AttemptResult {
+  attemptIndex: number;
+  aiId: string;
+  priority: number;
+  rotation: number;
+  errorType: AIErrorType;
+  errorMessage: string;
+  duration: number;
+  timeout: number;
+  shouldRetryImmediately: boolean;
+}
+
+// Configuration Constants
+export const GEMINI_CONFIG = {
+  MODEL_NAME: "gemini-2.0-flash",
+  MAX_EXECUTION_TIME: 55000,
+  BASE_TIMEOUT: 25000,
+  MAX_TIMEOUT: 40000,
+  TIMEOUT_BUFFER: 3000,
+  GENERATION_CONFIG: {
+    temperature: 0.1,
+    maxOutputTokens: 5120,
+  }
+} as const;

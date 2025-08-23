@@ -10,7 +10,8 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 const Layout = ({ user, title, description, children }: LayoutProps) => {
-   const { profile, isAuthenticated} = useAuthStore();
+  const { profile, isAuthenticated } = useAuthStore();
+  
   return (
     <div className="flex h-screen overflow-hidden">
       <div>

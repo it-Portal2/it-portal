@@ -29,7 +29,6 @@ const ProfileTab = () => {
     photoUrl: profile?.avatar || "",
   })
 
-  console.log("Profile:", profile);
 
   useEffect(() => {
     if (profile) {

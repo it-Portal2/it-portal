@@ -95,7 +95,7 @@ const initializeAuth = () => {
         setError(null);
 
         if (firebaseUser) {
-          console.log("Auth state changed, forcing token refresh...");
+     //     console.log("Auth state changed, forcing token refresh...");
           
           // Force token refresh to ensure latest claims
           await firebaseUser.getIdToken(true);
@@ -159,7 +159,7 @@ const initializeAuth = () => {
   tokenUnsubscribe = onIdTokenChanged(auth, async (user) => {
     if (user) {
       try {
-        console.log("ID token changed, updating cookie...");
+   //     console.log("ID token changed, updating cookie...");
         const token = await user.getIdToken();
         document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
       } catch (error) {

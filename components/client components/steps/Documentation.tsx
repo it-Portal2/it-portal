@@ -50,6 +50,12 @@ export function Documentation() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasImproved, setHasImproved] = useState(false);
   const [isStoringInFirebase, setIsStoringInFirebase] = useState(false);
+
+  // Enhanced retry state management
+  const [generationAttempts, setGenerationAttempts] = useState(0);
+  const [maxGenerationAttempts] = useState(3);
+  const [isAutoRetrying, setIsAutoRetrying] = useState(false);
+
   // Ref to track if we've already uploaded to Cloudinary
   const hasUploadedToCloudinary = useRef(false);
   // Ref to track if we've already stored in Firebase
@@ -62,16 +68,18 @@ export function Documentation() {
         return;
       }
 
-      const file = e.target.files[0];
+      const file = e.target.files;
 
       try {
         // Validate the file using Zod schema
         const validation = validatePdfFile(file);
         if (!validation.success) {
-          const errorMessage =
-            validation.error || "Invalid file format or size";
+          const errorMessage = validation.error || "Invalid file format or size";
           setFileError(errorMessage);
-          toast.error("File Validation Failed", { description: errorMessage });
+          toast.error("File validation failed", { 
+            description: errorMessage,
+            duration: 5000 
+          });
           return;
         }
         setFileError(null);
@@ -87,18 +95,26 @@ export function Documentation() {
           improvedDocumentation: null,
           cloudinaryDocumentationUrl: null,
         });
+
+        toast.success("File ready for processing", {
+          description: `${file.name} is ready to be improved with AI`,
+          duration: 3000
+        });
       } catch (error) {
         console.error("Error processing file:", error);
         const errorMessage =
           error instanceof Error ? error.message : "Failed to process file";
         setFileError(errorMessage);
-        toast.error("File Processing Error", { description: errorMessage });
+        toast.error("File processing error", { 
+          description: errorMessage,
+          duration: 5000 
+        });
       }
     },
     [updateFormData]
   );
 
-  // Generate documentation with proper error handling
+  // Generate documentation with enhanced error handling and retry logic
   const improveDocumentation = useCallback(async () => {
     if (!formData.documentationFile || isImproving || hasImproved) return;
 
@@ -107,8 +123,9 @@ export function Documentation() {
     hasStoredInFirebase.current = false;
 
     try {
-      toast.info("Starting to improve your documentation...", {
-        description: "Please wait while we process your PDF.",
+      toast.info("Starting AI document improvement", {
+        description: "Uploading and processing your PDF...",
+        duration: 3000
       });
 
       const pdfUrl = await uploadToCloudinaryForTextExtraction(
@@ -116,22 +133,22 @@ export function Documentation() {
       );
 
       if (!pdfUrl) {
-        throw new Error("Failed to upload PDF to Cloudinary");
+        throw new Error("PDF upload failed - please try again");
       }
 
-      toast.info("PDF Uploaded Successfully", {
-        description: "Your document is being enhanced with AI. Almost ready!",
+      toast.info("PDF uploaded successfully", {
+        description: "AI is now enhancing your documentation...",
+        duration: 3000
       });
 
       const generatedImprovedDocumentation =
         await generateDeveloperDocumentationFromPdf(pdfUrl);
 
       if (!generatedImprovedDocumentation) {
-        throw new Error("Failed to generate improved documentation");
+        throw new Error("AI enhancement failed - please retry");
       }
 
-      const improved =
-        generatedImprovedDocumentation.data?.improvedDocumentation;
+      const improved = generatedImprovedDocumentation.data?.improvedDocumentation;
       updateFormData({
         improvedDocumentation: improved,
       });
@@ -139,80 +156,217 @@ export function Documentation() {
       // Set hasImproved to true after successful response
       setHasImproved(true);
 
-      toast.success("Documentation Improved", {
-        description: "Your documentation has been enhanced with AI.",
+      toast.success("Documentation improved successfully!", {
+        description: "Your document has been enhanced with AI insights",
+        duration: 4000
       });
     } catch (error) {
       console.error("Error improving documentation:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Failed to improve documentation";
+          : "Document improvement failed - please try again";
 
       setFileError(errorMessage);
-      toast.error("Improvement Failed", { description: errorMessage });
+      toast.error("AI improvement failed", { 
+        description: errorMessage,
+        duration: 6000
+      });
     } finally {
       setIsImproving(false);
     }
   }, [formData.documentationFile, isImproving, hasImproved, updateFormData]);
 
-  const generateDocumentation = useCallback(async () => {
-    if (isGenerating) return;
+  // Enhanced generateDocumentation with retry logic
+  const generateDocumentation = useCallback(
+    async (isRetry: boolean = false) => {
+      if (isGenerating) return;
 
-    setIsGenerating(true);
-    hasUploadedToCloudinary.current = false;
-    hasStoredInFirebase.current = false;
-
-    try {
-      if (!formData.projectName || !formData.projectOverview) {
-        throw new Error("Project name and overview are required");
+      if (!isRetry) {
+        setGenerationAttempts(1);
       }
 
-      toast.info("Starting to generate your documentation...", {
-        description: "Please wait while we process your project details.",
-      });
+      setIsGenerating(true);
+      hasUploadedToCloudinary.current = false;
+      hasStoredInFirebase.current = false;
 
-      // Call the API route with axios
-      const response = await axios.post("/api/client/create-project", {
-        projectName: formData.projectName,
-        projectOverview: formData.projectOverview,
-        developmentAreas: formData.developmentAreas || [],
-      });
+      try {
+        if (!formData.projectName || !formData.projectOverview) {
+          throw new Error("Project name and overview are required for generation");
+        }
 
-      if (!response.data.success) {
-        throw new Error(
-          response.data.message ||
-            "Failed to generate documentation from server"
+        console.info(`[CLIENT] Starting documentation generation attempt ${generationAttempts}/${maxGenerationAttempts}`);
+
+        toast.info("Generating documentation", {
+          description: `AI is creating your project documentation... (Attempt ${generationAttempts}/${maxGenerationAttempts})`,
+          duration: 3000
+        });
+
+        // Call the API route with enhanced timeout and error handling
+        const response = await axios.post(
+          "/api/client/create-project", 
+          {
+            projectName: formData.projectName,
+            projectOverview: formData.projectOverview,
+            developmentAreas: formData.developmentAreas || [],
+          },
+          {
+            timeout: 25000, // 25 seconds client timeout
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
         );
+
+        if (!response.data.success) {
+          throw new Error(response.data.message || "Documentation generation failed");
+        }
+
+        const generatedDoc = response.data.documentation;
+
+        updateFormData({
+          generatedDocumentation: generatedDoc,
+          cloudinaryDocumentationUrl: null,
+        });
+
+        toast.success("Documentation generated successfully!", {
+          description: `Your project documentation is ready in ${response.data.processingTime || "unknown"}ms`,
+          duration: 4000
+        });
+
+        // Reset attempt counter on success
+        setGenerationAttempts(0);
+        
+      } catch (error) {
+        console.error(`[CLIENT] Documentation generation attempt ${generationAttempts} failed:`, error);
+
+        // Enhanced error classification for documentation generation
+        let errorType = 'unknown';
+        let errorMessage = 'Generation failed';
+        let shouldRetry = generationAttempts < maxGenerationAttempts;
+        let userFriendlyMessage = '';
+        let retryDelay = 2000;
+
+        if (axios.isAxiosError(error)) {
+          const response = error.response;
+          const data = response?.data;
+
+          if (error.code === "ECONNABORTED" || error.message.includes("timeout")) {
+            errorType = 'timeout';
+            errorMessage = 'Request timed out';
+            userFriendlyMessage = `Generation timed out (attempt ${generationAttempts}/${maxGenerationAttempts})`;
+            retryDelay = 3000;
+          } else if (response?.status === 408) {
+            errorType = 'server_timeout';
+            errorMessage = 'Server timeout';
+            userFriendlyMessage = `Server timeout (attempt ${generationAttempts}/${maxGenerationAttempts})`;
+            retryDelay = 2000;
+          } else if (response?.status === 503) {
+            errorType = 'service_unavailable';
+            errorMessage = data?.message || 'AI service temporarily unavailable';
+            userFriendlyMessage = `AI service overloaded (attempt ${generationAttempts}/${maxGenerationAttempts})`;
+            retryDelay = 4000;
+          } else if (response?.status === 400) {
+            errorType = 'validation_error';
+            errorMessage = data?.message || 'Invalid project details';
+            userFriendlyMessage = errorMessage;
+            shouldRetry = false; // Don't retry validation errors
+          } else if (data?.message) {
+            if (data.message.includes("**")) {
+              errorType = 'service_configuration';
+              errorMessage = data.message;
+              userFriendlyMessage = data.message;
+              shouldRetry = false; // Configuration errors need manual intervention
+            } else {
+              errorType = 'api_error';
+              errorMessage = data.message;
+              userFriendlyMessage = `${data.message} (attempt ${generationAttempts}/${maxGenerationAttempts})`;
+            }
+          }
+        } else if (error instanceof Error) {
+          if (error.message.includes('required')) {
+            errorType = 'validation_error';
+            errorMessage = error.message;
+            userFriendlyMessage = error.message;
+            shouldRetry = false;
+          } else {
+            errorType = 'unexpected_error';
+            errorMessage = error.message;
+            userFriendlyMessage = `Unexpected error: ${error.message}`;
+          }
+        }
+
+        // Auto-retry logic for recoverable errors
+        const autoRetryTypes = ['timeout', 'server_timeout', 'service_unavailable'];
+        const shouldAutoRetry = shouldRetry && autoRetryTypes.includes(errorType);
+
+        if (shouldAutoRetry) {
+          setIsAutoRetrying(true);
+          
+          toast.error(`Generation attempt ${generationAttempts} failed`, {
+            description: `${userFriendlyMessage}. Retrying automatically...`,
+            duration: 3000,
+          });
+
+          setGenerationAttempts((prev) => prev + 1);
+
+          setTimeout(() => {
+            setIsAutoRetrying(false);
+            generateDocumentation(true);
+          }, retryDelay);
+
+          return;
+        }
+
+        // Final failure or manual retry needed
+        if (shouldRetry && !shouldAutoRetry) {
+          toast.error("Documentation generation failed", {
+            description: userFriendlyMessage,
+            duration: 8000,
+            action: {
+              label: `Retry (${generationAttempts}/${maxGenerationAttempts})`,
+              onClick: () => {
+                setGenerationAttempts((prev) => prev + 1);
+                generateDocumentation(true);
+              },
+            },
+          });
+        } else if (errorType === 'service_configuration' || errorType === 'validation_error') {
+          toast.error("Configuration error", {
+            description: userFriendlyMessage,
+            duration: 10000,
+          });
+        } else {
+          // All attempts exhausted
+          toast.error("Generation failed - All attempts exhausted", {
+            description: `${userFriendlyMessage}. Please check your project details and try again.`,
+            duration: 12000,
+            action: {
+              label: "Reset & Try Again",
+              onClick: () => {
+                setGenerationAttempts(0);
+                // Allow user to try again from beginning
+              },
+            },
+          });
+        }
+      } finally {
+        if (!isAutoRetrying) {
+          setIsGenerating(false);
+        }
       }
-
-      const generatedDoc = response.data.documentation;
-
-      updateFormData({
-        generatedDocumentation: generatedDoc,
-        cloudinaryDocumentationUrl: null,
-      });
-
-      toast.success("Documentation Generated", {
-        description: "Your documentation has been generated successfully.",
-      });
-    } catch (error) {
-      console.error("Error generating documentation:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to generate documentation. Please try again.";
-      toast.error("Generation Failed", { description: errorMessage });
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [
-    formData.projectName,
-    formData.projectOverview,
-    formData.developmentAreas,
-    isGenerating,
-    updateFormData,
-  ]);
+    },
+    [
+      formData.projectName,
+      formData.projectOverview,
+      formData.developmentAreas,
+      isGenerating,
+      updateFormData,
+      generationAttempts,
+      maxGenerationAttempts,
+      isAutoRetrying
+    ]
+  );
 
   // Handle editor content changes
   const handleEditorChange = useCallback(
@@ -263,13 +417,15 @@ export function Documentation() {
     formData.projectName,
   ]);
 
-  // Store project data in Firebase
+  // Store project data in Firebase with enhanced error handling
   const storeInFirebase = useCallback(
     async (DocumentationUrl: string | null, QuotationUrl: string | null) => {
       if (hasStoredInFirebase.current) return true;
 
       setIsStoringInFirebase(true);
-      const storeToastId = toast.loading("Saving project data...");
+      const storeToastId = toast.loading("Saving project data...", {
+        description: "Storing your project in our secure database"
+      });
 
       try {
         const currentTimestamp = new Date().toISOString();
@@ -303,9 +459,9 @@ export function Documentation() {
         const docRef = await addDoc(collection(db, "Projects"), projectData);
 
         toast.dismiss(storeToastId);
-        toast.success("Project Saved", {
-          description:
-            "Your project has been successfully saved to our system!",
+        toast.success("Project saved successfully!", {
+          description: "Your project has been securely stored and is ready for review",
+          duration: 4000
         });
 
         hasStoredInFirebase.current = true;
@@ -318,7 +474,10 @@ export function Documentation() {
             : "Failed to save project data";
 
         toast.dismiss(storeToastId);
-        toast.error("Save Failed", { description: errorMessage });
+        toast.error("Save failed", { 
+          description: errorMessage,
+          duration: 6000
+        });
         return false;
       } finally {
         setIsStoringInFirebase(false);
@@ -336,7 +495,7 @@ export function Documentation() {
     ]
   );
 
-  // Handle submission with proper error handling
+  // Handle submission with enhanced error handling
   const handleSubmit = useCallback(async () => {
     // Check if we've already processed everything
     if (hasUploadedToCloudinary.current && hasStoredInFirebase.current) {
@@ -352,33 +511,34 @@ export function Documentation() {
       let uploadUrl = null;
       let quotationUrl = null;
       if (!hasUploadedToCloudinary.current) {
-        // toast.loading("Uploading documentation...", {
-        //   description: "Please wait while we securely store your files.",
-        // });
+        toast.info("Uploading documentation", {
+          description: "Securely storing your files...",
+          duration: 3000
+        });
 
         // Prepare PDF for upload
         const pdfToUpload = await preparePdfForUpload();
 
         if (!pdfToUpload) {
           throw new Error(
-            "No documentation to upload. Please upload a PDF or generate documentation first."
+            "No documentation available. Please upload a PDF or generate documentation first."
           );
         }
 
         // Upload the PDF to Cloudinary with progress tracking
         uploadUrl = await uploadToCloudinary(pdfToUpload, (progress) => {
           setUploadProgress(Math.round(progress));
-          // Update progress toast for major milestones
+          // Update progress for major milestones
           if (progress === 25 || progress === 50 || progress === 75) {
-            toast.info(`Upload Progress: ${Math.round(progress)}%`, {
-              description:
-                "Please wait while we continue uploading your files.",
+            toast.info(`Upload progress: ${Math.round(progress)}%`, {
+              description: "Please wait while we upload your files",
+              duration: 2000
             });
           }
         });
 
         if (!uploadUrl) {
-          throw new Error("Upload to Cloudinary failed");
+          throw new Error("File upload failed - please try again");
         }
 
         // Update form data with Cloudinary URL
@@ -401,27 +561,31 @@ export function Documentation() {
 
             if (quotationUrl) {
               updateFormData({ cloudinaryQuotationUrl: quotationUrl });
+              toast.success("Files uploaded successfully", {
+                description: "Documentation and quotation uploaded",
+                duration: 3000
+              });
             }
           } catch (quotationError) {
             console.error("Error uploading quotation PDF:", quotationError);
-            // Continue with main flow even if quotation upload fails
-            toast.warning("Quotation Upload Warning", {
-              description:
-                "Quotation upload failed, but documentation was uploaded successfully.",
+            toast.warning("Quotation upload failed", {
+              description: "Documentation uploaded successfully, but quotation failed",
+              duration: 4000
             });
           }
+        } else {
+          toast.success("Documentation uploaded", {
+            description: "Your files have been uploaded successfully",
+            duration: 3000
+          });
         }
-
-        toast.success("Files Uploaded", {
-          description: "Your documentation has been uploaded successfully.",
-        });
       }
 
       // Firebase storage step - if not already done
       if (!hasStoredInFirebase.current) {
         const firebaseSuccess = await storeInFirebase(uploadUrl, quotationUrl);
         if (!firebaseSuccess) {
-          throw new Error("Failed to store project data in database");
+          throw new Error("Failed to store project data - please try again");
         }
       }
 
@@ -432,8 +596,11 @@ export function Documentation() {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : "Upload failed. Please try again.";
-      toast.error("Submission Failed", { description: errorMessage });
+          : "Submission failed - please try again";
+      toast.error("Submission failed", { 
+        description: errorMessage,
+        duration: 8000
+      });
     } finally {
       setIsUploading(false);
     }
@@ -473,7 +640,8 @@ export function Documentation() {
     if (!formData.quotationPdf) {
       generateQuotation();
     }
-  }, [generateQuotation, formData.quotationPdf]); // Added proper dependencies
+  }, [generateQuotation, formData.quotationPdf]);
+
   console.log("documentation", formData);
 
   return (
@@ -606,7 +774,7 @@ export function Documentation() {
                       {isImproving ? (
                         <>
                           <RefreshCw className="h-5 w-5 animate-spin" />
-                          Improving...
+                          Improving with AI...
                         </>
                       ) : (
                         <>
@@ -702,8 +870,9 @@ export function Documentation() {
                       whileTap={{ scale: 0.98 }}
                     >
                       <Button
-                        onClick={generateDocumentation}
+                        onClick={() => generateDocumentation(false)}
                         className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-6 rounded-md shadow-lg hover:shadow-xl transition-all duration-300"
+                        disabled={isGenerating}
                       >
                         <Sparkles className="h-5 w-5 mr-2" />
                         <span className="font-medium">
@@ -720,9 +889,17 @@ export function Documentation() {
           {isGenerating && (
             <div className="border rounded-lg p-8 text-center">
               <RefreshCw className="mx-auto h-10 w-10 text-primary mb-4 animate-spin" />
-              <h3 className="font-medium">Generating Documentation...</h3>
+              <h3 className="font-medium">
+                {isAutoRetrying 
+                  ? `Retrying generation... (Attempt ${generationAttempts}/${maxGenerationAttempts})`
+                  : "Generating Documentation..."
+                }
+              </h3>
               <p className="text-sm text-muted-foreground">
-                This may take a few moments
+                {isAutoRetrying
+                  ? "Previous attempt failed, trying with backup systems..."
+                  : "AI is creating comprehensive documentation for your project"
+                }
               </p>
             </div>
           )}
@@ -730,7 +907,10 @@ export function Documentation() {
           {formData.generatedDocumentation && !isGenerating && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium">Generated Documentation</h3>
+                <h3 className="font-medium flex items-center gap-2">
+                  Generated Documentation
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                </h3>
               </div>
 
               <div className="border rounded-md h-64 overflow-y-auto">
@@ -744,7 +924,7 @@ export function Documentation() {
         </TabsContent>
       </Tabs>
 
-      {/* Submit button with upload status */}
+      {/* Submit button with enhanced status display */}
       <div className="flex justify-end mt-4">
         <Button
           onClick={handleSubmit}

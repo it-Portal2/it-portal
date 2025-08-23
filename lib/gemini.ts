@@ -13,224 +13,310 @@ import {
 import {
   extractQuestionTypeFromId,
   validateQuestionStructure,
-} from "./analysis-utils"; 
-
+} from "./analysis-utils";
+import { getActiveGoogleAIKeys } from "@/lib/firebase/admin";
+import {
+  AIKeyFromDB,
+  AttemptResult,
+  GEMINI_CONFIG,
+} from "@/lib/types";
+import {
+  classifyAndLogError,
+  generateUserFriendlyErrorMessage,
+  getDatabaseErrorMessage,
+  GeminiConfigurationError,
+  GeminiValidationError,
+} from "@/lib/gemini-errors";
+import { generateDynamicRetryStrategy, withTimeout } from "@/lib/gemini-retry";
 
 // Interfaces
-
 interface APIError extends Error {
   status?: number;
   headers?: Record<string, string>;
 }
 
-// interface HolisticAssessmentResult {
-//   overallScore: number; 
-//   verdict: "recommend" | "proceed-with-caution" | "not-recommended";
-//   resumeAlignmentScore: number; 
-//   rationale: string; 
-// }
-
-// interface QuestionAnalysisResult {
-//   questionId: string;
-//   question: string;
-//   answer: string;
-//   questionType: "technical" | "behavioral" | "scenario" | "leadership";
-//   originalityScore: number; 
-//   originalityReasoning: string;
-//   correctnessScore: number; 
-//   correctnessReasoning: string;
-//   classification:
-//     | "human-written"
-//     | "potentially-copied"
-//     | "likely-ai-generated";
-// }
-
-
-// Enhanced Constants with Generous Timeout Strategy
-
-const MODEL_NAME = "gemini-2.0-flash";
-const MAX_EXECUTION_TIME = 55000; // 55s total limit 
-
-// Progressive timeout strategy - start generous, then increase
-const FIRST_TIMEOUT = 25000; 
-const SECOND_TIMEOUT = 30000; 
-const FINAL_TIMEOUT = 40000; 
 const DEFAULT_ERROR_MESSAGE = "An unexpected error occurred";
-// Progressive timeout strategy array
-const TIMEOUT_STRATEGY = [FIRST_TIMEOUT, SECOND_TIMEOUT, FINAL_TIMEOUT];
 
-// API keys with health tracking
-const API_KEYS = [
-  process.env.GOOGLE_API_KEY_1 || "",
-  process.env.GOOGLE_API_KEY_2 || "",
-  process.env.GOOGLE_API_KEY_3 || "",
-].filter((key) => key !== "");
-
-// Enhanced Timeout Wrapper with Better Error Context
-
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  context: string = "Operation"
+/**
+ * Production-Grade Database-Driven Retry Strategy
+ * Implements rotating attempts across all available keys with intelligent error handling
+ */
+async function tryWithDatabaseKeysOptimized<T>(
+  generateFunction: (
+    genAI: GoogleGenerativeAI,
+    model: any,
+    keyInfo: AIKeyFromDB
+  ) => Promise<T>
 ): Promise<T> {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(
-      () => reject(new Error(`${context} timed out after ${timeoutMs}ms`)),
-      timeoutMs
-    );
-  });
-  return Promise.race([promise, timeoutPromise]);
-}
-
-// Smart Retry Strategy with Progressive Generous Timeouts
-
-async function tryWithMultipleKeysOptimized<T>(
-  generateFunction: (genAI: GoogleGenerativeAI, model: any) => Promise<T>
-): Promise<T> {
-  if (API_KEYS.length === 0) {
-    throw new Error("No Google API keys are configured");
-  }
-
   const startTime = Date.now();
-  let lastError: Error | null = null;
-  const attemptResults: Array<{
-    keyIndex: number;
-    error: string;
-    duration: number;
-    timeout: number;
-  }> = [];
+  const operationId = `operation_${Date.now()}_${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
 
-  for (let i = 0; i < API_KEYS.length; i++) {
-    const attemptStartTime = Date.now();
-    const timeElapsed = attemptStartTime - startTime;
+  try {
 
-    // Get timeout for this attempt (25s -> 30s -> 40s)
-    const timeoutForAttempt = TIMEOUT_STRATEGY[i] || FINAL_TIMEOUT;
 
-    // Check if we have enough time for this attempt (with 3s buffer)
-    if (timeElapsed > MAX_EXECUTION_TIME - timeoutForAttempt - 3000) {
-      console.warn(
-        `⏰ Skipping API key ${
-          i + 1
-        } due to insufficient time. Elapsed: ${timeElapsed}ms, Need: ${timeoutForAttempt}ms`
+    // 1. Fetch active Google AI keys from database
+    const activeKeys = await getActiveGoogleAIKeys();
+
+    if (activeKeys.length === 0) {
+      console.error(
+        `[GEMINI_SERVICE] No active Google API keys found in database`,
+        {
+          operationId,
+          keysFound: 0,
+          error: "CONFIG_ERROR",
+        }
       );
-      break;
+      throw new GeminiConfigurationError(
+        "CONFIG_ERROR: No active Google API keys found. Please activate at least one Google API key in Admin Panel → Settings → Manage AI Keys."
+      );
     }
 
-    const apiKey = API_KEYS[i];
 
-    try {
-      console.log(
-        `🔄 Attempting API key ${i + 1}/${
-          API_KEYS.length
-        } (generous timeout: ${timeoutForAttempt}ms, elapsed: ${timeElapsed}ms)`
-      );
 
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: MODEL_NAME,
-        generationConfig: {
-          temperature: 0.1,
-          // Keep consistent token count since we're using generous timeouts
-          maxOutputTokens: 5120,
-        },
+    // 2. Generate dynamic retry strategy
+    const retryStrategy = generateDynamicRetryStrategy(activeKeys.length);
+
+    if (retryStrategy.length === 0) {
+      console.error(`[GEMINI_SERVICE] Failed to generate retry strategy`, {
+        operationId,
+        numKeys: activeKeys.length,
+        maxExecutionTime: GEMINI_CONFIG.MAX_EXECUTION_TIME,
+        error: "STRATEGY_ERROR",
       });
-
-      const result = await withTimeout(
-        generateFunction(genAI, model),
-        timeoutForAttempt,
-        `API key ${i + 1} (${timeoutForAttempt}ms timeout)`
+      throw new GeminiConfigurationError(
+        "STRATEGY_ERROR: Unable to generate retry strategy - insufficient time budget or no keys available."
       );
+    }
 
-     // const totalTime = Date.now() - startTime;
-      // console.log(
-      //   `✅ Success with API key ${i + 1} in ${
-      //     Date.now() - attemptStartTime
-      //   }ms (total: ${totalTime}ms)`
-      // );
-      return result;
-    } catch (error) {
-      const attemptDuration = Date.now() - attemptStartTime;
-   //   const totalElapsed = Date.now() - startTime;
 
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      attemptResults.push({
-        keyIndex: i + 1,
-        error: errorMessage,
-        duration: attemptDuration,
-        timeout: timeoutForAttempt,
-      });
 
-      // console.warn(
-      //   `❌ API key ${
-      //     i + 1
-      //   } failed in ${attemptDuration}ms (timeout: ${timeoutForAttempt}ms, total: ${totalElapsed}ms): ${errorMessage}`
-      // );
+    // 3. Execute attempts with rotating key strategy
+    let lastError: Error | null = null;
+    const attemptResults: AttemptResult[] = [];
 
-      lastError = error instanceof Error ? error : new Error(String(error));
+    for (
+      let attemptIndex = 0;
+      attemptIndex < retryStrategy.length;
+      attemptIndex++
+    ) {
+      const attempt = retryStrategy[attemptIndex];
+      const key = activeKeys[attempt.keyIndex];
+      const attemptStartTime = Date.now();
+      const timeElapsed = attemptStartTime - startTime;
 
-      // Quick decision: if this was a timeout and we have more keys, continue immediately
-      if (errorMessage.includes("timed out") && i < API_KEYS.length - 1) {
-        console.log(` Moving to next API key immediately due to timeout...`);
-        continue;
+      // Final time budget check
+      if (
+        timeElapsed >
+        GEMINI_CONFIG.MAX_EXECUTION_TIME -
+          attempt.timeout -
+          GEMINI_CONFIG.TIMEOUT_BUFFER
+      ) {
+        break;
       }
 
-      // For non-timeout errors, add a small delay before retry
-      if (i < API_KEYS.length - 1) {
-        console.log(` Waiting 1s before trying next API key...`);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+      const attemptId = `${operationId}_attempt_${attemptIndex + 1}`;
+
+      try {
+        const genAI = new GoogleGenerativeAI(key.apiKey);
+        const model = genAI.getGenerativeModel({
+          model: GEMINI_CONFIG.MODEL_NAME,
+          generationConfig: GEMINI_CONFIG.GENERATION_CONFIG,
+        });
+
+        const result = await withTimeout(
+          generateFunction(genAI, model, key),
+          attempt.timeout,
+          `Key "${key.aiId}" rotation ${attempt.rotation}`
+        );
+
+
+        return result;
+      } catch (error) {
+        const attemptDuration = Date.now() - attemptStartTime;
+        const errorInfo = classifyAndLogError(
+          error,
+          key,
+          attemptIndex,
+          attempt.rotation,
+          attemptDuration,
+          attempt.timeout
+        );
+
+        console.error(`[GEMINI_SERVICE] API attempt failed`, {
+          operationId,
+          attemptId,
+          keyId: key.aiId,
+          keyPriority: key.priority,
+          rotation: attempt.rotation,
+          errorType: errorInfo.type,
+          errorMessage: errorInfo.technicalMessage,
+          attemptDurationMs: attemptDuration,
+          timeoutMs: attempt.timeout,
+          shouldRetryImmediately: errorInfo.shouldRetryImmediately,
+          phase: "attempt_error",
+        });
+
+        attemptResults.push({
+          attemptIndex: attemptIndex + 1,
+          aiId: key.aiId,
+          priority: key.priority,
+          rotation: attempt.rotation,
+          errorType: errorInfo.type,
+          errorMessage: errorInfo.userMessage,
+          duration: attemptDuration,
+          timeout: attempt.timeout,
+          shouldRetryImmediately: errorInfo.shouldRetryImmediately,
+        });
+
+        lastError = errorInfo.originalError;
+
+        // Smart retry delay logic
+        const isLastAttempt = attemptIndex === retryStrategy.length - 1;
+        if (!isLastAttempt && !errorInfo.shouldRetryImmediately) {
+          const delayMs =
+            errorInfo.type === "quota"
+              ? 2000
+              : errorInfo.type === "auth"
+              ? 1000
+              : 500;
+
+          console.info(
+            `[GEMINI_SERVICE] Applying retry delay before next attempt`,
+            {
+              operationId,
+              attemptId,
+              errorType: errorInfo.type,
+              delayMs,
+              nextAttemptIndex: attemptIndex + 2,
+              phase: "retry_delay",
+            }
+          );
+
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
       }
     }
+
+    // Generate comprehensive failure summary
+    const totalTime = Date.now() - startTime;
+    const errorSummary = attemptResults.reduce((acc, result) => {
+      acc[result.errorType] = (acc[result.errorType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    console.error(
+      `[GEMINI_SERVICE] All API attempts failed - operation complete failure`,
+      {
+        operationId,
+        totalKeys: activeKeys.length,
+        totalAttempts: attemptResults.length,
+        maxRotations: Math.max(...attemptResults.map((r) => r.rotation)),
+        totalTimeMs: totalTime,
+        errorSummary,
+        phase: "operation_failed",
+      }
+    );
+
+    // Detailed attempt log for debugging
+    attemptResults.forEach((result, index) => {
+      console.debug(`[GEMINI_SERVICE] Attempt ${result.attemptIndex} details`, {
+        operationId,
+        attemptNumber: result.attemptIndex,
+        keyId: result.aiId,
+        keyPriority: result.priority,
+        rotation: result.rotation,
+        errorType: result.errorType,
+        durationMs: result.duration,
+        timeoutMs: result.timeout,
+        phase: "attempt_summary",
+      });
+    });
+
+    const userFriendlyError = generateUserFriendlyErrorMessage(
+      attemptResults.map((r) => ({
+        errorType: r.errorType,
+        userMessage: r.errorMessage,
+      })),
+      activeKeys.length,
+      totalTime
+    );
+
+    throw new Error(userFriendlyError);
+  } catch (error) {
+    const totalTime = Date.now() - startTime;
+
+    if (
+      error instanceof GeminiConfigurationError ||
+      error instanceof GeminiValidationError
+    ) {
+      console.error(`[GEMINI_SERVICE] Configuration or validation error`, {
+        operationId,
+        errorType: error.constructor.name,
+        errorMessage: error.message,
+        totalTimeMs: totalTime,
+        phase: "operation_error",
+      });
+      throw error;
+    }
+
+    if (error instanceof Error && error.message.includes("DATABASE_ERROR")) {
+      console.error(`[GEMINI_SERVICE] Database error during operation`, {
+        operationId,
+        errorMessage: error.message,
+        totalTimeMs: totalTime,
+        phase: "database_error",
+      });
+      throw new Error(getDatabaseErrorMessage(error));
+    }
+
+    console.error(`[GEMINI_SERVICE] Unexpected system error during operation`, {
+      operationId,
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorStack: error instanceof Error ? error.stack : undefined,
+      totalTimeMs: totalTime,
+      phase: "system_error",
+    });
+
+    throw new Error(
+      `SYSTEM_ERROR: Failed to initialize AI service: ${
+        error instanceof Error ? error.message : "Unknown system error"
+      }`
+    );
   }
-
-  // Enhanced error context with timeout information
-  const summaryError = `All ${
-    API_KEYS.length
-  } API keys failed. Attempts: ${attemptResults
-    .map(
-      (r) =>
-        `Key${r.keyIndex}(${r.duration}ms/${r.timeout}ms: ${
-          r.error.includes("timed out") ? "TIMEOUT" : r.error.split(" ")[0]
-        })`
-    )
-    .join(", ")}`;
-
-  console.error(`Final failure summary: ${summaryError}`);
-  throw lastError || new Error(summaryError);
 }
 
-// ===============================
-// Enhanced Main Analysis Function
-// ===============================
+/**
+ * Main Analysis Function - Analyzes complete application with AI
+ */
 export async function analyzeCompleteApplicationOptimized(
   candidateData: Application
 ): Promise<{
   aiAnalysis: AIAnalysis;
   overallScore: number;
 }> {
-  const analysisStartTime = Date.now();
 
   try {
-    // Pre-validation
+    // Pre-validation with detailed error messages
     if (!candidateData.aiQuestions || candidateData.aiQuestions.length === 0) {
-      throw new Error("No questions available for analysis");
+      throw new GeminiValidationError(
+        "VALIDATION_ERROR: No interview questions available for analysis. Please ensure the candidate has completed the technical interview."
+      );
     }
 
     if (!validateQuestionStructure(candidateData.aiQuestions)) {
-      throw new Error("Invalid question format detected");
+      throw new GeminiValidationError(
+        "VALIDATION_ERROR: Invalid question format detected. Each question must have an id, question text, and answer."
+      );
     }
 
-    // console.log(
-    //   `🚀 Starting AI analysis for candidate: ${
-    //     candidateData.fullName || "Unknown"
-    //   }`
-    // );
-    // console.log(
-    //   `📊 Analyzing ${candidateData.aiQuestions.length} Q&A pairs with generous timeouts (${FIRST_TIMEOUT}ms → ${SECOND_TIMEOUT}ms → ${FINAL_TIMEOUT}ms)`
-    // );
-
-    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
+    const questionCounts = candidateData.aiQuestions.reduce((acc, qa) => {
+      const type = extractQuestionTypeFromId(qa.id || "");
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       // Parse questions with type detection from ID
       const questionAnswerPairs =
         candidateData.aiQuestions
@@ -244,15 +330,7 @@ export async function analyzeCompleteApplicationOptimized(
           })
           .join("\n\n") || "No questions answered";
 
-      // Count questions by type for context
-      const questionCounts =
-        candidateData.aiQuestions?.reduce((acc, qa) => {
-          const type = extractQuestionTypeFromId(qa.id || "");
-          acc[type] = (acc[type] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>) || {};
-
-      // Your existing optimized prompt with word limits
+      // Construct analysis prompt
       const PROMPT = `Evaluate this cybersecurity candidate. Return ONLY valid JSON.
 
 CANDIDATE PROFILE:
@@ -264,7 +342,6 @@ QUESTION BREAKDOWN: ${JSON.stringify(questionCounts)}
 
 QUESTIONS & ANSWERS:
 ${questionAnswerPairs}
-
 
 EVALUATION FRAMEWORK:
 
@@ -283,7 +360,6 @@ SCENARIO (${questionCounts.scenario || 0} questions):
 LEADERSHIP (${questionCounts.leadership || 0} questions):
 - Correctness: Demonstrated ability in guiding others, maintaining standards, and fostering growth
 - Focus: Decision-making, accountability, continuous learning, ethical practices, and motivating teams
-
 
 SCORING RULES:
 Originality (0-100):
@@ -337,6 +413,7 @@ JSON OUTPUT:
   }
 }`;
 
+
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
@@ -351,13 +428,30 @@ JSON OUTPUT:
           !analysisResult.questionAnalyses ||
           !analysisResult.holisticAssessment
         ) {
+          console.error(
+            ` Response validation failed - missing required sections`,
+            {
+              keyId: keyInfo.aiId,
+              hasQuestionAnalyses: !!analysisResult.questionAnalyses,
+              hasHolisticAssessment: !!analysisResult.holisticAssessment,
+              phase: "response_validation_error",
+            }
+          );
           throw new Error("Missing required analysis sections");
         }
+
       } catch (parseError) {
-        console.error("🔧 JSON Parse Error - attempting recovery:", parseError);
         console.error(
-          "📝 Response preview:",
-          cleanedResponse.substring(0, 500)
+          `[GEMINI_ANALYSIS] JSON parsing failed, attempting recovery`,
+          {
+            keyId: keyInfo.aiId,
+            parseError:
+              parseError instanceof Error
+                ? parseError.message
+                : "Unknown parse error",
+            responsePreview: cleanedResponse.substring(0, 500),
+            phase: "json_parse_error",
+          }
         );
 
         const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
@@ -365,30 +459,36 @@ JSON OUTPUT:
           try {
             // Try fixing common JSON issues
             let fixedJson = jsonMatch[0]
-              .replace(/,(\s*[}\]])/g, "$1") 
+              .replace(/,(\s*[}\]])/g, "$1")
               .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
-              .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g, ': "$1"$2'); 
+              .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g, ': "$1"$2');
 
             analysisResult = JSON.parse(fixedJson);
+
           } catch (recoveryError) {
+            console.error(`[GEMINI_ANALYSIS] JSON parsing recovery failed`, {
+              keyId: keyInfo.aiId,
+              recoveryError:
+                recoveryError instanceof Error
+                  ? recoveryError.message
+                  : "Unknown recovery error",
+              phase: "json_parse_recovery_failed",
+            });
             throw new Error(
               `JSON parsing failed even after recovery attempts: ${recoveryError}`
             );
           }
         } else {
+          console.error(
+            `[GEMINI_ANALYSIS] No valid JSON structure found in response`,
+            {
+              keyId: keyInfo.aiId,
+              phase: "json_structure_not_found",
+            }
+          );
           throw new Error("No valid JSON structure found in AI response");
         }
       }
-
-
-      // if (
-      //   analysisResult.questionAnalyses.length !==
-      //   (candidateData.aiQuestions?.length || 0)
-      // ) {
-      //   console.warn(
-      //     `⚠️  Expected ${candidateData.aiQuestions?.length} analyses, got ${analysisResult.questionAnalyses.length}`
-      //   );
-      // }
 
       // Map scores efficiently with validation
       const originalityScores: OriginalityScore[] =
@@ -431,72 +531,33 @@ JSON OUTPUT:
           "Analysis completed successfully",
       };
 
-      // const totalAnalysisTime = Date.now() - analysisStartTime;
-      // console.log(
-      //   `✅ Analysis completed successfully in ${totalAnalysisTime}ms`
-      // );
 
-      return {
-        aiAnalysis,
-        overallScore: score,
-      };
+
+      return { aiAnalysis, overallScore: score };
     });
   } catch (error) {
-    // const totalTime = Date.now() - analysisStartTime;
-    // console.error(
-    //   `❌ Error analyzing complete application after ${totalTime}ms:`,
-    //   error
-    // );
 
-    // Enhanced error categorization and user-friendly messages
-    if (error instanceof Error) {
-      const errorMessage = error.message.toLowerCase();
-
-      if (errorMessage.includes("timed out")) {
-        throw new Error(
-          "Analysis timed out despite generous timeouts - AI service is heavily loaded. Please wait 60 seconds and try again."
-        );
-      } else if (
-        errorMessage.includes("json") ||
-        errorMessage.includes("parse")
-      ) {
-        throw new Error(
-          " AI response processing failed. The analysis was interrupted - please retry."
-        );
-      } else if (
-        errorMessage.includes("api key") ||
-        (errorMessage.includes("all") && errorMessage.includes("failed"))
-      ) {
-        throw new Error(
-          " All AI service endpoints temporarily unavailable. Please try again in 30-60 seconds."
-        );
-      } else if (
-        errorMessage.includes("no questions") ||
-        errorMessage.includes("invalid")
-      ) {
-        throw new Error(
-          " Invalid application data. Please check the candidate's responses."
-        );
-      } else if (errorMessage.includes("no google api keys")) {
-        throw new Error(
-          "AI analysis service is not properly configured. Please contact support."
-        );
-      }
+    // Re-throw custom errors as-is (they already have user-friendly messages)
+    if (
+      error instanceof GeminiConfigurationError ||
+      error instanceof GeminiValidationError ||
+      (error instanceof Error && error.message.includes("**"))
+    ) {
+      throw error;
     }
 
     // Fallback error
     throw new Error(
       error instanceof Error
-        ? `Analysis failed: ${error.message}`
-        : "Analysis failed due to an unexpected error"
+        ? `Analysis Failed: ${error.message}. If this persists, please contact support.`
+        : "Unexpected Error: An unexpected error occurred during analysis. Please try again or contact support if the issue persists."
     );
   }
 }
 
-// Optimized JSON Cleaning
-
+// Helper function for JSON cleaning
 function cleanJsonResponse(response: string): string {
-  // Remove markdown and code blocks efficiently
+  // Remove markdown and code blocks
   let cleaned = response
     .replace(/```json\s*/gi, "")
     .replace(/```\s*/g, "")
@@ -519,54 +580,55 @@ function cleanJsonResponse(response: string): string {
   return cleaned;
 }
 
-
 // Quick Analysis Function
-
 export async function quickAnalyze(
   candidateData: Application
 ): Promise<AIVerdict> {
+
   try {
     const result = await analyzeCompleteApplicationOptimized(candidateData);
+
     return result.aiAnalysis.overallVerdict;
   } catch (error) {
-    console.error("Quick analysis failed:", error);
+    console.error(` Quick analysis failed`, {
+      candidateName: candidateData.fullName || "Unknown",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
     return "Requires Review";
   }
 }
 
-//  For documentation generation...
-
+// Documentation generation functions
 export async function generateImprovedDocumentationFromGeminiAI(
   textContent: string
 ): Promise<any> {
+
   try {
-    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
+
+    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       const PROMPT = `
-      🔹 **You are an expert Project Architect & Senior Developer.**
-      Your task is to **analyze, improve, and structure** the client's developer document into a **clear, comprehensive, and developer-friendly format in fully structured HTML.** Additionally, you will create a detailed one-month project plan, breaking down tasks, targets, and achievements for each week.
+      You are an expert Project Architect & Senior Developer.
+      Your task is to analyze, improve, and structure the client's developer document into a clear, comprehensive, and developer-friendly format in fully structured HTML. Additionally, you will create a detailed one-month project plan, breaking down tasks, targets, and achievements for each week.
 
-      ---
-
-      ## 📌 **Client-Provided Developer Document**
-      🔹 **Input Document:**
+      ## Client-Provided Developer Document
+      Input Document:
       \`\`\`
       ${textContent}
       \`\`\`
 
-      ---
-      📌 **Response Format:**  
-          ✅ AI must return **fully structured, styled HTML** with:  
-          - ✅ **Headings (h1, h2, h3)**
-          - ✅ **Bullet points (ul, li)**
-          - ✅ **No special characters like **, \`\`\`**
-        
-          📌 **Section Structure:**  
-          ✅ Each section must dynamically adjust the **number of points** based on project requirements.  
-        
-          ## **🎯 AI Response: Well-Structured HTML Documentation**  
-          **Generate content only without any body styling. The HTML will be inserted into an existing page, so do not include any styles for the body element. Follow this format:**
-        
-          \`\`\`
+      Response Format:  
+      AI must return fully structured, styled HTML with:  
+      - Headings (h1, h2, h3)
+      - Bullet points (ul, li)
+      - No special characters like **, \`\`\`
+
+      Section Structure:  
+      Each section must dynamically adjust the number of points based on project requirements.  
+
+      AI Response: Well-Structured HTML Documentation  
+      Generate content only without any body styling. The HTML will be inserted into an existing page, so do not include any styles for the body element. Follow this format:
+
+      \`\`\`
       <!DOCTYPE html>
       <html lang="en">
       <head>
@@ -593,13 +655,10 @@ export async function generateImprovedDocumentationFromGeminiAI(
                   border-radius: 5px;
                   overflow-x: auto;
               }
-              /* Do not include any body styles */
           </style>
       </head>
       <body>
-
-          <h1>📌 Project Documentation</h1>
-
+          <h1>Project Documentation</h1>
           <h2>1. Project Overview</h2>
           <ul>
               <li><strong>Project Name:</strong> [Dynamically generate]</li>
@@ -611,21 +670,17 @@ export async function generateImprovedDocumentationFromGeminiAI(
                     <li> [Feature 3] (More if needed)</li>
                 </ul>
             </ul>
-        
-        
-              <h2>3. Pages & Components Breakdown</h2>
-        
-              <h3>📌 A. [Page Name] (Add more if needed)</h3>
-              <ul>
-                  <li><strong>Purpose:</strong> [Brief explanation]</li>
-                  <li><strong>Features:</strong></li>
-                  <ul>
-                      <li> [Feature 1]</li>
-                      <li> [Feature 2]</li>
-                      <li> [Feature 3] (More if needed)</li>
-                  </ul>
-              </ul>
-        
+            <h2>3. Pages & Components Breakdown</h2>
+            <h3>A. [Page Name] (Add more if needed)</h3>
+            <ul>
+                <li><strong>Purpose:</strong> [Brief explanation]</li>
+                <li><strong>Features:</strong></li>
+                <ul>
+                    <li> [Feature 1]</li>
+                    <li> [Feature 2]</li>
+                    <li> [Feature 3] (More if needed)</li>
+                </ul>
+            </ul>
        <h2>3. One-Month Project Plan</h2>  
       <h3>Week 1: [Focus Area]</h3>  
       <ul>  
@@ -673,7 +728,6 @@ export async function generateImprovedDocumentationFromGeminiAI(
         <li><strong>Step 2:</strong> [Describe second step]</li>  
         <li><strong>Step 3:</strong> [Describe third step]</li>  
       </ul>  
-
       <h2>5. Tech Stack & Implementation</h2>  
       <ul>  
         <li><strong>Frontend:</strong> [Dynamically choose]</li>  
@@ -689,14 +743,19 @@ export async function generateImprovedDocumentationFromGeminiAI(
       const response = await result.response.text();
 
       // Remove any unnecessary AI-generated intro
-      let cleanedResponse = response.replace(/^```html\s*|\s*```$/g, "").trim();
-      cleanedResponse = cleanedResponse.replace(/\*?\n\n##/g, "##");
-      cleanedResponse = cleanedResponse.replace(/body\s*{[^}]*}/g, "");
+         let cleanedResponse = response
+        .replace(/```html\n?/gi, "")
+        .replace(/```/g, "")
+        .replace(/\*?\n\n##/g, "##")
+        .replace(/body\s*{[^}]*}/g, "")
+        .trim();
 
+      
       return cleanedResponse;
     });
   } catch (error) {
-    console.error("Documentation generation error:", error);
+    console.error(`Documentation generation failed`, {    errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
 
     if (error instanceof Error) {
       const apiError = error as APIError;
@@ -723,45 +782,42 @@ export async function generateDocumentationFromGeminiAI(
   projectOverview: string,
   developmentAreas: string[]
 ): Promise<any> {
+
   try {
-    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
-      // Your existing prompt for documentation generation
+    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       const PROMPT = `
-        🔹 **You are an expert Project Architect & Senior Developer.**  
-        Your task is to **analyze, improve, and structure** the client's given project name, project overview, and development areas into a **clear, comprehensive, and developer-friendly format in fully structured HTML.**  
+        You are an expert Project Architect & Senior Developer.  
+        Your task is to analyze, improve, and structure the client's given project name, project overview, and development areas into a clear, comprehensive, and developer-friendly format in fully structured HTML.  
       
-        ---
-      
-        ## 📌 **Client-Provided Project Name**  
-        🔹 **Project Name:**  
+        ## Client-Provided Project Name  
+        Project Name:  
         \`\`\`
         ${projectName}
         \`\`\`
       
-        ## 📌 **Client-Provided Project Overview**  
-        🔹 **Project Overview:**  
+        ## Client-Provided Project Overview  
+        Project Overview:  
         \`\`\`
         ${projectOverview}
         \`\`\`
       
-        ## 📌 **Client-Provided Development Areas**  
-        🔹 **Development Areas:**  
+        ## Client-Provided Development Areas  
+        Development Areas:  
         \`\`\`
         ${developmentAreas.join(", ")}
         \`\`\`
       
-        ---
-        📌 **Response Format:**  
-        ✅ AI must return **fully structured, styled HTML** with:  
-        - ✅ **Headings (h1, h2, h3)**
-        - ✅ **Bullet points (ul, li)**
-        - ✅ **No special characters like **, \`\`\`**
+        Response Format:  
+        AI must return fully structured, styled HTML with:  
+        - Headings (h1, h2, h3)
+        - Bullet points (ul, li)
+        - No special characters like **, \`\`\`
       
-        📌 **Section Structure:**  
-        ✅ Each section must dynamically adjust the **number of points** based on project requirements.  
+        Section Structure:  
+        Each section must dynamically adjust the number of points based on project requirements.  
       
-        ## **🎯 AI Response: Well-Structured HTML Documentation**  
-        **Generate content only without any body styling. The HTML will be inserted into an existing page, so do not include any styles for the body element. Follow this format:**
+        AI Response: Well-Structured HTML Documentation  
+        Generate content only without any body styling. The HTML will be inserted into an existing page, so do not include any styles for the body element. Follow this format:
       
         \`\`\`
         <!DOCTYPE html>
@@ -803,12 +859,11 @@ export async function generateDocumentationFromGeminiAI(
                     border-radius: 5px;
                     overflow-x: auto;
                 }
-                /* Do not include any body styles */
             </style>
         </head>
         <body>
       
-            <h1>📌 ${projectName} - Project Documentation</h1>
+            <h1>${projectName} - Project Documentation</h1>
       
             <h2>1. Project Overview</h2>
             <ul>
@@ -825,7 +880,7 @@ export async function generateDocumentationFromGeminiAI(
       
             <h2>3. Pages & Components Breakdown</h2>
       
-            <h3>📌 A. [Page Name] (Add more if needed)</h3>
+            <h3>A. [Page Name] (Add more if needed)</h3>
             <ul>
                 <li><strong>Purpose:</strong> [Brief explanation]</li>
                 <li><strong>Features:</strong></li>
@@ -898,14 +953,23 @@ export async function generateDocumentationFromGeminiAI(
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
-      let cleanedResponse = response.replace(/^```html\s*|\s*```$/g, "").trim();
-      cleanedResponse = cleanedResponse.replace(/\*?\n\n##/g, "##");
-      cleanedResponse = cleanedResponse.replace(/body\s*{[^}]*}/g, "");
+      let cleanedResponse = response
+        .replace(/```html\n?/gi, "")
+        .replace(/```/g, "")
+        .replace(/\*?\n\n##/g, "##")
+        .replace(/body\s*{[^}]*}/g, "")
+        .trim();
 
       return cleanedResponse;
     });
   } catch (error) {
-    console.error("Documentation generation error:", error);
+    console.error(
+      `Project documentation generation failed`,
+      {
+        projectName,
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      }
+    );
 
     if (error instanceof Error) {
       const apiError = error as APIError;
@@ -930,22 +994,23 @@ export async function generateDocumentationFromGeminiAI(
 export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
   textContent: string
 ): Promise<ClientTask[]> {
+
+
   try {
-    return await tryWithMultipleKeysOptimized(async (genAI, model) => {
+
+
+    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
+
       const PROMPT = `
-        🔹 **You are an expert Project Architect & Senior Developer.**
+        You are an expert Project Architect & Senior Developer.
         Your task is to analyze the provided developer documentation text and generate a concise, actionable list of tasks for a developer to implement the project. The tasks should be specific, clear, and focused on development work.
   
-        ---
-  
-        ## 📌 **Input Documentation Text**
+        ## Input Documentation Text
         \`\`\`
         ${textContent}
         \`\`\`
   
-        ---
-  
-        ## 📌 **Instructions**
+        ## Instructions
         - Generate a list of tasks based on the documentation.
         - Each task should be a single, actionable development step.
         - Avoid vague tasks like "Build the app" — break them into smaller, specific steps.
@@ -954,7 +1019,7 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
           - \`name\`: a concise description of the task (e.g., "Set up Firebase authentication")
           - \`completed\`: a boolean, always set to false
   
-        ## 📌 **Response Format**
+        ## Response Format
         Return the tasks in this exact JSON format:
         \`\`\`json
         [
@@ -963,31 +1028,50 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
         ]
         \`\`\`
   
-        ---
-  
-        ## 🎯 **Output**
+        ## Output
         Provide only the JSON array of tasks, with no additional text or markdown outside the JSON.
       `;
 
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
-      const cleanedResponse = response
-        .replace(/^```json\s*|\s*```$/g, "")
-        .trim();
+      console.info(
+        ` Task generation response received`,
+        {
+   
+          keyId: keyInfo.aiId,
+          responseLength: response.length,
+        }
+      );
+
+      const cleanedResponse = response.replace(/^``````$/g, "").trim();
       const tasks: ClientTask[] = JSON.parse(cleanedResponse);
 
       if (
         !Array.isArray(tasks) ||
         tasks.some((t) => !t.id || !t.name || typeof t.completed !== "boolean")
       ) {
+        console.error(`[GEMINI_TASK_GENERATION] Invalid task format returned`, {
+          keyId: keyInfo.aiId,
+          tasksLength: Array.isArray(tasks) ? tasks.length : "not_array",
+        });
         throw new Error("Invalid task format returned by AI");
       }
+
+      console.info(
+        `[GEMINI_TASK_GENERATION] Task generation completed successfully`,
+        {
+          keyId: keyInfo.aiId,
+          tasksGenerated: tasks.length,
+        }
+      );
 
       return tasks;
     });
   } catch (error) {
-    console.error("Task generation error:", error);
+    console.error(`Task generation failed`, {
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
     throw new Error(
       `Task generation failed: ${
         error instanceof Error ? error.message : "Unknown error"

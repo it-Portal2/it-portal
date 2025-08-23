@@ -84,7 +84,7 @@ export const useAuth = () => {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        console.log("User signed in, forcing token refresh...");
+      ///  console.log("User signed in, forcing token refresh...");
         // Force token refresh to get updated claims
         await user.getIdToken(true);
 
@@ -98,7 +98,7 @@ export const useAuth = () => {
         const userData = userDoc.data();
         const userRole = userData.role;
 
-        console.log(`User role: ${userRole}, Expected: ${expectedRole}`);
+        //console.log(`User role: ${userRole}, Expected: ${expectedRole}`);
 
         // Check role permissions
         if (expectedRole === "admin") {
@@ -118,7 +118,7 @@ export const useAuth = () => {
         // Set auth cookie with fresh token
         const token = await user.getIdToken(true);
         document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
-        console.log("Fresh token set in cookie");
+       // console.log("Fresh token set in cookie");
 
         // Redirect based on actual user role (not expected role)
         let redirectPath = "/";
@@ -130,7 +130,7 @@ export const useAuth = () => {
           redirectPath = "/client";
         }
 
-        console.log(`Redirecting to: ${redirectPath}`);
+     //   console.log(`Redirecting to: ${redirectPath}`);
         await router.push(redirectPath);
         return true;
       } catch (error: any) {

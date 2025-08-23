@@ -30,7 +30,8 @@ import {
   RefreshCw,
   FileDown,
 } from "lucide-react";
-import { toPng} from 'html-to-image';
+import html2canvas from 'html2canvas-pro';
+import jsPDF from 'jspdf';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CircularProgress } from "@/components/ui-custom/CircularProgress";
@@ -91,8 +92,7 @@ export default function ApplicationDetailPageClient({
   const [currentAttempt, setCurrentAttempt] = useState(1);
   const [maxAttempts] = useState(3);
   const [analysisPhase, setAnalysisPhase] = useState("");
-const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   // Error state handling
   if (error || !applicationDetails) {
     return (
@@ -141,14 +141,18 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     }
   };
 
-  // Enhanced AI Analysis with robust timeout and retry handling
+  // Enhanced AI Analysis with robust error handling and toast messages
   const handleAIAnalysis = useCallback(
     async (isRetry: boolean = false) => {
       if (
         !applicationDetails?.aiQuestions ||
         applicationDetails.aiQuestions.length === 0
       ) {
-        toast.error("No questions available for analysis");
+        toast.error("No interview questions available for analysis", {
+          description:
+            "Please ensure the candidate has completed the technical interview.",
+          duration: 5000,
+        });
         return;
       }
 
@@ -158,42 +162,44 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
       setIsAnalyzing(true);
       setAnalysisProgress(5);
-      setAnalysisPhase("Initializing analysis...");
+      setAnalysisPhase("Initializing AI analysis systems...");
 
-      // Progress simulation with phases
+      // Enhanced progress simulation with realistic phases
       const progressInterval = setInterval(() => {
         setAnalysisProgress((prev) => {
-          if (prev < 20) {
-            setAnalysisPhase("Preparing candidate data...");
+          if (prev < 15) {
+            setAnalysisPhase("Validating candidate data...");
+            return prev + 2;
+          } else if (prev < 35) {
+            setAnalysisPhase("Processing technical responses...");
             return prev + 3;
-          } else if (prev < 40) {
-            setAnalysisPhase("Analyzing technical responses...");
-            return prev + 4;
-          } else if (prev < 60) {
-            setAnalysisPhase("Evaluating authenticity...");
-            return prev + 3;
-          } else if (prev < 80) {
-            setAnalysisPhase("Computing final scores...");
+          } else if (prev < 55) {
+            setAnalysisPhase("Analyzing response authenticity...");
+            return prev + 2;
+          } else if (prev < 75) {
+            setAnalysisPhase("Computing technical accuracy scores...");
             return prev + 2;
           } else if (prev < 90) {
-            setAnalysisPhase("Generating recommendations...");
+            setAnalysisPhase("Generating final recommendations...");
             return prev + 1;
           }
           return prev;
         });
-      }, 800);
+      }, 1000);
 
       try {
-        // console.log(
-        //   `🚀 Starting AI analysis attempt ${currentAttempt}/${maxAttempts}`
-        // );
+        // console.info(`[CLIENT] Starting AI analysis attempt ${currentAttempt}/${maxAttempts}`, {
+        //   candidateName: applicationDetails?.fullName || 'Unknown',
+        //   questionsCount: applicationDetails?.aiQuestions?.length || 0,
+        //   attempt: currentAttempt
+        // });
 
-        // Create axios request with shorter timeout than server timeout
+        // Create axios request with appropriate timeout
         const analysisPromise = axios.post(
           "/api/admin/application-analysis",
           { applicationDetails: applicationDetails },
           {
-            timeout: 50000, // 50 seconds client timeout
+            timeout: 50000, // 50 seconds client timeout (less than server 55s)
             headers: {
               "Content-Type": "application/json",
             },
@@ -204,9 +210,10 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
         clearInterval(progressInterval);
         setAnalysisProgress(100);
-        setAnalysisPhase("Analysis completed!");
+        setAnalysisPhase("Analysis completed successfully!");
 
         if (response.data.success) {
+          // Update application with AI analysis results
           const updateResponse = await updateApplicationAIAnalysisAction(
             applicationDetails.id,
             response.data.aiAnalysis,
@@ -216,14 +223,16 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
           if (updateResponse.success) {
             setHasAnalyzed(true);
 
-            toast.success(" AI analysis completed successfully!", {
-              description: `Processed in ${
+            toast.success("AI Analysis Completed Successfully!", {
+              description: `Comprehensive analysis completed in ${
                 response.data.processingTime || "unknown"
-              }ms`,
-              duration: 4000,
+              }ms. Overall score: ${
+                response.data.overallScore?.toFixed(1) || "N/A"
+              }/10`,
+              duration: 6000,
             });
 
-            // Auto-scroll to results
+            // Auto-scroll to results section
             setTimeout(() => {
               const aiResultsSection = document.getElementById(
                 "ai-analysis-results"
@@ -238,95 +247,170 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
             }, 500);
           } else {
             throw new Error(
-              updateResponse.error || "Failed to update application"
+              updateResponse.error || "Failed to save analysis results"
             );
           }
         } else {
-          throw new Error(response.data.message || "API call failed");
+          throw new Error(response.data.message || "Analysis request failed");
         }
       } catch (error) {
         clearInterval(progressInterval);
         setAnalysisProgress(0);
         setAnalysisPhase("");
 
-      //  console.error(`❌ Analysis attempt ${currentAttempt} failed:`, error);
+        //  console.error(`[CLIENT] Analysis attempt ${currentAttempt} failed:`, error);
 
-        // Determine if we should retry
-        const shouldRetry = currentAttempt < maxAttempts;
+        // Enhanced error classification and handling
+        let errorType = "unknown";
         let errorMessage = "Analysis failed";
-        let shouldShowRetry = false;
+        let shouldRetry = currentAttempt < maxAttempts;
+        let userFriendlyMessage = "";
+        let retryDelay = 2000; // Default 2 second delay
 
         if (axios.isAxiosError(error)) {
+          const response = error.response;
+          const data = response?.data;
+
+          // Handle specific error types from our enhanced API routes
           if (
             error.code === "ECONNABORTED" ||
             error.message.includes("timeout")
           ) {
-            errorMessage = `Analysis timed out on attempt ${currentAttempt}/${maxAttempts}`;
-            shouldShowRetry = shouldRetry;
-          } else if (error.response?.status === 408) {
+            errorType = "timeout";
+            errorMessage = `Request timed out after ${
+              error.config?.timeout || 50000
+            }ms`;
+            userFriendlyMessage = `Analysis timed out on attempt ${currentAttempt}/${maxAttempts}. The AI service may be experiencing high load.`;
+            retryDelay = 3000; // Longer delay for timeouts
+          } else if (response?.status === 408) {
+            errorType = "server_timeout";
+            errorMessage = "Server processing timeout";
+            userFriendlyMessage = `Server timeout on attempt ${currentAttempt}/${maxAttempts}. Trying with backup systems...`;
+            retryDelay = 2000;
+          } else if (response?.status === 503) {
+            errorType = "service_unavailable";
             errorMessage =
-              "Server processing timeout - trying different approach";
-            shouldShowRetry = shouldRetry;
-          } else if (error.response?.status === 503) {
-            errorMessage = "AI service temporarily overloaded";
-            shouldShowRetry = shouldRetry;
-          } else if (error.response?.status === 422) {
-            errorMessage = "AI response parsing failed";
-            shouldShowRetry = shouldRetry;
-          } else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-            shouldShowRetry =
-              shouldRetry && !error.response.data.message.includes("required");
+              data?.message || "AI service temporarily unavailable";
+            userFriendlyMessage = `AI service temporarily overloaded (attempt ${currentAttempt}/${maxAttempts}). Retrying with different endpoints...`;
+            retryDelay = 4000; // Longer delay for service issues
+          } else if (response?.status === 422) {
+            errorType = "parsing_error";
+            errorMessage = data?.message || "AI response parsing failed";
+            userFriendlyMessage = `Response processing failed (attempt ${currentAttempt}/${maxAttempts}). Retrying with enhanced parsing...`;
+            retryDelay = 1500;
+          } else if (response?.status === 400) {
+            errorType = "validation_error";
+            errorMessage = data?.message || "Request validation failed";
+            userFriendlyMessage = errorMessage;
+            shouldRetry = false; // Don't retry validation errors
+          } else if (data?.message) {
+            // Handle user-friendly messages from our API (containing **)
+            if (data.message.includes("**")) {
+              errorType = "service_configuration";
+              errorMessage = data.message;
+              userFriendlyMessage = data.message;
+              shouldRetry = false; // Configuration errors need manual intervention
+            } else {
+              errorType = "api_error";
+              errorMessage = data.message;
+              userFriendlyMessage = `${data.message} (attempt ${currentAttempt}/${maxAttempts})`;
+            }
+          } else {
+            errorType = "network_error";
+            errorMessage = error.message || "Network request failed";
+            userFriendlyMessage = `Network error on attempt ${currentAttempt}/${maxAttempts}. Checking connection...`;
           }
         } else if (error instanceof Error) {
-          errorMessage = error.message;
-          shouldShowRetry =
-            shouldRetry && !error.message.includes("validation");
+          if (error.message.toLowerCase().includes("validation")) {
+            errorType = "client_validation";
+            errorMessage = error.message;
+            userFriendlyMessage = error.message;
+            shouldRetry = false;
+          } else {
+            errorType = "unexpected_error";
+            errorMessage = error.message;
+            userFriendlyMessage = `Unexpected error: ${error.message}`;
+          }
         }
 
-        // Auto-retry for timeout/service errors (not user errors)
-        if (
-          shouldRetry &&
-          (errorMessage.includes("timeout") ||
-            errorMessage.includes("overloaded") ||
-            errorMessage.includes("parsing failed"))
-        ) {
+        // Auto-retry logic for recoverable errors
+        const autoRetryTypes = [
+          "timeout",
+          "server_timeout",
+          "service_unavailable",
+          "parsing_error",
+          "network_error",
+        ];
+        const shouldAutoRetry =
+          shouldRetry && autoRetryTypes.includes(errorType);
+
+        if (shouldAutoRetry) {
+          toast.error(
+            `Attempt ${currentAttempt}/${maxAttempts} Failed - Auto Retrying`,
+            {
+              description: userFriendlyMessage,
+              duration: 3000,
+            }
+          );
+
           setCurrentAttempt((prev) => prev + 1);
 
-          toast.error(`Attempt ${currentAttempt} failed - Retrying...`, {
-            description: errorMessage,
-            duration: 3000,
-          });
-
-          // Wait 2 seconds before retry
+          // Wait before retry with progressive backoff
           setTimeout(() => {
             handleAIAnalysis(true);
-          }, 2000);
+          }, retryDelay);
 
           return;
         }
 
-        // Final failure - show error with manual retry option
-        toast.error("AI Analysis Failed", {
-          description: errorMessage,
-          duration: 8000,
-          action: shouldShowRetry
-            ? {
-                label: `Retry (${currentAttempt}/${maxAttempts})`,
-                onClick: () => {
-                  setCurrentAttempt((prev) => prev + 1);
-                  handleAIAnalysis(true);
-                },
-              }
-            : {
-                label: "Reset",
-                onClick: () => {
-                  setCurrentAttempt(1);
-                  setAnalysisProgress(0);
-                  setAnalysisPhase("");
-                },
+        // Final failure - show comprehensive error with manual retry option
+        if (shouldRetry && !shouldAutoRetry) {
+          // Manual retry option for certain error types
+          toast.error("AI Analysis Failed", {
+            description: userFriendlyMessage,
+            duration: 10000,
+            action: {
+              label: `Manual Retry (${currentAttempt}/${maxAttempts})`,
+              onClick: () => {
+                setCurrentAttempt((prev) => prev + 1);
+                handleAIAnalysis(true);
               },
-        });
+            },
+          });
+        } else if (
+          errorType === "service_configuration" ||
+          errorType === "client_validation"
+        ) {
+          // Configuration/validation errors - no retry
+          toast.error("Configuration Error", {
+            description: userFriendlyMessage,
+            duration: 12000,
+          });
+        } else {
+          // All attempts exhausted
+          toast.error("Analysis Failed - All Attempts Exhausted", {
+            description: `${userFriendlyMessage}\n\nPlease try again later or contact technical support if this issue persists.`,
+            duration: 15000,
+            action: {
+              label: "Reset & Try Again",
+              onClick: () => {
+                setCurrentAttempt(1);
+                setAnalysisProgress(0);
+                setAnalysisPhase("");
+                // Allow user to try again from beginning
+              },
+            },
+          });
+        }
+
+        // console.error(`[CLIENT] Final error classification:`, {
+        //   errorType,
+        //   errorMessage,
+        //   shouldRetry,
+        //   shouldAutoRetry,
+        //   currentAttempt,
+        //   maxAttempts
+        // });
       } finally {
         setIsAnalyzing(false);
       }
@@ -334,59 +418,99 @@ const [isGeneratingReport, setIsGeneratingReport] = useState(false);
     [applicationDetails, currentAttempt, maxAttempts]
   );
 
-const generateReport = useCallback(async () => {
+const generatePdf = useCallback(async () => {
   try {
-    setIsGeneratingReport(true);
+    setIsGeneratingPdf(true);
     
     const element = document.getElementById('report-capture-section');
     if (!element) {
-      toast.error('Unable to find the report section to capture');
+      toast.error('Report section not found');
       return;
     }
 
-    // Hide buttons by adding CSS class
+    // Hide action buttons during capture
     const actionButtons = document.getElementById('action-buttons-section');
     if (actionButtons) {
-      actionButtons.style.display = 'none';
+      actionButtons.style.visibility = 'hidden';
     }
 
-    // Generate screenshot
-    const dataUrl = await toPng(element, {
-      quality: 0.95,
+    // Device-optimized settings
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Generate high-quality canvas using html2canvas-pro (supports oklch)
+    const canvas = await html2canvas(element, {
+      scale: isMobile ? 2 : 3, // HD quality with device optimization
+      useCORS: true,
       backgroundColor: '#ffffff',
-      pixelRatio: 2,
-      width: element.scrollWidth,
-      height: element.scrollHeight,
+      logging: false,
+      windowWidth: element.scrollWidth,
+      windowHeight: element.scrollHeight,
+      scrollX: 0,
+      scrollY: 0
     });
+
+    // Convert canvas to image data
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+
+    // Create PDF with jsPDF
+    const pdf = new jsPDF({
+      unit: 'mm',
+      format: 'a4',
+      orientation: 'portrait'
+    });
+
+    // Get PDF dimensions
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    // Calculate image dimensions for PDF
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    // Add first page
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    // Add additional pages for large content
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+
+    // Generate filename and save
+    const filename = `${applicationDetails?.fullName?.replace(/\s+/g, '_') || 'Candidate'}_Report_${new Date().toISOString().slice(0,10)}.pdf`;
+    pdf.save(filename);
 
     // Show buttons again
     if (actionButtons) {
-      actionButtons.style.display = 'flex';
+      actionButtons.style.visibility = 'visible';
     }
 
-    // Download logic
-    const link = document.createElement('a');
-    link.download = `${applicationDetails?.fullName?.replace(/\s+/g, '_') || 'Candidate'}_Report_${new Date().toISOString().slice(0, 10)}.png`;
-    link.href = dataUrl;
-    link.click();
-    
-    toast.success(`Report downloaded successfully!`);
+    toast.success('📄 Multi-page PDF Downloaded Successfully!', {
+      description: 'High-quality PDF with all content captured'
+    });
 
   } catch (error) {
-    console.error('Screenshot generation failed:', error);
-    toast.error('Failed to generate report');
+    console.error('PDF generation failed:', error);
     
-    // Ensure buttons are shown again on error
+    // Restore buttons on error
     const actionButtons = document.getElementById('action-buttons-section');
     if (actionButtons) {
-      actionButtons.style.display = 'flex';
+      actionButtons.style.visibility = 'visible';
     }
+    
+    toast.error('Failed to generate PDF', {
+      description: 'Please try again or contact support'
+    });
   } finally {
-    setIsGeneratingReport(false);
+    setIsGeneratingPdf(false);
   }
 }, [applicationDetails?.fullName]);
-
-
 
   const safeDisplay = (value: any, fallback = "N/A") => {
     return value && value !== "" ? value : fallback;
@@ -515,7 +639,10 @@ const generateReport = useCallback(async () => {
           </div>
 
           {/* Action Buttons */}
-          <div id="action-buttons-section"  className="flex items-center gap-3 flex-wrap">
+          <div
+            id="action-buttons-section"
+            className="flex items-center gap-3 flex-wrap"
+          >
             <Button
               onClick={() => handleApplicationStatusChange("Accepted")}
               className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
@@ -558,12 +685,12 @@ const generateReport = useCallback(async () => {
             </Button>
             {/* Generate Report Button */}
             <Button
-              onClick={generateReport}
+              onClick={generatePdf}
               variant="outline"
               className="gap-2 bg-yellow-300 border-blue-200 text-black hover:bg-yellow-300/80 "
-              disabled={isGeneratingReport}
+              disabled={isGeneratingPdf}
             >
-              {isGeneratingReport ? (
+              {isGeneratingPdf ? (
                 <>
                   <RefreshCw className="h-4 w-4 animate-spin" />
                   Generating Report...
@@ -571,7 +698,7 @@ const generateReport = useCallback(async () => {
               ) : (
                 <>
                   <FileDown className="h-4 w-4" />
-                 Generate Report
+                  Generate Report
                 </>
               )}
             </Button>
@@ -589,7 +716,6 @@ const generateReport = useCallback(async () => {
             )}
           </div>
         </div>
-
 
         {/* AI Analysis Results Summary Cards */}
         {applicationDetails?.aiAnalysis && (

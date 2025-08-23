@@ -36,12 +36,12 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
   const { logout } = useAuth();
   const { isAuthenticated, profile } = useAuthStore();
 
-  // Debug logs
-  useEffect(() => {
-    console.log("Sidebar render - isAuthenticated:", isAuthenticated);
-    console.log("Sidebar render - role:", role);
-    console.log("Sidebar render - profile:", profile);
-  }, [isAuthenticated, role, profile]);
+  // // Debug logs
+  // useEffect(() => {
+  //   console.log("Sidebar render - isAuthenticated:", isAuthenticated);
+  //   console.log("Sidebar render - role:", role);
+  //   console.log("Sidebar render - profile:", profile);
+  // }, [isAuthenticated, role, profile]);
 
   // Don't render if not authenticated
   if (!isAuthenticated) {

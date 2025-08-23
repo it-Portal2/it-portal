@@ -485,7 +485,7 @@ const SubadminsTab = () => {
             data={subadmins}
             columns={columns}
             emptyMessage="No subadmins found"
-            itemsPerPage={10}
+            itemsPerPage={6}
             loading={isLoading.fetch}
           />
         </CardContent>

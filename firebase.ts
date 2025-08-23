@@ -25,5 +25,4 @@ export const auth = getAuth();
 export const googleProvider = new GoogleAuthProvider();
 // Set session persistence
 setPersistence(auth, browserSessionPersistence)
-  .then(() => console.log("Auth persistence set to session"))
   .catch((error) => console.error("Error setting persistence:", error));

@@ -8,10 +8,12 @@ import {
   deleteDoc,
   where,
   query,
+  addDoc,
+  orderBy,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
-import {  Application, CorrectnessScore, OriginalityScore } from "../types";
+import {  AIKeyFromDB, Application, CorrectnessScore, OriginalityScore } from "../types";
 import { adminAuth } from "@/firebaseAdmin";
 
 export async function acceptProject(
@@ -664,7 +666,7 @@ export async function createSubadmin(
       };
     }
 
-    console.log(`Creating subadmin: ${email}`);
+  //  console.log(`Creating subadmin: ${email}`);
 
     // Create user in Firebase Auth
     const userRecord = await adminAuth.createUser({
@@ -674,15 +676,15 @@ export async function createSubadmin(
       disabled: false,
     });
 
-    console.log(`User created in Firebase Auth: ${userRecord.uid}`);
+  //  console.log(`User created in Firebase Auth: ${userRecord.uid}`);
 
     // Set custom claims - subadmin role
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: "subadmin" });
-    console.log(`Custom claims set for: ${userRecord.uid}`);
+  //  console.log(`Custom claims set for: ${userRecord.uid}`);
 
     // Revoke refresh tokens to force immediate token refresh
     await adminAuth.revokeRefreshTokens(userRecord.uid);
-    console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
+   // console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
 
     // Create user profile in Firestore
     const subadminProfile: SubadminProfile = {
@@ -699,7 +701,7 @@ export async function createSubadmin(
     };
 
     await setDoc(doc(db, "users", userRecord.uid), subadminProfile);
-    console.log(`Subadmin profile created in Firestore: ${userRecord.uid}`);
+  //  console.log(`Subadmin profile created in Firestore: ${userRecord.uid}`);
 
     return { success: true, uid: userRecord.uid };
   } catch (error: any) {
@@ -742,7 +744,7 @@ export async function getAllSubadmins(): Promise<SubadminProfile[]> {
       } as SubadminProfile);
     });
 
-    console.log(`Retrieved ${subadmins.length} subadmins`);
+   // console.log(`Retrieved ${subadmins.length} subadmins`);
     return subadmins;
   } catch (error) {
     console.error("Error fetching subadmins:", error);
@@ -770,7 +772,7 @@ export async function updateSubadmin(
       };
     }
 
-    console.log(`Updating subadmin: ${uid}`);
+ // console.log(`Updating subadmin: ${uid}`);
 
     const updateData: any = {
       ...updates,
@@ -785,17 +787,17 @@ export async function updateSubadmin(
     
     if (Object.keys(authUpdates).length > 0) {
       await adminAuth.updateUser(uid, authUpdates);
-      console.log(`Firebase Auth updated for: ${uid}`);
+   //   console.log(`Firebase Auth updated for: ${uid}`);
     }
 
     // Revoke refresh tokens to apply changes immediately
     await adminAuth.revokeRefreshTokens(uid);
-    console.log(`Refresh tokens revoked for updated subadmin: ${uid}`);
+  //  console.log(`Refresh tokens revoked for updated subadmin: ${uid}`);
 
     // Update Firestore document
     const userRef = doc(db, "users", uid);
     await updateDoc(userRef, updateData);
-    console.log(`Firestore updated for: ${uid}`);
+  //  console.log(`Firestore updated for: ${uid}`);
 
     return { success: true };
   } catch (error: any) {
@@ -827,7 +829,7 @@ export async function toggleSubadminStatus(
       };
     }
 
-    console.log(`Toggling status for subadmin: ${uid} to ${isActive}`);
+   // console.log(`Toggling status for subadmin: ${uid} to ${isActive}`);
 
     // Update Firebase Auth disabled status (opposite of isActive)
     await adminAuth.updateUser(uid, { disabled: !isActive });
@@ -839,7 +841,7 @@ export async function toggleSubadminStatus(
     const userRef = doc(db, "users", uid);
     await updateDoc(userRef, { isActive });
 
-    console.log(`Status toggled for subadmin: ${uid}`);
+   // console.log(`Status toggled for subadmin: ${uid}`);
     return { success: true };
   } catch (error) {
     console.error("Error toggling subadmin status:", error);
@@ -867,10 +869,283 @@ export async function deleteSubadmin(uid: string): Promise<{ success: boolean; e
     // Delete from Firestore
     await deleteDoc(doc(db, "users", uid));
 
-    console.log(`Subadmin deleted: ${uid}`);
+   // console.log(`Subadmin deleted: ${uid}`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting subadmin:", error);
     return { success: false, error: "Failed to delete subadmin" };
+  }
+}
+
+// AI Key Management Functions with unique aiID
+export interface AIKey {
+  docId: string; // Firestore document ID (auto-generated)
+  aiID: string; // User-defined unique AI identifier
+  keyName: string;
+  apiKey: string;
+  provider: string;
+  priority: number;
+  status: "active" | "inactive";
+  createdAt: string;
+}
+
+/**
+ * Check if aiID already exists
+ */
+export async function checkAIIDExists(aiID: string): Promise<boolean> {
+  try {
+    const aiKeysRef = collection(db, "aiKeys");
+    const q = query(aiKeysRef, where("aiID", "==", aiID));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error("Error checking aiID existence:", error);
+    return false;
+  }
+}
+
+/**
+ * Get all AI keys
+ */
+export async function getAllAIKeys(): Promise<AIKey[]> {
+  try {
+    const aiKeysRef = collection(db, "aiKeys");
+    const q = query(aiKeysRef, orderBy("priority", "asc"));
+    
+    const querySnapshot = await getDocs(q);
+    const aiKeys: AIKey[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      aiKeys.push({
+        docId: doc.id, // Firestore document ID
+        ...data,
+      } as AIKey);
+    });
+
+   // console.log(`Retrieved ${aiKeys.length} AI keys`);
+    return aiKeys;
+  } catch (error) {
+    console.error("Error fetching AI keys:", error);
+    return [];
+  }
+}
+
+/**
+ * Create a new AI key with unique aiID validation
+ */
+export async function createAIKey(
+  aiID: string,
+  keyName: string,
+  apiKey: string,
+  provider: string,
+  priority: number,
+  status: "active" | "inactive" = "active"
+): Promise<{ success: boolean; error?: string; docId?: string }> {
+  try {
+    if (!aiID || !keyName || !apiKey || !provider || !priority) {
+      return {
+        success: false,
+        error: "AI ID, key name, API key, provider, and priority are required",
+      };
+    }
+
+    console.log(`Creating AI key with aiID: ${aiID}`);
+
+    // Check if aiID already exists
+    const aiIDExists = await checkAIIDExists(aiID);
+    if (aiIDExists) {
+      return {
+        success: false,
+        error: `Duplicate AI ID '${aiID}' not allowed. Please use a unique AI ID.`,
+      };
+    }
+
+    // Check if priority already exists
+    const existingKeysRef = collection(db, "aiKeys");
+    const priorityQuery = query(existingKeysRef, where("priority", "==", priority));
+    const prioritySnapshot = await getDocs(priorityQuery);
+
+    if (!prioritySnapshot.empty) {
+      return {
+        success: false,
+        error: `Priority ${priority} already exists. Please choose a different priority.`,
+      };
+    }
+
+    const aiKeyData = {
+      aiID,
+      keyName,
+      apiKey,
+      provider,
+      priority,
+      status,
+      createdAt: new Date().toISOString(),
+    };
+
+    const docRef = await addDoc(collection(db, "aiKeys"), aiKeyData);
+    console.log(`AI key created with docId: ${docRef.id}, aiID: ${aiID}`);
+
+    return { success: true, docId: docRef.id };
+  } catch (error: any) {
+    console.error("Error creating AI key:", error);
+    return { success: false, error: "Failed to create AI key" };
+  }
+}
+
+/**
+ * Update AI key using docId
+ */
+export async function updateAIKey(
+  docId: string,
+  updates: {
+    aiID?: string;
+    keyName?: string;
+    apiKey?: string;
+    provider?: string;
+    priority?: number;
+    status?: "active" | "inactive";
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!docId) {
+      return {
+        success: false,
+        error: "Document ID is required",
+      };
+    }
+
+    console.log(`Updating AI key with docId: ${docId}`);
+
+    // Check if new aiID conflicts with existing keys (if aiID is being updated)
+    if (updates.aiID) {
+      const existingKeysRef = collection(db, "aiKeys");
+      const aiIDQuery = query(existingKeysRef, where("aiID", "==", updates.aiID));
+      const aiIDSnapshot = await getDocs(aiIDQuery);
+
+      // Check if any existing key (other than current one) has this aiID
+      const conflictingKey = aiIDSnapshot.docs.find(doc => doc.id !== docId);
+      if (conflictingKey) {
+        return {
+          success: false,
+          error: `AI ID '${updates.aiID}' already exists. Please use a unique AI ID.`,
+        };
+      }
+    }
+
+    // Check if new priority conflicts with existing keys (if priority is being updated)
+    if (updates.priority) {
+      const existingKeysRef = collection(db, "aiKeys");
+      const priorityQuery = query(existingKeysRef, where("priority", "==", updates.priority));
+      const prioritySnapshot = await getDocs(priorityQuery);
+
+      // Check if any existing key (other than current one) has this priority
+      const conflictingKey = prioritySnapshot.docs.find(doc => doc.id !== docId);
+      if (conflictingKey) {
+        return {
+          success: false,
+          error: `Priority ${updates.priority} already exists. Please choose a different priority.`,
+        };
+      }
+    }
+
+    const aiKeyRef = doc(db, "aiKeys", docId);
+    await updateDoc(aiKeyRef, updates);
+    console.log(`AI key updated with docId: ${docId}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating AI key:", error);
+    return { success: false, error: "Failed to update AI key" };
+  }
+}
+
+/**
+ * Toggle AI key status using docId
+ */
+export async function toggleAIKeyStatus(
+  docId: string,
+  currentStatus: "active" | "inactive"
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!docId) {
+      return {
+        success: false,
+        error: "Document ID is required",
+      };
+    }
+
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+    console.log(`Toggling status for AI key with docId: ${docId} to ${newStatus}`);
+
+    const aiKeyRef = doc(db, "aiKeys", docId);
+    await updateDoc(aiKeyRef, { status: newStatus });
+
+    console.log(`Status toggled for AI key with docId: ${docId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error toggling AI key status:", error);
+    return { success: false, error: "Failed to update status" };
+  }
+}
+
+/**
+ * Delete AI key using docId
+ */
+export async function deleteAIKey(docId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!docId) {
+      return {
+        success: false,
+        error: "Document ID is required",
+      };
+    }
+
+    console.log(`Deleting AI key with docId: ${docId}`);
+    await deleteDoc(doc(db, "aiKeys", docId));
+    console.log(`AI key deleted with docId: ${docId}`);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting AI key:", error);
+    return { success: false, error: "Failed to delete AI key" };
+  }
+}
+
+/**
+ * Get all active AI keys optimized for Gemini API
+ * Only fetches required fields: aiId, apiKey, priority, status
+ */
+export async function getActiveGoogleAIKeys(): Promise<AIKeyFromDB[]> {
+  try {
+    const aiKeysRef = collection(db, "aiKeys");
+    const q = query(
+      aiKeysRef,
+      where("status", "==", "active"),
+      where("provider", "==", "Google"),
+      orderBy("priority", "asc")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const aiKeys: AIKeyFromDB[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      
+      // Only extract required fields
+      if (data.aiID && data.apiKey && typeof data.priority === 'number') {
+        aiKeys.push({
+          aiId: data.aiID,
+          apiKey: data.apiKey,
+          priority: data.priority,
+          status: data.status,
+        });
+      }
+    });
+
+    return aiKeys;
+  } catch (error) {
+    console.error("Error fetching AI keys:", error);
+    throw new Error(`DATABASE_ERROR: Failed to fetch AI keys from database: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
