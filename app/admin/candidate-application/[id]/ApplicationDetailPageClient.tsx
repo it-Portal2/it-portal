@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -149,7 +150,7 @@ export default function ApplicationDetailPageClient({
       );
     }
   };
-  // Add this function for career analysis
+
   // Add this function for career analysis
   const handleCareerAnalysis = useCallback(async () => {
     if (!applicationDetails?.id) {
@@ -290,12 +291,6 @@ export default function ApplicationDetailPageClient({
       }, 1000);
 
       try {
-        // console.info(`[CLIENT] Starting AI analysis attempt ${currentAttempt}/${maxAttempts}`, {
-        //   candidateName: applicationDetails?.fullName || 'Unknown',
-        //   questionsCount: applicationDetails?.aiQuestions?.length || 0,
-        //   attempt: currentAttempt
-        // });
-
         // Create axios request with appropriate timeout
         const analysisPromise = axios.post(
           "/api/admin/application-analysis",
@@ -359,8 +354,6 @@ export default function ApplicationDetailPageClient({
         clearInterval(progressInterval);
         setAnalysisProgress(0);
         setAnalysisPhase("");
-
-        //  console.error(`[CLIENT] Analysis attempt ${currentAttempt} failed:`, error);
 
         // Enhanced error classification and handling
         let errorType = "unknown";
@@ -504,15 +497,6 @@ export default function ApplicationDetailPageClient({
             },
           });
         }
-
-        // console.error(`[CLIENT] Final error classification:`, {
-        //   errorType,
-        //   errorMessage,
-        //   shouldRetry,
-        //   shouldAutoRetry,
-        //   currentAttempt,
-        //   maxAttempts
-        // });
       } finally {
         setIsAnalyzing(false);
       }
@@ -658,6 +642,9 @@ export default function ApplicationDetailPageClient({
       {/* Enhanced Analysis Progress Dialog */}
       <Dialog open={isAnalyzing} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md border-0 bg-white/95 backdrop-blur-sm">
+          <VisuallyHidden>
+            <DialogTitle>AI Analysis in Progress</DialogTitle>
+          </VisuallyHidden>
           <div className="p-8 text-center">
             <div className="relative mb-8">
               <CircularProgress
@@ -1364,6 +1351,9 @@ export default function ApplicationDetailPageClient({
       {/* Career Analysis Progress Dialog */}
       <Dialog open={showCareerDialog} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md border-0 bg-white/95 backdrop-blur-sm">
+          <VisuallyHidden>
+            <DialogTitle>Career Path Analysis in Progress</DialogTitle>
+          </VisuallyHidden>
           <div className="p-8 text-center">
             <div className="relative mb-8">
               <CircularProgress

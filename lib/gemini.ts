@@ -1135,12 +1135,12 @@ Return exactly 3 job role titles, one per line, no additional text:
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
-      // Parse the response to extract job roles
-      const jobRoles = response
+     
+      const jobRoles: string[] = response
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0 && !line.includes('[') && !line.includes(']'))
-        .slice(0, 3); // Ensure exactly 3 roles
+        .map((line: string) => line.trim()) 
+        .filter((line: string) => line.length > 0 && !line.includes('[') && !line.includes(']'))
+        .slice(0, 3); 
 
       return jobRoles;
     });
