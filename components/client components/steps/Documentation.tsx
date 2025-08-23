@@ -68,7 +68,7 @@ export function Documentation() {
         return;
       }
 
-      const file = e.target.files;
+      const file = e.target.files[0];
 
       try {
         // Validate the file using Zod schema
