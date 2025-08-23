@@ -31,6 +31,7 @@ import {
   toggleAIKeyStatus,
   updateAIKey,
   createAIKey,
+  updateApplicationCareerRecommendations,
 } from "@/lib/firebase/admin";
 
 export async function acceptProjectAction(
@@ -401,6 +402,32 @@ export async function updateApplicationAIAnalysisAction(
 
   return result;
 }
+/**
+ * Generate career path recommendations for highly recommended candidates
+ */
+
+export async function updateCareerRecommendationsOnly(
+  applicationId: string,
+  careerRecommendations: string[]
+) {
+  try {
+    const updateResult = await updateApplicationCareerRecommendations(
+      applicationId,
+      careerRecommendations
+    );
+
+    if (updateResult.success) {
+      revalidatePath("/admin/candidate-application");
+      revalidatePath(`/admin/candidate-application/${applicationId}`);
+    }
+
+    return updateResult;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    return { success: false, error: errorMessage };
+  }
+}
+
 
 // Updated Subadmin Management Actions - Only for subadmins
 

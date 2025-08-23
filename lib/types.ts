@@ -164,7 +164,9 @@ export interface Application {
   resumeAnalysis: ResumeAnalysis;
   aiQuestions?: QuestionAndAnswer[];
   aiAnalysis?: AIAnalysis | null;
+  careerRecommendations?: string[];
 }
+
 
 // Props interface for the client component
 export interface ApplicationDetailClientProps {

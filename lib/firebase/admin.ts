@@ -635,6 +635,37 @@ export async function updateApplicationAIAnalysis(
   }
 }
 
+/**
+ * Update application with career recommendations
+ */
+export async function updateApplicationCareerRecommendations(
+  applicationId: string,
+  careerRecommendations: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!applicationId || !Array.isArray(careerRecommendations)) {
+      return {
+        success: false,
+        error: "Valid application ID and career recommendations array are required",
+      };
+    }
+
+   // console.log(`Updating career recommendations for application: ${applicationId}`);
+
+    const applicationRef = doc(db, "applications", applicationId);
+    await updateDoc(applicationRef, { 
+      careerRecommendations, 
+    });
+
+  //  console.log(`Career recommendations updated successfully for application: ${applicationId}`);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Error updating career recommendations:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    return { success: false, error: `Failed to update career recommendations: ${errorMessage}` };
+  }
+}
+
 // Subadmin Management Functions
 export interface SubadminProfile {
   uid: string;

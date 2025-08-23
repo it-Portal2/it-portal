@@ -1,6 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Key, Lock, Save, User } from "lucide-react";
+import {
+//  Key,
+  //Lock, 
+   Save, 
+  // User
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -20,12 +25,12 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store/userStore";
 import { updateAvatar, updateProfile } from "@/app/actions/common-actions";
 import { uploadAvatarToCloudinary } from "@/lib/cloudinary";
-import { auth } from "@/firebase";
-import {
-  updatePassword,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-} from "firebase/auth";
+// import { auth } from "@/firebase";
+// import {
+//   updatePassword,
+//   EmailAuthProvider,
+//   reauthenticateWithCredential,
+// } from "firebase/auth";
 
 const DeveloperSettings = () => {
   const { profile, setProfile } = useAuthStore();
@@ -43,11 +48,11 @@ const DeveloperSettings = () => {
     photoUrl: profile?.avatar || "",
   });
 
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
+  // const [passwordForm, setPasswordForm] = useState({
+  //   currentPassword: "",
+  //   newPassword: "",
+  //   confirmPassword: "",
+  // });
 
   useEffect(() => {
     if (profile) {
@@ -71,11 +76,11 @@ const DeveloperSettings = () => {
     }
   };
 
-  // Handle password form changes
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setPasswordForm((prev) => ({ ...prev, [name]: value }));
-  };
+  // // Handle password form changes
+  // const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const { name, value } = e.target;
+  //   setPasswordForm((prev) => ({ ...prev, [name]: value }));
+  // };
 
   // Handle save profile
   const handleSaveProfile = async () => {
@@ -116,54 +121,54 @@ const DeveloperSettings = () => {
     }
   };
 
-  // Handle save password
-  const handleSavePassword = async () => {
-    if (!profile?.uid) {
-      toast.error("Please sign in to update your password");
-      return;
-    }
+  // // Handle save password
+  // const handleSavePassword = async () => {
+  //   if (!profile?.uid) {
+  //     toast.error("Please sign in to update your password");
+  //     return;
+  //   }
 
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast.error("Passwords don't match", {
-        description: "New password and confirm password must match.",
-      });
-      return;
-    }
+  //   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+  //     toast.error("Passwords don't match", {
+  //       description: "New password and confirm password must match.",
+  //     });
+  //     return;
+  //   }
 
-    setIsLoading((prev) => ({ ...prev, password: true }));
+  //   setIsLoading((prev) => ({ ...prev, password: true }));
 
-    try {
-      if (!auth.currentUser || !auth.currentUser.email) {
-        throw new Error("No authenticated user found");
-      }
+  //   try {
+  //     if (!auth.currentUser || !auth.currentUser.email) {
+  //       throw new Error("No authenticated user found");
+  //     }
 
-      const credential = EmailAuthProvider.credential(
-        auth.currentUser.email,
-        passwordForm.currentPassword
-      );
-      await reauthenticateWithCredential(auth.currentUser, credential);
-      await updatePassword(auth.currentUser, passwordForm.newPassword);
+  //     const credential = EmailAuthProvider.credential(
+  //       auth.currentUser.email,
+  //       passwordForm.currentPassword
+  //     );
+  //     await reauthenticateWithCredential(auth.currentUser, credential);
+  //     await updatePassword(auth.currentUser, passwordForm.newPassword);
 
-      toast.success("Password updated successfully");
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-    } catch (error: any) {
-      if (error.code === "auth/wrong-password") {
-        toast.error("Current password is incorrect");
-      } else if (error.code === "auth/weak-password") {
-        toast.error("New password is too weak");
-      } else {
-        toast.error(
-          error.message || "An error occurred while updating password"
-        );
-      }
-    } finally {
-      setIsLoading((prev) => ({ ...prev, password: false }));
-    }
-  };
+  //     toast.success("Password updated successfully");
+  //     setPasswordForm({
+  //       currentPassword: "",
+  //       newPassword: "",
+  //       confirmPassword: "",
+  //     });
+  //   } catch (error: any) {
+  //     if (error.code === "auth/wrong-password") {
+  //       toast.error("Current password is incorrect");
+  //     } else if (error.code === "auth/weak-password") {
+  //       toast.error("New password is too weak");
+  //     } else {
+  //       toast.error(
+  //         error.message || "An error occurred while updating password"
+  //       );
+  //     }
+  //   } finally {
+  //     setIsLoading((prev) => ({ ...prev, password: false }));
+  //   }
+  // };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile?.uid) {
@@ -216,9 +221,8 @@ const DeveloperSettings = () => {
       transition={{ duration: 0.3 }}
     >
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid grid-cols-2 w-full md:w-auto">
+        <TabsList className=" w-full ">
           <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6 mt-6">
@@ -324,74 +328,6 @@ const DeveloperSettings = () => {
               >
                 <Save className="h-4 w-4" />
                 {isLoading.profile ? "Saving..." : "Save Changes"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="password" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>
-                Update your password to maintain account security
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input
-                  id="currentPassword"
-                  name="currentPassword"
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={handlePasswordChange}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                  id="newPassword"
-                  name="newPassword"
-                  type="password"
-                  value={passwordForm.newPassword}
-                  onChange={handlePasswordChange}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={passwordForm.confirmPassword}
-                  onChange={handlePasswordChange}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setPasswordForm({
-                    currentPassword: "",
-                    newPassword: "",
-                    confirmPassword: "",
-                  })
-                }
-                disabled={isLoading.password}
-              >
-                Reset Fields
-              </Button>
-              <Button
-                className="flex items-center gap-1"
-                onClick={handleSavePassword}
-                disabled={isLoading.password}
-              >
-                <Lock className="h-4 w-4" />
-                {isLoading.password ? "Updating..." : "Update Password"}
               </Button>
             </CardFooter>
           </Card>

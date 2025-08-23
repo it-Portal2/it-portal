@@ -1079,3 +1079,77 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
     );
   }
 }
+
+/**
+ * Generate Career Path Recommendations for Highly Recommended Candidates
+ * Uses AI to suggest 3 suitable job roles based on analysis results
+ */
+export async function generateCareerPathRecommendations(
+  candidateData: Application
+): Promise<string[]> {
+
+
+  try {
+    // Pre-validation: Only for Highly Recommended candidates
+    if (!candidateData.aiAnalysis || candidateData.aiAnalysis.overallVerdict !== "Highly Recommended") {
+      return [];
+    }
+
+    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
+      // Construct career analysis prompt
+      const PROMPT = `You are a highly experienced global career advisor. 
+Analyze the following candidate profile and suggest exactly 3 modern, market-relevant job roles they are most likely to excel in.
+
+CANDIDATE PROFILE:
+Name: ${candidateData.fullName || "Unknown"}
+Overall Score: ${candidateData.overallScore || 0}/10
+AI Verdict: ${candidateData?.aiAnalysis?.overallVerdict}
+
+PROFESSIONAL BACKGROUND:
+Education: ${candidateData.resumeAnalysis?.education || "N/A"}
+Experience: ${candidateData.resumeAnalysis?.experience || "N/A"}
+Skills: ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
+Summary: ${candidateData.resumeAnalysis?.summary || "N/A"}
+
+AI ANALYSIS INSIGHTS:
+${candidateData?.aiAnalysis?.aiRecommendation || "No specific insights available"}
+
+TECHNICAL COMPETENCY:
+Average Correctness Score: ${(candidateData?.aiAnalysis?.correctnessScores || []).reduce((acc, curr) => acc + curr.score, 0) / (candidateData?.aiAnalysis?.correctnessScores?.length || 1) || 0}/10
+Average Authenticity: ${(candidateData?.aiAnalysis?.originalityScores ?? []).reduce((acc, curr) => acc + curr.score, 0) / (candidateData?.aiAnalysis?.originalityScores?.length || 1) || 0}%
+
+INSTRUCTIONS:
+1. Consider all global job roles across industries and domains (do not limit to a specific sector).
+2. Suggest exactly 3 job roles that are:
+   - Currently in demand worldwide
+   - Realistic for this candidate based on skills, education, and experience
+   - Offering progressive career growth and relevance in 2025
+3. Do not explain, justify, or add extra text.
+
+RESPONSE FORMAT:
+Return exactly 3 job role titles, one per line, no additional text:
+[Job Role 1]
+[Job Role 2]
+[Job Role 3]`;
+
+      const result = await model.generateContent(PROMPT);
+      const response = await result.response.text();
+
+      // Parse the response to extract job roles
+      const jobRoles = response
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0 && !line.includes('[') && !line.includes(']'))
+        .slice(0, 3); // Ensure exactly 3 roles
+
+      return jobRoles;
+    });
+
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? `Career analysis failed: ${error.message}`
+        : "Career analysis failed due to an unexpected error"
+    );
+  }
+}

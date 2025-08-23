@@ -29,9 +29,10 @@ import {
   Zap,
   RefreshCw,
   FileDown,
+  BrainCircuit,
 } from "lucide-react";
-import html2canvas from 'html2canvas-pro';
-import jsPDF from 'jspdf';
+import html2canvas from "html2canvas-pro";
+import jsPDF from "jspdf";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CircularProgress } from "@/components/ui-custom/CircularProgress";
@@ -93,6 +94,14 @@ export default function ApplicationDetailPageClient({
   const [maxAttempts] = useState(3);
   const [analysisPhase, setAnalysisPhase] = useState("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isCareerAnalyzing, setIsCareerAnalyzing] = useState(false);
+  const [careerAnalysisProgress, setCareerAnalysisProgress] = useState(0);
+  const [careerAnalysisPhase, setCareerAnalysisPhase] = useState("");
+  const [showCareerDialog, setShowCareerDialog] = useState(false);
+  const [careerRecommendations, setCareerRecommendations] = useState<string[]>(
+    applicationDetails?.careerRecommendations || []
+  );
+
   // Error state handling
   if (error || !applicationDetails) {
     return (
@@ -140,6 +149,99 @@ export default function ApplicationDetailPageClient({
       );
     }
   };
+  // Add this function for career analysis
+  // Add this function for career analysis
+  const handleCareerAnalysis = useCallback(async () => {
+    if (!applicationDetails?.id) {
+      toast.error("Application ID not found");
+      return;
+    }
+
+    setIsCareerAnalyzing(true);
+    setCareerAnalysisProgress(5);
+    setCareerAnalysisPhase("Initializing career analysis...");
+    setShowCareerDialog(true);
+
+    // Progress simulation
+    const progressInterval = setInterval(() => {
+      setCareerAnalysisProgress((prev) => {
+        if (prev < 30) {
+          setCareerAnalysisPhase("Analyzing candidate profile...");
+          return prev + 5;
+        } else if (prev < 60) {
+          setCareerAnalysisPhase("Evaluating market trends...");
+          return prev + 4;
+        } else if (prev < 90) {
+          setCareerAnalysisPhase("Generating career recommendations...");
+          return prev + 3;
+        }
+        return prev;
+      });
+    }, 1000);
+
+    try {
+      // Call axios directly to hit the API endpoint with application data
+      const response = await axios.post(
+        "/api/admin/generate-career-paths",
+        {
+          applicationData: applicationDetails, // Send full application data
+        },
+        {
+          timeout: 30000, // 30 seconds timeout
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      clearInterval(progressInterval);
+      setCareerAnalysisProgress(100);
+      setCareerAnalysisPhase("Career analysis completed!");
+
+      if (response.data.success && response.data.careerRecommendations) {
+        // Update the local state with career recommendations
+        setCareerRecommendations(response.data.careerRecommendations);
+
+        toast.success("Career Analysis Completed!", {
+          description: `Generated ${response.data.careerRecommendations.length} role recommendations`,
+          duration: 5000,
+        });
+
+        // Keep dialog open to show results briefly
+        setTimeout(() => {
+          setShowCareerDialog(false);
+        }, 2000);
+      } else {
+        throw new Error(response.data.message || "Career analysis failed");
+      }
+    } catch (error) {
+      clearInterval(progressInterval);
+      setCareerAnalysisProgress(0);
+      setCareerAnalysisPhase("");
+
+      console.error("Career analysis failed:", error);
+      let errorMessage = "Unknown error occurred";
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      toast.error("Career Analysis Failed", {
+        description: errorMessage,
+        duration: 8000,
+      });
+
+      setShowCareerDialog(false);
+    } finally {
+      setIsCareerAnalyzing(false);
+    }
+  }, [applicationDetails]);
 
   // Enhanced AI Analysis with robust error handling and toast messages
   const handleAIAnalysis = useCallback(
@@ -418,99 +520,103 @@ export default function ApplicationDetailPageClient({
     [applicationDetails, currentAttempt, maxAttempts]
   );
 
-const generatePdf = useCallback(async () => {
-  try {
-    setIsGeneratingPdf(true);
-    
-    const element = document.getElementById('report-capture-section');
-    if (!element) {
-      toast.error('Report section not found');
-      return;
-    }
+  const generatePdf = useCallback(async () => {
+    try {
+      setIsGeneratingPdf(true);
 
-    // Hide action buttons during capture
-    const actionButtons = document.getElementById('action-buttons-section');
-    if (actionButtons) {
-      actionButtons.style.visibility = 'hidden';
-    }
+      const element = document.getElementById("report-capture-section");
+      if (!element) {
+        toast.error("Report section not found");
+        return;
+      }
 
-    // Device-optimized settings
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // Generate high-quality canvas using html2canvas-pro (supports oklch)
-    const canvas = await html2canvas(element, {
-      scale: isMobile ? 2 : 3, // HD quality with device optimization
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight,
-      scrollX: 0,
-      scrollY: 0
-    });
+      // Hide action buttons during capture
+      const actionButtons = document.getElementById("action-buttons-section");
+      if (actionButtons) {
+        actionButtons.style.visibility = "hidden";
+      }
 
-    // Convert canvas to image data
-    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      // Device-optimized settings
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
 
-    // Create PDF with jsPDF
-    const pdf = new jsPDF({
-      unit: 'mm',
-      format: 'a4',
-      orientation: 'portrait'
-    });
+      // Generate high-quality canvas using html2canvas-pro (supports oklch)
+      const canvas = await html2canvas(element, {
+        scale: isMobile ? 2 : 3, // HD quality with device optimization
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
+      });
 
-    // Get PDF dimensions
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
+      // Convert canvas to image data
+      const imgData = canvas.toDataURL("image/jpeg", 1.0);
 
-    // Calculate image dimensions for PDF
-    const imgWidth = pdfWidth;
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      // Create PDF with jsPDF
+      const pdf = new jsPDF({
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+      });
 
-    let heightLeft = imgHeight;
-    let position = 0;
+      // Get PDF dimensions
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
 
-    // Add first page
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pdfHeight;
+      // Calculate image dimensions for PDF
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    // Add additional pages for large content
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Add first page
+      pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
       heightLeft -= pdfHeight;
+
+      // Add additional pages for large content
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      // Generate filename and save
+      const filename = `${
+        applicationDetails?.fullName?.replace(/\s+/g, "_") || "Candidate"
+      }_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
+      pdf.save(filename);
+
+      // Show buttons again
+      if (actionButtons) {
+        actionButtons.style.visibility = "visible";
+      }
+
+      toast.success("📄 Multi-page PDF Downloaded Successfully!", {
+        description: "High-quality PDF with all content captured",
+      });
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+
+      // Restore buttons on error
+      const actionButtons = document.getElementById("action-buttons-section");
+      if (actionButtons) {
+        actionButtons.style.visibility = "visible";
+      }
+
+      toast.error("Failed to generate PDF", {
+        description: "Please try again or contact support",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
     }
-
-    // Generate filename and save
-    const filename = `${applicationDetails?.fullName?.replace(/\s+/g, '_') || 'Candidate'}_Report_${new Date().toISOString().slice(0,10)}.pdf`;
-    pdf.save(filename);
-
-    // Show buttons again
-    if (actionButtons) {
-      actionButtons.style.visibility = 'visible';
-    }
-
-    toast.success('📄 Multi-page PDF Downloaded Successfully!', {
-      description: 'High-quality PDF with all content captured'
-    });
-
-  } catch (error) {
-    console.error('PDF generation failed:', error);
-    
-    // Restore buttons on error
-    const actionButtons = document.getElementById('action-buttons-section');
-    if (actionButtons) {
-      actionButtons.style.visibility = 'visible';
-    }
-    
-    toast.error('Failed to generate PDF', {
-      description: 'Please try again or contact support'
-    });
-  } finally {
-    setIsGeneratingPdf(false);
-  }
-}, [applicationDetails?.fullName]);
+  }, [applicationDetails?.fullName]);
 
   const safeDisplay = (value: any, fallback = "N/A") => {
     return value && value !== "" ? value : fallback;
@@ -924,6 +1030,75 @@ const generatePdf = useCallback(async () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Career Path Analysis Section */}
+            {applicationDetails?.aiAnalysisStatus === "analyzed" &&
+              applicationDetails?.aiAnalysis?.overallVerdict ===
+                "Highly Recommended" && (
+                <Card>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg">
+                      <div className="p-2 bg-amber-100 rounded-lg">
+                        <Target className="h-5 w-5 text-amber-600" />
+                      </div>
+                      Career Path Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {careerRecommendations.length === 0 ? (
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 mb-4">
+                          Generate AI-powered career recommendations for this
+                          highly qualified candidate.
+                        </p>
+                        <Button
+                          onClick={handleCareerAnalysis}
+                          disabled={isCareerAnalyzing}
+                          className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                        >
+                          {isCareerAnalyzing ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 animate-spin" />
+                              Analyzing Career Paths...
+                            </>
+                          ) : (
+                            <>
+                              <BrainCircuit className="h-4 w-4" />
+                              Generate Career Recommendations
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-sm text-amber-800 flex items-center gap-2">
+                          <Award className="h-4 w-4" />
+                          Recommended Career Paths
+                        </h4>
+                        <div className="space-y-2">
+                          {careerRecommendations.map(
+                            (role: string, index: number) => (
+                              <div
+                                key={index}
+                                className="p-3 bg-amber-50 rounded-lg border border-amber-200"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-xs font-bold">
+                                    {index + 1}
+                                  </span>
+                                  <span className="text-sm font-medium text-amber-900">
+                                    {role}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
           </div>
 
           {/* Right Column - Technical Assessment */}
@@ -1185,6 +1360,52 @@ const generatePdf = useCallback(async () => {
           </div>
         </div>
       </div>
+
+      {/* Career Analysis Progress Dialog */}
+      <Dialog open={showCareerDialog} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md border-0 bg-white/95 backdrop-blur-sm">
+          <div className="p-8 text-center">
+            <div className="relative mb-8">
+              <CircularProgress
+                value={careerAnalysisProgress}
+                size={120}
+                color="primary"
+              >
+                <Target className="h-8 w-8 text-amber-600 animate-pulse" />
+              </CircularProgress>
+            </div>
+
+            <h3 className="text-xl font-bold mb-3 text-gray-900">
+              Career Path Analysis
+            </h3>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                {careerAnalysisPhase ||
+                  "Analyzing candidate profile and market trends..."}
+              </p>
+
+              <div className="flex items-center justify-center gap-4 text-xs">
+                <div className="text-amber-600 font-medium">
+                  Progress: {careerAnalysisProgress}%
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-xs text-gray-500 mt-6">
+              <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"></div>
+              <div
+                className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
