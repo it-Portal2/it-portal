@@ -3,7 +3,7 @@ import { adminAuth } from "./firebaseAdmin";
 
 const roleRoutes = {
   admin: ["/admin"],
-  subadmin: ["/admin"], // Allow subadmin to access admin panel
+  subadmin: ["/admin"], 
   developer: ["/developer"],
   client: ["/client"],
 };

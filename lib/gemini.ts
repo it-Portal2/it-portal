@@ -1162,3 +1162,281 @@ Return exactly 3 job role titles, one per line, no additional text:
     );
   }
 }
+
+
+/**
+ * Analyze resume PDF and extract key information
+ */
+export async function analyzeResumeWithAI(
+  base64Data: string, 
+  mimeType: string
+): Promise<{
+  skills: string[];
+  experience: string;
+  education: string;
+  summary: string;
+}> {
+  const analysisStartTime = Date.now();
+  const resumeAnalysisId = `resume_analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  try {
+    console.info(`[GEMINI_RESUME_ANALYSIS] Starting resume analysis`, {
+      resumeAnalysisId,
+      timestamp: new Date().toISOString(),
+      phase: 'resume_analysis_start'
+    });
+
+    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
+      console.info(`[GEMINI_RESUME_ANALYSIS] Processing with API key`, {
+        resumeAnalysisId,
+        keyId: keyInfo.aiId,
+        keyPriority: keyInfo.priority,
+        phase: 'prompt_preparation'
+      });
+
+      const prompt = `You are an expert HR professional and resume analyzer. Analyze this resume document carefully and extract key information.
+
+IMPORTANT: Extract ONLY information that is explicitly present in the resume. Do not infer or assume information.
+
+EDGE CASE HANDLING:
+- If NO work experience is found → Mark as "0 years, Fresher/Entry level"
+- If NO skills are explicitly mentioned → Return ["General skills"] or skills inferred from education/projects
+- If NO education is found → Mark as "Not specified"
+- If NO clear summary can be formed → Create brief summary from available information
+
+Extract the following data and return it in JSON format:
+1. Technical and professional skills (array of specific skills mentioned or inferred from projects/education)
+2. Years of experience and seniority level (calculate from work history or mark as fresher)
+3. Educational background and qualifications (degrees, certifications, institutions)
+4. Brief professional summary (2-3 sentences highlighting available strengths)
+
+EXPERIENCE LEVEL CALCULATION:
+- 0 years = "0 years, Fresher/Entry level"
+- 0-2 years = "X years, Junior level" 
+- 2-5 years = "X years, Mid level"
+- 5-8 years = "X years, Senior level"  
+- 8+ years = "X years, Lead/Principal level"
+
+Return JSON in this exact format:
+{
+  "skills": ["specific_skill_1", "specific_skill_2", "specific_skill_3"],
+  "experience": "X years, [Fresher/Junior/Mid/Senior/Lead] level",
+  "education": "Degree, Institution, Year (or 'Not specified' if unavailable)",
+  "summary": "Professional summary highlighting key strengths and expertise based on available information"
+}
+
+Be precise and handle missing information gracefully by using appropriate defaults.`;
+
+      const result = await model.generateContent([
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType
+          }
+        },
+        { text: prompt }
+      ]);
+
+      const response = await result.response.text();
+      
+      // Clean and parse response
+      const cleanedResponse = cleanJsonResponse(response);
+      const analysis = JSON.parse(cleanedResponse);
+      
+      // Validate and set defaults
+      if (!analysis.skills || !Array.isArray(analysis.skills) || analysis.skills.length === 0) {
+        analysis.skills = ["General skills"];
+      }
+      
+      if (!analysis.experience) {
+        analysis.experience = "0 years, Fresher/Entry level";
+      }
+      
+      if (!analysis.education) {
+        analysis.education = "Not specified";
+      }
+      
+      if (!analysis.summary) {
+        analysis.summary = "Candidate with available qualifications seeking opportunities.";
+      }
+
+      const totalAnalysisTime = Date.now() - analysisStartTime;
+      
+      console.info(`[GEMINI_RESUME_ANALYSIS] Resume analysis completed successfully`, {
+        resumeAnalysisId,
+        keyId: keyInfo.aiId,
+        totalAnalysisTimeMs: totalAnalysisTime,
+        skillsFound: analysis.skills.length,
+        phase: 'resume_analysis_complete'
+      });
+
+      return analysis;
+    });
+
+  } catch (error) {
+    const totalTime = Date.now() - analysisStartTime;
+    
+    console.error(`[GEMINI_RESUME_ANALYSIS] Resume analysis failed`, {
+      resumeAnalysisId,
+      totalTimeMs: totalTime,
+      errorType: error?.constructor?.name || 'Unknown',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      phase: 'resume_analysis_failed'
+    });
+
+    throw new Error(
+      error instanceof Error
+        ? `Failed to analyze resume: ${error.message}`
+        : "Failed to analyze resume due to an unexpected error"
+    );
+  }
+}
+
+/**
+ * Generate exactly 10 interview questions based on resume analysis
+ */
+export async function generateInterviewQuestions(
+  resumeData: {
+    skills: string[];
+    experience: string;
+    education: string;
+    summary: string;
+  }
+): Promise<Array<{ id: string; question: string; answer: string }>> {
+  const questionStartTime = Date.now();
+  const questionGenerationId = `question_gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  try {
+    console.info(`[GEMINI_QUESTION_GENERATION] Starting interview question generation`, {
+      questionGenerationId,
+      timestamp: new Date().toISOString(),
+      skillsCount: resumeData.skills.length,
+      phase: 'question_generation_start'
+    });
+
+    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
+      console.info(`[GEMINI_QUESTION_GENERATION] Processing with API key`, {
+        questionGenerationId,
+        keyId: keyInfo.aiId,
+        keyPriority: keyInfo.priority,
+        phase: 'prompt_preparation'
+      });
+
+      const prompt = `You are a senior HR director at a Fortune 500 company. Based on the candidate's resume analysis, generate EXACTLY 10 interview questions for this candidate.
+
+CANDIDATE ANALYSIS:
+- Skills: ${resumeData.skills.join(", ")}
+- Experience: ${resumeData.experience}
+- Education: ${resumeData.education}
+- Summary: ${resumeData.summary}
+
+GENERATE EXACTLY 10 QUESTIONS WITH THIS DISTRIBUTION:
+- 4 TECHNICAL QUESTIONS: Core technical knowledge questions based on their specific skills
+- 2 BEHAVIORAL-FOCUSED: Use STAR method frameworks (Situation, Task, Action, Result) to assess past experiences and behaviors but in the question dont mention user that it is start method or answer the question in star method 
+- 2 SCENARIO-DRIVEN: Present realistic workplace challenges they might face
+- 2 LEADERSHIP & PROBLEM-SOLVING: Assess critical thinking and decision-making abilities based on their background
+
+Technical Questions Must Focus ONLY On:
+${resumeData.skills.join(", ")} (use ONLY these skills from their resume)
+
+STRICT RULE: Do not ask about technologies, frameworks, or skills that are NOT mentioned in their resume.
+
+Return JSON in this exact format with EXACTLY 10 questions:
+{
+  "questions": [
+    {
+      "id": "technical_q1",
+      "question": "Technical question 1 based on their skills"
+    },
+    {
+      "id": "technical_q2",
+      "question": "Technical question 2 based on their skills"
+    },
+    {
+      "id": "technical_q3",
+      "question": "Technical question 3 based on their skills"
+    },
+    {
+      "id": "technical_q4",
+      "question": "Technical question 4 based on their skills"
+    },
+    {
+      "id": "behavioral_q1",
+      "question": "Behavioral question based on their experience"
+    },
+    {
+      "id": "behavioral_q2",
+      "question": "Behavioral question based on their experience"
+    },
+    {
+      "id": "scenario_q1",
+      "question": "Scenario-driven workplace challenge question"
+    },
+    {
+      "id": "scenario_q2",
+      "question": "Scenario-driven workplace challenge question"
+    },
+    {
+      "id": "leadership_q1",
+      "question": "Leadership and problem-solving question"
+    },
+    {
+      "id": "leadership_q2",
+      "question": "Leadership and problem-solving question"
+    }
+  ]
+}
+
+Generate exactly 10 questions following this distribution. Make them specific to their actual resume data.`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response.text();
+      
+      // Clean and parse response
+      const cleanedResponse = cleanJsonResponse(response);
+      const data = JSON.parse(cleanedResponse);
+      
+      if (!data.questions || !Array.isArray(data.questions)) {
+        throw new Error("Invalid questions format in AI response");
+      }
+      
+      const questions = data.questions.map((q: any, index: number) => ({
+        id: q.id || `question_${index + 1}_${Date.now()}`,
+        question: q.question,
+        answer: ""
+      }));
+      
+      // Ensure exactly 10 questions
+      const finalQuestions = questions.slice(0, 10);
+
+      const totalQuestionTime = Date.now() - questionStartTime;
+      
+      console.info(`[GEMINI_QUESTION_GENERATION] Question generation completed successfully`, {
+        questionGenerationId,
+        keyId: keyInfo.aiId,
+        totalQuestionTimeMs: totalQuestionTime,
+        questionsGenerated: finalQuestions.length,
+        phase: 'question_generation_complete'
+      });
+
+      return finalQuestions;
+    });
+
+  } catch (error) {
+    const totalTime = Date.now() - questionStartTime;
+    
+    console.error(`[GEMINI_QUESTION_GENERATION] Question generation failed`, {
+      questionGenerationId,
+      totalTimeMs: totalTime,
+      errorType: error?.constructor?.name || 'Unknown',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      phase: 'question_generation_failed'
+    });
+
+    throw new Error(
+      error instanceof Error
+        ? `Failed to generate questions: ${error.message}`
+        : "Failed to generate questions due to an unexpected error"
+    );
+  }
+}

@@ -437,7 +437,7 @@ const Payments = () => {
                     <SelectItem value="all">All Amounts ({stats.installmentPayments})</SelectItem>
                     <SelectItem value="low">Low Payment ≤30% ({stats.lowPercentage})</SelectItem>
                     <SelectItem value="medium">Medium Payment 31-70% ({stats.mediumPercentage})</SelectItem>
-                    <SelectItem value="high">High Payment >70% ({stats.highPercentage})</SelectItem>
+                    <SelectItem value="high">High Payment ≥70% ({stats.highPercentage})</SelectItem>
                   </SelectContent>
                 </Select>
               )}
