@@ -516,11 +516,11 @@ const PaymentTab = () => {
             </div>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
+        <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
           <Button
             variant="destructive"
             onClick={() => handleDeletePaymentMethod("paypal")}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete PayPal
@@ -528,7 +528,7 @@ const PaymentTab = () => {
           <Button
             onClick={handleSavePayPal}
             disabled={isLoading.paypal}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Save className="h-4 w-4" />
             {isLoading.paypal ? "Saving..." : "Save PayPal Details"}
@@ -634,11 +634,11 @@ const PaymentTab = () => {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
+        <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
           <Button
             variant="destructive"
             onClick={() => handleDeletePaymentMethod("upi")}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete UPI
@@ -646,7 +646,7 @@ const PaymentTab = () => {
           <Button
             onClick={handleSaveUpi}
             disabled={isLoading.upi}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Save className="h-4 w-4" />
             {isLoading.upi ? "Saving..." : "Save UPI Details"}
@@ -738,11 +738,11 @@ const PaymentTab = () => {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
+        <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
           <Button
             variant="destructive"
             onClick={() => handleDeletePaymentMethod("bankDetails")}
-            className="flex items-center gap-1"
+             className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete Bank Details
@@ -750,7 +750,7 @@ const PaymentTab = () => {
           <Button
             onClick={handleSaveBankDetails}
             disabled={isLoading.bankDetails}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Save className="h-4 w-4" />
             {isLoading.bankDetails ? "Saving..." : "Save Bank Details"}
@@ -868,11 +868,11 @@ const PaymentTab = () => {
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
+        <CardFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
           <Button
             variant="destructive"
             onClick={() => handleDeletePaymentMethod("crypto")}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete Crypto
@@ -880,7 +880,7 @@ const PaymentTab = () => {
           <Button
             onClick={handleSaveCrypto}
             disabled={isLoading.crypto}
-            className="flex items-center gap-1"
+            className="flex items-center gap-1 w-full sm:w-auto"
           >
             <Save className="h-4 w-4" />
             {isLoading.crypto ? "Saving..." : "Save Crypto Details"}

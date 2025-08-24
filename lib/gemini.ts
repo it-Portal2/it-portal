@@ -316,6 +316,7 @@ export async function analyzeCompleteApplicationOptimized(
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
+    
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       // Parse questions with type detection from ID
       const questionAnswerPairs =
@@ -380,15 +381,16 @@ Classification:
 - potentially-copied: 30-69 originality, templated feel
 - likely-ai-generated: <30 originality, generic/AI patterns
 
-OVERALL ASSESSMENT:
-- recommend: ≥8.0 (strong technical + good behavioral/leadership)
-- proceed-with-caution: 6.0-7.9 (decent but has concerns)
-- not-recommended: <6.0 (significant weaknesses)
+VERDICT CRITERIA (Choose ONE):
+"Highly Recommended": Tech excellence + behavioral strength + ethical integrity + leadership potential
+"Recommended": Solid tech foundation + positive behaviors + ethical standards + role readiness  
+"Requires Review": Shows potential BUT has concerns (ethics/originality/competency gaps)
+"Not Recommended": Poor tech skills OR ethical red flags OR dishonest responses OR malpractice signs
 
 RESPONSE REQUIREMENTS:
-- originalityReasoning: Maximum 60 words, focus on specific indicators
-- correctnessReasoning: Exactly 60 words, detailed type-specific assessment
-- rationale: Maximum 100 words, detailed overall evaluation
+- originalityReasoning: (50–60 words), focus on specific indicators
+- correctnessReasoning: (50–60 words), detailed type-specific assessment
+- rationale: (90–100 words), detailed overall evaluation explaining your verdict choice
 
 JSON OUTPUT:
 {
@@ -407,12 +409,11 @@ JSON OUTPUT:
   ],
   "holisticAssessment": {
     "overallScore": 0.0-10.0,
-    "verdict": "recommend/proceed-with-caution/not-recommended",
+    "verdict": "Highly Recommended/Recommended/Requires Review/Not Recommended",
     "resumeAlignmentScore": 0-10,
-    "rationale": "concise assessment focusing on technical competency and overall fit (max 100 words)"
+    "rationale": "concise assessment explaining your verdict choice and focusing on technical competency and overall fit (max 100 words)"
   }
 }`;
-
 
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
@@ -505,21 +506,31 @@ JSON OUTPUT:
           reasoning: analysis.correctnessReasoning || "Analysis not available",
         }));
 
-      // Efficient verdict mapping with score validation
+      // Use AI-determined verdict directly from the response
       const score = Math.max(
         0,
         Math.min(10, analysisResult.holisticAssessment.overallScore || 0)
       );
+      
+      // Get verdict directly from AI response
+      const aiVerdict = analysisResult.holisticAssessment.verdict || "Requires Review";
+      
+      // Map AI verdict to your AIVerdict type
       let overallVerdict: AIVerdict;
-
-      if (score >= 8.5) {
-        overallVerdict = "Highly Recommended";
-      } else if (score >= 8.0) {
-        overallVerdict = "Recommended";
-      } else if (score >= 6.0) {
-        overallVerdict = "Requires Review";
-      } else {
-        overallVerdict = "Not Recommended";
+      switch (aiVerdict) {
+        case "Highly Recommended":
+          overallVerdict = "Highly Recommended";
+          break;
+        case "Recommended":
+          overallVerdict = "Recommended";
+          break;
+        case "Not Recommended":
+          overallVerdict = "Not Recommended";
+          break;
+        case "Requires Review":
+        default:
+          overallVerdict = "Requires Review";
+          break;
       }
 
       const aiAnalysis: AIAnalysis = {
@@ -530,8 +541,6 @@ JSON OUTPUT:
           analysisResult.holisticAssessment.rationale ||
           "Analysis completed successfully",
       };
-
-
 
       return { aiAnalysis, overallScore: score };
     });

@@ -181,14 +181,13 @@ export default function ApplicationDetailPageClient({
     }, 1000);
 
     try {
-      // Call axios directly to hit the API endpoint with application data
       const response = await axios.post(
         "/api/admin/generate-career-paths",
         {
-          applicationData: applicationDetails, // Send full application data
+          applicationData: applicationDetails, 
         },
         {
-          timeout: 30000, // 30 seconds timeout
+          timeout: 40000, 
           headers: {
             "Content-Type": "application/json",
           },
@@ -1019,11 +1018,9 @@ export default function ApplicationDetailPageClient({
             </Card>
 
             {/* Career Path Analysis Section */}
-            {applicationDetails?.aiAnalysisStatus === "analyzed" &&
-              applicationDetails?.aiAnalysis?.overallVerdict ===
-                "Highly Recommended" && (
+            {applicationDetails?.aiAnalysisStatus === "analyzed" && (
                 <Card>
-                  <CardHeader className="pb-4">
+                  <CardHeader>
                     <CardTitle className="flex items-center gap-3 text-lg">
                       <div className="p-2 bg-amber-100 rounded-lg">
                         <Target className="h-5 w-5 text-amber-600" />
@@ -1058,10 +1055,6 @@ export default function ApplicationDetailPageClient({
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-sm text-amber-800 flex items-center gap-2">
-                          <Award className="h-4 w-4" />
-                          Recommended Career Paths
-                        </h4>
                         <div className="space-y-2">
                           {careerRecommendations.map(
                             (role: string, index: number) => (

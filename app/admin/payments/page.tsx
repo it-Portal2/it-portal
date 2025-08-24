@@ -27,8 +27,6 @@ import { fetchAllPaymentRecordsAction, updatePaymentStatusAction } from "@/app/a
 import { Skeleton } from "@/components/ui/skeleton"
 import { PaymentRecord } from "@/lib/firebase/client"
 
-
-
 // Enhanced Payment Details Dialog
 const PaymentDetailsDialog = ({
   payment,
@@ -248,7 +246,6 @@ const Payments = () => {
   const [loading, setLoading] = useState<boolean>(true)
 
   // Fetch payment records with filters
-  // Fetch payment records with filters
   useEffect(() => {
     const fetchPayments = async () => {
       setLoading(true)
@@ -344,7 +341,7 @@ const Payments = () => {
 
   const filteredPayments = getFilteredPayments()
 
-  // Get statistics
+  // Get statistics and counts for filters
   const stats = {
     total: payments.length,
     pending: payments.filter((p) => p.status === "pending").length,
@@ -352,6 +349,17 @@ const Payments = () => {
     rejected: payments.filter((p) => p.status === "rejected").length,
     fullPayments: payments.filter((p) => p.paymentType === "full").length,
     installmentPayments: payments.filter((p) => p.paymentType === "installment").length,
+    
+    // Payment mode counts
+    upi: payments.filter((p) => p.modeOfPayment === "UPI").length,
+    bankTransfer: payments.filter((p) => p.modeOfPayment === "Bank Transfer").length,
+    paypal: payments.filter((p) => p.modeOfPayment === "PayPal").length,
+    crypto: payments.filter((p) => p.modeOfPayment === "Cryptocurrency").length,
+    
+    // Percentage ranges for installments
+    lowPercentage: payments.filter((p) => p.paymentType === "installment" && p.installmentPercentage && p.installmentPercentage <= 30).length,
+    mediumPercentage: payments.filter((p) => p.paymentType === "installment" && p.installmentPercentage && p.installmentPercentage > 30 && p.installmentPercentage <= 70).length,
+    highPercentage: payments.filter((p) => p.paymentType === "installment" && p.installmentPercentage && p.installmentPercentage > 70).length,
   }
 
   if (loading) {
@@ -377,57 +385,10 @@ const Payments = () => {
       transition={{ duration: 0.4 }}
       className="space-y-6"
     >
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-blue-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-yellow-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Verified</p>
-                <p className="text-2xl font-bold">{stats.verified}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-purple-600" />
-              <div>
-                <p className="text-sm text-muted-foreground">Installments</p>
-                <p className="text-2xl font-bold">{stats.installmentPayments}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
+      <Card className="py-4">
+        <CardContent className="px-3">
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
             <div className="relative flex-1">
@@ -447,36 +408,36 @@ const Payments = () => {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="all">All Status ({stats.total})</SelectItem>
+                  <SelectItem value="pending">Pending ({stats.pending})</SelectItem>
+                  <SelectItem value="verified">Verified ({stats.verified})</SelectItem>
+                  <SelectItem value="rejected">Rejected ({stats.rejected})</SelectItem>
                 </SelectContent>
               </Select>
 
               <Select value={paymentModeFilter} onValueChange={setPaymentModeFilter}>
-                <SelectTrigger className="w-[140px]">
+                <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Payment Mode" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Modes</SelectItem>
-                  <SelectItem value="UPI">UPI</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="PayPal">PayPal</SelectItem>
-                  <SelectItem value="Cryptocurrency">Cryptocurrency</SelectItem>
+                  <SelectItem value="all">All Modes ({stats.total})</SelectItem>
+                  <SelectItem value="UPI">UPI ({stats.upi})</SelectItem>
+                  <SelectItem value="Bank Transfer">Bank Transfer ({stats.bankTransfer})</SelectItem>
+                  <SelectItem value="PayPal">PayPal ({stats.paypal})</SelectItem>
+                  <SelectItem value="Cryptocurrency">Cryptocurrency ({stats.crypto})</SelectItem>
                 </SelectContent>
               </Select>
 
               {activeTab === "installment" && (
                 <Select value={percentageFilter} onValueChange={setPercentageFilter}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Payment Amount" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Amounts</SelectItem>
-                    <SelectItem value="low">Low Payment (&lt;=30%)</SelectItem>
-                    <SelectItem value="medium">Medium Payment (31-70%)</SelectItem>
-                    <SelectItem value="high">High Payment (&gt;70%)</SelectItem>
+                    <SelectItem value="all">All Amounts ({stats.installmentPayments})</SelectItem>
+                    <SelectItem value="low">Low Payment ≤30% ({stats.lowPercentage})</SelectItem>
+                    <SelectItem value="medium">Medium Payment 31-70% ({stats.mediumPercentage})</SelectItem>
+                    <SelectItem value="high">High Payment >70% ({stats.highPercentage})</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -502,16 +463,16 @@ const Payments = () => {
 
       {/* Payment Type Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "all" | "full" | "installment")}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all" className="flex items-center gap-2">
+        <TabsList className="flex flex-col w-full h-full sm:h-auto sm:flex-row sm:w-auto">
+          <TabsTrigger value="all" className="flex items-center gap-2 sm:w-auto w-full">
             <FileText className="h-4 w-4" />
             All Payments ({payments.length})
           </TabsTrigger>
-          <TabsTrigger value="full" className="flex items-center gap-2">
+          <TabsTrigger value="full" className="flex items-center gap-2 sm:w-auto w-full">
             <CheckCircle className="h-4 w-4" />
             Full Payments ({stats.fullPayments})
           </TabsTrigger>
-          <TabsTrigger value="installment" className="flex items-center gap-2">
+          <TabsTrigger value="installment" className="flex items-center gap-2 sm:w-auto w-full">
             <TrendingUp className="h-4 w-4" />
             Installments ({stats.installmentPayments})
           </TabsTrigger>
@@ -649,7 +610,7 @@ const PaymentTable = ({
 
   return (
     <div className="rounded-lg overflow-hidden border">
-      <ProjectTable data={payments} columns={columns} itemsPerPage={10} emptyMessage="No payment records found" />
+      <ProjectTable data={payments} columns={columns} itemsPerPage={6} emptyMessage="No payment records found" />
     </div>
   )
 }
