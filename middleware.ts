@@ -10,7 +10,7 @@ const roleRoutes = {
 };
 
 export const config = {
-  // ⚠️ CRITICAL: Remove ALL api routes from matcher
+  // ⚠️ CRITICAL: Remove '/api/:path*' completely from matcher
   matcher: ["/admin/:path*", "/developer/:path*", "/client/:path*"],
   runtime: "nodejs",
 };
@@ -18,12 +18,7 @@ export const config = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ⚠️ CRITICAL: Explicitly skip ALL API routes
-  if (pathname.startsWith('/api/')) {
-    return NextResponse.next();
-  }
-
-  // Your existing auth logic for non-API routes...
+  // Your existing auth logic (no changes needed)
   const cookieToken = request.cookies.get("firebaseToken")?.value;
   const urlToken = request.nextUrl.searchParams.get("token");
   const token = cookieToken || urlToken;

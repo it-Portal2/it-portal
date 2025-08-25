@@ -1,4 +1,4 @@
-// api/resume-analysis.js
+// pages/api/resume-analysis.js
 export default async function handler(req, res) {
   // Set CORS headers for ALL requests
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,8 +41,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Dynamic import to avoid build issues
-    const { analyzeResumeWithAI, generateInterviewQuestions } = await import('../lib/gemini');
+    // Import your functions dynamically
+    const { analyzeResumeWithAI, generateInterviewQuestions } = await import('../../lib/gemini');
 
     // Step 1: Resume analysis
     const resumeAnalysis = await analyzeResumeWithAI(fileData, fileType);
