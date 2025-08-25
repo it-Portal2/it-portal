@@ -1,3 +1,4 @@
+// Updated AuthPage with correct client login handler
 "use client";
 
 import type React from "react";
@@ -117,6 +118,29 @@ export default function AuthPage() {
       console.error("Signup error:", error);
     } finally {
       setIsSigningUp(false);
+    }
+  };
+
+  // Handle client login
+  const handleClientLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Prevent multiple clicks
+    if (isLoggingIn || isLoading) return;
+
+    setIsLoggingIn(true);
+
+    try {
+      const success = await login(loginForm.email, loginForm.password, "client");
+
+      if (success) {
+        toast.success(`Welcome back!`);
+        setLoginForm({ email: "", password: "" });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -486,7 +510,7 @@ export default function AuthPage() {
                     {/* Client Login Tab */}
                     <TabsContent value="login">
                       <motion.form
-                        onSubmit={(e) => handleAdminLogin(e)}
+                        onSubmit={handleClientLogin}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.3 }}

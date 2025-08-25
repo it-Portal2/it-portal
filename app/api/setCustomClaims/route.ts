@@ -1,7 +1,6 @@
 import { adminAuth } from "@/firebaseAdmin";
 import { NextRequest, NextResponse } from "next/server";
 
-// Define allowed roles
 const ALLOWED_ROLES = ["client", "admin", "developer", "subadmin"] as const;
 type AllowedRole = typeof ALLOWED_ROLES[number];
 
@@ -9,18 +8,10 @@ export async function POST(req: NextRequest) {
   try {
     console.log("API: Setting custom claims...");
     
-    // Parse request body with error handling
-    let body;
-    try {
-      body = await req.json();
-    } catch (parseError) {
-      console.error("Error parsing request body:", parseError);
-      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
-    }
-
+    const body = await req.json();
     const { uid, role } = body;
+    console.log(`API: Setting custom claims for uid: ${uid}, role: ${role}`);
 
-    // Validate required fields
     if (!uid || typeof uid !== "string") {
       return NextResponse.json({ error: "Valid uid is required" }, { status: 400 });
     }
@@ -29,26 +20,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Valid role is required" }, { status: 400 });
     }
 
-    // Validate role is allowed
     if (!ALLOWED_ROLES.includes(role as AllowedRole)) {
       return NextResponse.json({ 
         error: `Invalid role. Allowed roles: ${ALLOWED_ROLES.join(", ")}` 
       }, { status: 400 });
     }
 
-    console.log(`API: Setting custom claims for uid: ${uid}, role: ${role}`);
-
     // Set custom claims
     await adminAuth.setCustomUserClaims(uid, { role });
     
-    // Force token refresh for the user by revoking refresh tokens
-    try {
-      await adminAuth.revokeRefreshTokens(uid);
-      console.log(`API: Refresh tokens revoked for uid: ${uid} to apply new claims immediately`);
-    } catch (revokeError) {
-      console.error("API: Error revoking refresh tokens:", revokeError);
-      // Don't fail the request if token revocation fails
-    }
+    // DO NOT revoke refresh tokens - this was causing the logout issue
+    console.log(`API: Custom claims set successfully for uid: ${uid}`);
 
     return NextResponse.json({ 
       message: "Custom claims set successfully",
@@ -59,7 +41,6 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("API: Error setting custom claims:", error);
     
-    // Handle specific Firebase Admin errors
     if (error instanceof Error) {
       if (error.message.includes("user-not-found")) {
         return NextResponse.json({ error: "User not found" }, { status: 404 });
@@ -76,7 +57,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Optional: Add GET method to retrieve current claims
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

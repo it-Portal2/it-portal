@@ -48,7 +48,6 @@ export const useAuthStore = create<AuthState>()(
         set({
           user,
           isAuthenticated: !!user,
-          isLoading: false,
         }),
 
       setProfile: (profile) => set({ profile }),
@@ -78,34 +77,30 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Initialize Firebase auth listener with token refresh handling
 let unsubscribe: (() => void) | null = null;
 let tokenUnsubscribe: (() => void) | null = null;
+let isInitializing = false;
 
 const initializeAuth = () => {
-  if (unsubscribe) return; // Prevent multiple initializations
-
+  if (unsubscribe || isInitializing) return;
+  
+  isInitializing = true;
+  
   unsubscribe = onAuthStateChanged(
     auth,
     async (firebaseUser) => {
       try {
-        const { setUser, setProfile, setLoading, setError, setInitialized, resetAuth } = useAuthStore.getState();
-        
+        const { setUser, setProfile, setLoading, setError, setInitialized, resetAuth } = useAuthStore.getState();   
         setLoading(true);
         setError(null);
-
+        
         if (firebaseUser) {
-     //     console.log("Auth state changed, forcing token refresh...");
-          
-          // Force token refresh to ensure latest claims
-          await firebaseUser.getIdToken(true);
-          
           setUser(firebaseUser);
-
+          
           try {
             const userRef = doc(db, "users", firebaseUser.uid);
             const userSnap = await getDoc(userRef);
-
+            
             if (userSnap.exists()) {
               const userData = userSnap.data();
               const profile: UserProfile = {
@@ -114,7 +109,7 @@ const initializeAuth = () => {
                 name: firebaseUser.displayName || userData.name || null,
                 phone: userData.phone || null,
                 role: userData.role || "client",
-                avatar: userData.avatar || null,
+                avatar: userData.avatar || firebaseUser.photoURL || null,
                 createdAt: userData.createdAt || Date.now(),
                 lastLogin: Date.now(),
               };
@@ -126,7 +121,7 @@ const initializeAuth = () => {
                 name: firebaseUser.displayName,
                 phone: null,
                 role: "client",
-                avatar: null,
+                avatar: firebaseUser.photoURL,
                 createdAt: Date.now(),
                 lastLogin: Date.now(),
               };
@@ -134,17 +129,28 @@ const initializeAuth = () => {
             }
           } catch (firestoreError) {
             console.error("Firestore error:", firestoreError);
-            setError("Failed to load user profile");
+            const fallbackProfile: UserProfile = {
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              name: firebaseUser.displayName,
+              phone: null,
+              role: "client",
+              avatar: firebaseUser.photoURL,
+              createdAt: Date.now(),
+              lastLogin: Date.now(),
+            };
+            setProfile(fallbackProfile);
           }
         } else {
           resetAuth();
         }
       } catch (error: any) {
         console.error("Error in auth state change:", error);
-        useAuthStore.getState().setError(error.message || "Authentication error");
+        useAuthStore.getState().setError("Authentication error occurred");
       } finally {
         useAuthStore.getState().setLoading(false);
         useAuthStore.getState().setInitialized(true);
+        isInitializing = false;
       }
     },
     (error) => {
@@ -152,28 +158,39 @@ const initializeAuth = () => {
       useAuthStore.getState().setError("Authentication service error");
       useAuthStore.getState().setLoading(false);
       useAuthStore.getState().setInitialized(true);
+      isInitializing = false;
     }
   );
 
-  // Listen for token changes and update cookies
+  // Update cookies when token changes (but don't force refresh)
   tokenUnsubscribe = onIdTokenChanged(auth, async (user) => {
     if (user) {
       try {
-   //     console.log("ID token changed, updating cookie...");
-        const token = await user.getIdToken();
-        document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+        // Only refresh token if it's about to expire (within 5 minutes)
+        const tokenResult = await user.getIdTokenResult();
+        const expirationTime = new Date(tokenResult.expirationTime);
+        const now = new Date();
+        const fiveMinutes = 5 * 60 * 1000;
+        
+        if (expirationTime.getTime() - now.getTime() < fiveMinutes) {
+          const token = await user.getIdToken(true);
+          document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+        } else {
+          const token = await user.getIdToken(false);
+          document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+        }
       } catch (error) {
         console.error("Token refresh error:", error);
       }
+    } else {
+      document.cookie = "firebaseToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     }
   });
 };
 
-// Initialize auth when module loads
 if (typeof window !== "undefined") {
   initializeAuth();
   
-  // Cleanup subscriptions on page unload
   window.addEventListener("beforeunload", () => {
     if (unsubscribe) {
       unsubscribe();

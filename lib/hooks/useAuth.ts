@@ -1,3 +1,4 @@
+// Updated useAuth hook - Fixed token handling
 import { useState, useCallback } from "react";
 import {
   signInWithEmailAndPassword,
@@ -17,6 +18,24 @@ export const useAuth = () => {
   const { setError, resetAuth, setLoading } = useAuthStore();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const setCustomClaims = async (uid: string, role: UserRole) => {
+    try {
+      const response = await fetch("/api/setCustomClaims", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid, role }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to set custom claims");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error setting custom claims:", error);
+      throw error;
+    }
+  };
+
   const signUp = useCallback(
     async (email: string, password: string, name: string, phone: string) => {
       if (isProcessing) return false;
@@ -26,19 +45,15 @@ export const useAuth = () => {
       setError(null);
 
       try {
-        // Validate input
         if (password.length < 6) {
           throw new Error("Password must be at least 6 characters long");
         }
 
-        // Create user account
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Update profile with name
         await updateProfile(user, { displayName: name });
 
-        // Create user document in Firestore
         const userProfile: UserProfile = {
           uid: user.uid,
           email: user.email,
@@ -52,8 +67,11 @@ export const useAuth = () => {
 
         await setDoc(doc(db, "users", user.uid), userProfile);
 
-        // Set auth cookie
-        const token = await user.getIdToken(true);
+        // Set custom claims but don't wait for token refresh
+        setCustomClaims(user.uid, "client").catch(console.error);
+        
+        // Get current token without forcing refresh
+        const token = await user.getIdToken(false);
         document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
 
         router.push("/client");
@@ -79,16 +97,9 @@ export const useAuth = () => {
       setError(null);
 
       try {
-        console.log(`Attempting login for role: ${expectedRole}`);
-        
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-      ///  console.log("User signed in, forcing token refresh...");
-        // Force token refresh to get updated claims
-        await user.getIdToken(true);
-
-        // Get user document from Firestore
         const userDoc = await getDoc(doc(db, "users", user.uid));
         
         if (!userDoc.exists()) {
@@ -98,11 +109,7 @@ export const useAuth = () => {
         const userData = userDoc.data();
         const userRole = userData.role;
 
-        //console.log(`User role: ${userRole}, Expected: ${expectedRole}`);
-
-        // Check role permissions
         if (expectedRole === "admin") {
-          // Allow both admin and subadmin to access admin panel
           if (!["admin", "subadmin"].includes(userRole)) {
             throw new Error("Access denied. Admin or Subadmin privileges required.");
           }
@@ -110,17 +117,13 @@ export const useAuth = () => {
           throw new Error(`Access denied. ${expectedRole} privileges required.`);
         }
 
-        // Update last login
         await updateDoc(doc(db, "users", user.uid), {
           lastLogin: Date.now(),
         });
 
-        // Set auth cookie with fresh token
         const token = await user.getIdToken(true);
         document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
-       // console.log("Fresh token set in cookie");
 
-        // Redirect based on actual user role (not expected role)
         let redirectPath = "/";
         if (userRole === "admin" || userRole === "subadmin") {
           redirectPath = "/admin";
@@ -130,8 +133,7 @@ export const useAuth = () => {
           redirectPath = "/client";
         }
 
-     //   console.log(`Redirecting to: ${redirectPath}`);
-        await router.push(redirectPath);
+        router.push(redirectPath);
         return true;
       } catch (error: any) {
         console.error("Login error:", error);
@@ -153,15 +155,26 @@ export const useAuth = () => {
     setError(null);
 
     try {
+      console.log("Starting Google sign-in...");
+
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if user document exists
+      console.log("Google sign-in successful, checking user document...");
+
       const userDoc = await getDoc(doc(db, "users", user.uid));
+      let userRole: UserRole = "client";
+      let isNewUser = false;
       
       if (!userDoc.exists()) {
-        // Create new user document for Google sign-in
+        isNewUser = true;
+        console.log("New user detected, creating profile...");
+        
         const userProfile: UserProfile = {
           uid: user.uid,
           email: user.email,
@@ -174,22 +187,43 @@ export const useAuth = () => {
         };
 
         await setDoc(doc(db, "users", user.uid), userProfile);
+        userRole = "client";
       } else {
-        // Update last login
+        console.log("Existing user detected, updating last login...");
         await updateDoc(doc(db, "users", user.uid), {
           lastLogin: Date.now(),
         });
+        userRole = userDoc.data().role as UserRole;
       }
 
-      // Set auth cookie
-      const token = await user.getIdToken(true);
+      // Set custom claims in background (don't wait)
+      if (isNewUser) {
+        console.log("Setting custom claims for new Google user...");
+        setCustomClaims(user.uid, userRole).catch(console.error);
+      }
+
+      // Get token without forcing refresh to avoid expiration issues
+      const token = await user.getIdToken(false);
+      console.log("Got token for user");
+
       document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
 
+      console.log("Redirecting to client dashboard...");
       router.push("/client");
       return true;
+      
     } catch (error: any) {
       console.error("Google login error:", error);
-      setError(error.message || "Failed to login with Google");
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        setError("Sign-in was cancelled");
+      } else if (error.code === 'auth/popup-blocked') {
+        setError("Popup was blocked by browser. Please allow popups and try again.");
+      } else if (error.code === 'auth/network-request-failed') {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError(error.message || "Failed to login with Google");
+      }
       return false;
     } finally {
       setIsProcessing(false);
@@ -201,10 +235,7 @@ export const useAuth = () => {
     try {
       await signOut(auth);
       
-      // Clear auth cookie
       document.cookie = "firebaseToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      
-      // Clear local storage
       localStorage.removeItem("auth-storage");
       
       resetAuth();
