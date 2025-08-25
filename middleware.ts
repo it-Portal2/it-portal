@@ -10,12 +10,24 @@ const roleRoutes = {
 };
 
 export const config = {
-  matcher: ["/admin/:path*", "/developer/:path*", "/client/:path*"],
+  matcher: [
+    // Exclude API routes from middleware
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    // Only apply to protected routes
+    "/admin/:path*", 
+    "/developer/:path*", 
+    "/client/:path*"
+  ],
   runtime: "nodejs",
 };
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Skip middleware for API routes
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
 
   // Your existing auth logic (no changes needed)
   const cookieToken = request.cookies.get("firebaseToken")?.value;
