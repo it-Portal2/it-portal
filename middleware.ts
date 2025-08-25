@@ -16,11 +16,6 @@ export const config = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip auth for API routes - let them handle themselves
-  if (pathname.startsWith('/api/')) {
-    return NextResponse.next();
-  }
-
   // Authentication logic for protected routes only
   const cookieToken = request.cookies.get("firebaseToken")?.value;
   const urlToken = request.nextUrl.searchParams.get("token");
