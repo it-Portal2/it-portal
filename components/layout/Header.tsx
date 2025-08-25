@@ -17,7 +17,6 @@ interface PageMetadataDict {
   [key: string]: PageMetadata;
 }
 
-
 // Complete metadata for all user types and routes
 const pageMetadata: PageMetadataDict = {
   // Admin routes
@@ -80,7 +79,6 @@ const pageMetadata: PageMetadataDict = {
     description: "Manage your account preferences",
   },
 
-
   // Client routes
   "/client/": {
     title: "Client Dashboard",
@@ -110,9 +108,8 @@ const pageMetadata: PageMetadataDict = {
 
 const Header = ({ title, description }: DashboardHeaderProps) => {
   const pathname = usePathname();
-  
-  // Get dynamic metadata based on current path
-  const dynamicMetadata = pageMetadata[pathname];
+
+  const dynamicMetadata = pathname ? pageMetadata[pathname] : null;
   
   // Use provided props or fall back to dynamic metadata or defaults
   const currentTitle = title || dynamicMetadata?.title || "Dashboard";
