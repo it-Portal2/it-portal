@@ -11,9 +11,7 @@ const roleRoutes = {
 
 export const config = {
   matcher: [
-    // Exclude API routes from middleware
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
-    // Only apply to protected routes
+    // Only match protected routes, completely exclude API routes
     "/admin/:path*", 
     "/developer/:path*", 
     "/client/:path*"
@@ -24,7 +22,7 @@ export const config = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for API routes
+  // Double check - absolutely skip any API routes
   if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }

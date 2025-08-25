@@ -4,17 +4,17 @@ import { analyzeResumeWithAI, generateInterviewQuestions } from "@/lib/gemini";
 
 export const maxDuration = 60;
 
-// CORS headers
+// CORS headers - allow all origins for now to test
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://internlink.cehpoint.co.in',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Credentials': 'true',
-  'Access-Control-Max-Age': '86400', // 24 hours
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept, Origin',
+  'Access-Control-Allow-Credentials': 'false',
 };
 
 // Handle preflight OPTIONS requests
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  console.log('OPTIONS request received for:', request.url);
   return new NextResponse(null, {
     status: 200,
     headers: corsHeaders
@@ -22,6 +22,8 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('POST request received for:', request.url);
+  
   try {
     const requestBody = await request.json();
     const { fileData, fileName, fileType, fileSize } = requestBody;
@@ -73,6 +75,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    console.error('API Error:', error);
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
         
     return NextResponse.json({
