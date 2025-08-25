@@ -10,7 +10,6 @@ const roleRoutes = {
 };
 
 export const config = {
-  // ⚠️ CRITICAL: Remove '/api/:path*' completely from matcher
   matcher: ["/admin/:path*", "/developer/:path*", "/client/:path*"],
   runtime: "nodejs",
 };
