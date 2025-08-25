@@ -1,10 +1,10 @@
 // api/resume-analysis.js
 export default async function handler(req, res) {
   // Set CORS headers for ALL requests
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
   // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // Import your functions dynamically to avoid build issues
+    // Dynamic import to avoid build issues
     const { analyzeResumeWithAI, generateInterviewQuestions } = await import('../lib/gemini');
 
     // Step 1: Resume analysis
