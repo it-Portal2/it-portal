@@ -1,12 +1,11 @@
 "use client";
-
 import type React from "react";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, X, Info } from "lucide-react";
+import { Plus, Minus, X, Info, Star } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -30,9 +29,11 @@ interface DeveloperTypeSelectorProps {
   value: number;
   onChange: (value: number) => void;
   currency: string;
+  showLeadDesignerBadge?: boolean;
+  designerProfileLink?: string;
 }
 
-// Keep DeveloperTypeSelector component the same
+// Updated DeveloperTypeSelector component with lead designer badge
 function DeveloperTypeSelector({
   title,
   cost,
@@ -40,6 +41,8 @@ function DeveloperTypeSelector({
   value,
   onChange,
   currency,
+  showLeadDesignerBadge = false,
+  designerProfileLink = "#",
 }: DeveloperTypeSelectorProps) {
   const displayCost =
     currency === "INR"
@@ -50,18 +53,24 @@ function DeveloperTypeSelector({
           return usdValue.toLocaleString();
         });
 
+  const handleLeadDesignerClick = () => {
+    window.open(designerProfileLink, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className="flex items-center justify-between p-3 border rounded-md">
-      <div className="flex items-center">
+      <div className="flex flex-col md:flex-row md:items-center">
+        {/* Title + Cost */}
         <div>
           <h4 className="font-medium text-sm">{title}</h4>
           <p className="text-xs text-muted-foreground">{displayCost}</p>
         </div>
 
+        {/* Tooltip */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="ml-2">
+              <button type="button" className="ml-0 mt-1 md:mt-0 md:ml-2">
                 <Info className="w-4 h-4 text-muted-foreground" />
               </button>
             </TooltipTrigger>
@@ -70,6 +79,35 @@ function DeveloperTypeSelector({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        {/* Lead Designer Glowing Badge */}
+        {showLeadDesignerBadge && (
+          <div className="mt-2 md:mt-0 md:ml-3">
+            <button
+              onClick={handleLeadDesignerClick}
+              className="invert hover:rotate-2 brightness-150 dark:brightness-100 group hover:shadow-lg hover:shadow-yellow-700/60 transition ease-in-out hover:scale-105 p-1 rounded-lg bg-gradient-to-br from-yellow-800 via-yellow-600 to-yellow-800 hover:from-yellow-700 hover:via-yellow-800 hover:to-yellow-600"
+            >
+              <div className="px-3 py-[2px] backdrop-blur-xl bg-black/80 rounded-sm font-medium text-xs w-full h-full">
+                <div className="group-hover:scale-100 flex group-hover:text-yellow-500 text-yellow-600 gap-1">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.8"
+                    className="w-4 h-4 stroke-yellow-600 group-hover:stroke-yellow-500"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+                    />
+                  </svg>
+                 <span className="hidden sm:flex">Meet Our</span>Lead Designer
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -82,9 +120,7 @@ function DeveloperTypeSelector({
         >
           <Minus className="w-4 h-4" />
         </Button>
-
         <span className="w-5 text-center">{value}</span>
-
         <Button
           type="button"
           size="icon"
@@ -104,6 +140,8 @@ export function DevelopmentPreferences() {
   const [showDesignLinkDialog, setShowDesignLinkDialog] = useState(false);
   const [designLink, setDesignLink] = useState(formData.designLink || "");
   const [linkError, setLinkError] = useState("");
+  
+  const LEAD_DESIGNER_PROFILE_URL = "https://tithi-ui-ux-design.vercel.app";
 
   const addDevelopmentArea = () => {
     if (newArea.trim() && !formData.developmentAreas.includes(newArea.trim())) {
@@ -127,13 +165,11 @@ export function DevelopmentPreferences() {
     }
   };
 
-
   const handleDesignLinkSubmit = () => {
     if (!designLink.trim()) {
       setLinkError("Please provide a valid design link");
       return;
     }
-
     // Simple URL validation
     try {
       new URL(designLink);
@@ -165,7 +201,6 @@ export function DevelopmentPreferences() {
               (e.g., Web App, Mobile App, Dashboard, Landing Page)
             </span>
           </Label>
-
           <div className="flex gap-2">
             <Input
               id="developmentAreas"
@@ -181,13 +216,11 @@ export function DevelopmentPreferences() {
               <Plus className="w-4 h-4" />
             </Button>
           </div>
-
           {validationErrors.developmentAreas && (
             <p className="text-sm text-destructive">
               {validationErrors.developmentAreas}
             </p>
           )}
-
           <div className="flex flex-wrap gap-2 mt-2">
             {formData.developmentAreas.map((area) => (
               <Badge key={area} variant="secondary" className="px-3 py-1">
@@ -235,9 +268,10 @@ export function DevelopmentPreferences() {
               value={formData.uiUxDesigners}
               onChange={(value) => updateFormData({ uiUxDesigners: value })}
               currency={formData.currency}
+              showLeadDesignerBadge={true}
+              designerProfileLink={LEAD_DESIGNER_PROFILE_URL}
             />
           </div>
-
           {validationErrors.teamMembers && (
             <p className="text-sm text-destructive">
               {validationErrors.teamMembers}
@@ -259,7 +293,6 @@ export function DevelopmentPreferences() {
               be a Figma, Adobe XD, or similar design file.
             </DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="designLink">Design Link</Label>
@@ -274,7 +307,6 @@ export function DevelopmentPreferences() {
               )}
             </div>
           </div>
-
           <DialogFooter>
             <Button
               variant="outline"
