@@ -13,7 +13,12 @@ import {
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
-import {  AIKeyFromDB, Application, CorrectnessScore, OriginalityScore } from "../types";
+import {
+  AIKeyFromDB,
+  Application,
+  CorrectnessScore,
+  OriginalityScore,
+} from "../types";
 import { adminAuth } from "@/firebaseAdmin";
 
 export async function acceptProject(
@@ -371,7 +376,7 @@ export async function updatePaymentStatus(
 /**
  * Get all applications from Firebase
  */
-export async function getAllApplications(){
+export async function getAllApplications() {
   try {
     const applicationsRef = collection(db, "applications");
 
@@ -389,16 +394,14 @@ export async function getAllApplications(){
     return applications;
   } catch (error) {
     console.error("Error fetching all applications:", error);
-    return []; 
+    return [];
   }
 }
 
 /**
  * Get application details by ID
  */
-export async function getApplicationById(
-  applicationId: string
-) {
+export async function getApplicationById(applicationId: string) {
   try {
     if (!applicationId) {
       return {
@@ -410,19 +413,19 @@ export async function getApplicationById(
     const applicationRef = doc(db, "applications", applicationId);
     const applicationSnap = await getDoc(applicationRef);
 
-     if (applicationSnap.exists()) {
-        const data = applicationSnap.data();
-        return {
-          id: applicationSnap.id,
-          ...data,
-        } as Application;
-      } else {
-        throw new Error("Application not found");
-      }
-    } catch (error) {
-      console.error("Error fetching application:", error);
-      throw error;
+    if (applicationSnap.exists()) {
+      const data = applicationSnap.data();
+      return {
+        id: applicationSnap.id,
+        ...data,
+      } as Application;
+    } else {
+      throw new Error("Application not found");
     }
+  } catch (error) {
+    console.error("Error fetching application:", error);
+    throw error;
+  }
 }
 
 /**
@@ -431,15 +434,12 @@ export async function getApplicationById(
  * @returns Promise<Application[]> - Array of filtered applications
  */
 export async function getApplicationsByStatus(
-  status: "Pending" | "Accepted" | "Rejected" 
+  status: "Pending" | "Accepted" | "Rejected"
 ): Promise<Application[]> {
   try {
     const applicationsRef = collection(db, "applications");
-    const q = query(
-      applicationsRef, 
-      where("applicationStatus", "==", status),
-    );
-    
+    const q = query(applicationsRef, where("applicationStatus", "==", status));
+
     const querySnapshot = await getDocs(q);
     const applications: Application[] = [];
 
@@ -490,7 +490,7 @@ export async function deleteApplication(
  */
 export async function updateApplicationStatus(
   applicationId: string,
-  status: "Accepted" | "Rejected" 
+  status: "Accepted" | "Rejected"
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!applicationId) {
@@ -512,7 +512,6 @@ export async function updateApplicationStatus(
   }
 }
 
-
 /**
  * Update AI analysis for application
  * @param applicationId - The ID of the application
@@ -520,7 +519,6 @@ export async function updateApplicationStatus(
  * @param overallScore - Overall score from AI analysis
  * @returns Promise<{ success: boolean; error?: string }>
  */
-
 
 export async function updateApplicationOriginality(
   applicationId: string,
@@ -646,23 +644,28 @@ export async function updateApplicationCareerRecommendations(
     if (!applicationId || !Array.isArray(careerRecommendations)) {
       return {
         success: false,
-        error: "Valid application ID and career recommendations array are required",
+        error:
+          "Valid application ID and career recommendations array are required",
       };
     }
 
-   // console.log(`Updating career recommendations for application: ${applicationId}`);
+    // console.log(`Updating career recommendations for application: ${applicationId}`);
 
     const applicationRef = doc(db, "applications", applicationId);
-    await updateDoc(applicationRef, { 
-      careerRecommendations, 
+    await updateDoc(applicationRef, {
+      careerRecommendations,
     });
 
-  //  console.log(`Career recommendations updated successfully for application: ${applicationId}`);
+    //  console.log(`Career recommendations updated successfully for application: ${applicationId}`);
     return { success: true };
   } catch (error: unknown) {
     console.error("Error updating career recommendations:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-    return { success: false, error: `Failed to update career recommendations: ${errorMessage}` };
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return {
+      success: false,
+      error: `Failed to update career recommendations: ${errorMessage}`,
+    };
   }
 }
 
@@ -697,7 +700,7 @@ export async function createSubadmin(
       };
     }
 
-  //  console.log(`Creating subadmin: ${email}`);
+    //  console.log(`Creating subadmin: ${email}`);
 
     // Create user in Firebase Auth
     const userRecord = await adminAuth.createUser({
@@ -707,15 +710,15 @@ export async function createSubadmin(
       disabled: false,
     });
 
-  //  console.log(`User created in Firebase Auth: ${userRecord.uid}`);
+    //  console.log(`User created in Firebase Auth: ${userRecord.uid}`);
 
     // Set custom claims - subadmin role
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: "subadmin" });
-  //  console.log(`Custom claims set for: ${userRecord.uid}`);
+    //  console.log(`Custom claims set for: ${userRecord.uid}`);
 
     // Revoke refresh tokens to force immediate token refresh
     await adminAuth.revokeRefreshTokens(userRecord.uid);
-   // console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
+    // console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
 
     // Create user profile in Firestore
     const subadminProfile: SubadminProfile = {
@@ -732,12 +735,12 @@ export async function createSubadmin(
     };
 
     await setDoc(doc(db, "users", userRecord.uid), subadminProfile);
-  //  console.log(`Subadmin profile created in Firestore: ${userRecord.uid}`);
+    //  console.log(`Subadmin profile created in Firestore: ${userRecord.uid}`);
 
     return { success: true, uid: userRecord.uid };
   } catch (error: any) {
     console.error("Error creating subadmin:", error);
-    
+
     // Handle specific Firebase Auth errors
     if (error.code === "auth/email-already-exists") {
       return { success: false, error: "Email already exists" };
@@ -759,11 +762,8 @@ export async function createSubadmin(
 export async function getAllSubadmins(): Promise<SubadminProfile[]> {
   try {
     const usersRef = collection(db, "users");
-    const q = query(
-      usersRef,
-      where("role", "==", "subadmin")
-    );
-    
+    const q = query(usersRef, where("role", "==", "subadmin"));
+
     const querySnapshot = await getDocs(q);
     const subadmins: SubadminProfile[] = [];
 
@@ -775,7 +775,7 @@ export async function getAllSubadmins(): Promise<SubadminProfile[]> {
       } as SubadminProfile);
     });
 
-   // console.log(`Retrieved ${subadmins.length} subadmins`);
+    // console.log(`Retrieved ${subadmins.length} subadmins`);
     return subadmins;
   } catch (error) {
     console.error("Error fetching subadmins:", error);
@@ -803,7 +803,7 @@ export async function updateSubadmin(
       };
     }
 
- // console.log(`Updating subadmin: ${uid}`);
+    // console.log(`Updating subadmin: ${uid}`);
 
     const updateData: any = {
       ...updates,
@@ -815,25 +815,25 @@ export async function updateSubadmin(
     if (updates.email) authUpdates.email = updates.email;
     if (updates.name) authUpdates.displayName = updates.name;
     if (updates.password) authUpdates.password = updates.password;
-    
+
     if (Object.keys(authUpdates).length > 0) {
       await adminAuth.updateUser(uid, authUpdates);
-   //   console.log(`Firebase Auth updated for: ${uid}`);
+      //   console.log(`Firebase Auth updated for: ${uid}`);
     }
 
     // Revoke refresh tokens to apply changes immediately
     await adminAuth.revokeRefreshTokens(uid);
-  //  console.log(`Refresh tokens revoked for updated subadmin: ${uid}`);
+    //  console.log(`Refresh tokens revoked for updated subadmin: ${uid}`);
 
     // Update Firestore document
     const userRef = doc(db, "users", uid);
     await updateDoc(userRef, updateData);
-  //  console.log(`Firestore updated for: ${uid}`);
+    //  console.log(`Firestore updated for: ${uid}`);
 
     return { success: true };
   } catch (error: any) {
     console.error("Error updating subadmin:", error);
-    
+
     if (error.code === "auth/email-already-exists") {
       return { success: false, error: "Email already exists" };
     }
@@ -860,7 +860,7 @@ export async function toggleSubadminStatus(
       };
     }
 
-   // console.log(`Toggling status for subadmin: ${uid} to ${isActive}`);
+    // console.log(`Toggling status for subadmin: ${uid} to ${isActive}`);
 
     // Update Firebase Auth disabled status (opposite of isActive)
     await adminAuth.updateUser(uid, { disabled: !isActive });
@@ -872,7 +872,7 @@ export async function toggleSubadminStatus(
     const userRef = doc(db, "users", uid);
     await updateDoc(userRef, { isActive });
 
-   // console.log(`Status toggled for subadmin: ${uid}`);
+    // console.log(`Status toggled for subadmin: ${uid}`);
     return { success: true };
   } catch (error) {
     console.error("Error toggling subadmin status:", error);
@@ -883,7 +883,9 @@ export async function toggleSubadminStatus(
 /**
  * Delete subadmin
  */
-export async function deleteSubadmin(uid: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteSubadmin(
+  uid: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     if (!uid) {
       return {
@@ -900,7 +902,7 @@ export async function deleteSubadmin(uid: string): Promise<{ success: boolean; e
     // Delete from Firestore
     await deleteDoc(doc(db, "users", uid));
 
-   // console.log(`Subadmin deleted: ${uid}`);
+    // console.log(`Subadmin deleted: ${uid}`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting subadmin:", error);
@@ -942,7 +944,7 @@ export async function getAllAIKeys(): Promise<AIKey[]> {
   try {
     const aiKeysRef = collection(db, "aiKeys");
     const q = query(aiKeysRef, orderBy("priority", "asc"));
-    
+
     const querySnapshot = await getDocs(q);
     const aiKeys: AIKey[] = [];
 
@@ -954,7 +956,7 @@ export async function getAllAIKeys(): Promise<AIKey[]> {
       } as AIKey);
     });
 
-   // console.log(`Retrieved ${aiKeys.length} AI keys`);
+    // console.log(`Retrieved ${aiKeys.length} AI keys`);
     return aiKeys;
   } catch (error) {
     console.error("Error fetching AI keys:", error);
@@ -994,7 +996,10 @@ export async function createAIKey(
 
     // Check if priority already exists
     const existingKeysRef = collection(db, "aiKeys");
-    const priorityQuery = query(existingKeysRef, where("priority", "==", priority));
+    const priorityQuery = query(
+      existingKeysRef,
+      where("priority", "==", priority)
+    );
     const prioritySnapshot = await getDocs(priorityQuery);
 
     if (!prioritySnapshot.empty) {
@@ -1051,11 +1056,14 @@ export async function updateAIKey(
     // Check if new aiID conflicts with existing keys (if aiID is being updated)
     if (updates.aiID) {
       const existingKeysRef = collection(db, "aiKeys");
-      const aiIDQuery = query(existingKeysRef, where("aiID", "==", updates.aiID));
+      const aiIDQuery = query(
+        existingKeysRef,
+        where("aiID", "==", updates.aiID)
+      );
       const aiIDSnapshot = await getDocs(aiIDQuery);
 
       // Check if any existing key (other than current one) has this aiID
-      const conflictingKey = aiIDSnapshot.docs.find(doc => doc.id !== docId);
+      const conflictingKey = aiIDSnapshot.docs.find((doc) => doc.id !== docId);
       if (conflictingKey) {
         return {
           success: false,
@@ -1067,11 +1075,16 @@ export async function updateAIKey(
     // Check if new priority conflicts with existing keys (if priority is being updated)
     if (updates.priority) {
       const existingKeysRef = collection(db, "aiKeys");
-      const priorityQuery = query(existingKeysRef, where("priority", "==", updates.priority));
+      const priorityQuery = query(
+        existingKeysRef,
+        where("priority", "==", updates.priority)
+      );
       const prioritySnapshot = await getDocs(priorityQuery);
 
       // Check if any existing key (other than current one) has this priority
-      const conflictingKey = prioritySnapshot.docs.find(doc => doc.id !== docId);
+      const conflictingKey = prioritySnapshot.docs.find(
+        (doc) => doc.id !== docId
+      );
       if (conflictingKey) {
         return {
           success: false,
@@ -1107,7 +1120,9 @@ export async function toggleAIKeyStatus(
     }
 
     const newStatus = currentStatus === "active" ? "inactive" : "active";
-    console.log(`Toggling status for AI key with docId: ${docId} to ${newStatus}`);
+    console.log(
+      `Toggling status for AI key with docId: ${docId} to ${newStatus}`
+    );
 
     const aiKeyRef = doc(db, "aiKeys", docId);
     await updateDoc(aiKeyRef, { status: newStatus });
@@ -1123,7 +1138,9 @@ export async function toggleAIKeyStatus(
 /**
  * Delete AI key using docId
  */
-export async function deleteAIKey(docId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteAIKey(
+  docId: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     if (!docId) {
       return {
@@ -1156,15 +1173,15 @@ export async function getActiveGoogleAIKeys(): Promise<AIKeyFromDB[]> {
       where("provider", "==", "Google"),
       orderBy("priority", "asc")
     );
-    
+
     const querySnapshot = await getDocs(q);
     const aiKeys: AIKeyFromDB[] = [];
 
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      
+
       // Only extract required fields
-      if (data.aiID && data.apiKey && typeof data.priority === 'number') {
+      if (data.aiID && data.apiKey && typeof data.priority === "number") {
         aiKeys.push({
           aiId: data.aiID,
           apiKey: data.apiKey,
@@ -1177,6 +1194,416 @@ export async function getActiveGoogleAIKeys(): Promise<AIKeyFromDB[]> {
     return aiKeys;
   } catch (error) {
     console.error("Error fetching AI keys:", error);
-    throw new Error(`DATABASE_ERROR: Failed to fetch AI keys from database: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `DATABASE_ERROR: Failed to fetch AI keys from database: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }
+
+export interface ClientRecord {
+  uid: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  password: string; // Store for viewing purposes
+  avatar?: string | null;
+  role: "client";
+  createdAt: string;
+  lastLogin?: string | null;
+}
+
+/**
+ * Create a new client user
+ */
+export async function createClient(
+  email: string,
+  password: string,
+  name: string
+): Promise<{ success: boolean; error?: string; uid?: string }> {
+  try {
+    if (!email || !password || !name) {
+      return {
+        success: false,
+        error: "Email, password, and name are required",
+      };
+    }
+
+    //  console.log(`Creating client: ${email}`);
+
+    // Create user in Firebase Auth
+    const userRecord = await adminAuth.createUser({
+      email,
+      password,
+      displayName: name,
+      disabled: false,
+    });
+
+    //  console.log(`User created in Firebase Auth: ${userRecord.uid}`);
+
+    // Set custom claims - client role
+    await adminAuth.setCustomUserClaims(userRecord.uid, { role: "client" });
+    //  console.log(`Custom claims set for: ${userRecord.uid}`);
+
+    // Revoke refresh tokens to force immediate token refresh
+    await adminAuth.revokeRefreshTokens(userRecord.uid);
+    //    console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
+
+    // Create user profile in Firestore - using "users" collection
+    const clientProfile: ClientRecord = {
+      uid: userRecord.uid,
+      email,
+      password, // Store password for admin viewing
+      name,
+      phone: null,
+      role: "client",
+      avatar: null,
+      createdAt: new Date().toISOString(),
+      lastLogin: null,
+    };
+
+    await setDoc(doc(db, "users", userRecord.uid), clientProfile);
+    console.log(
+      `Client profile created in Firestore users collection: ${userRecord.uid}`
+    );
+
+    return { success: true, uid: userRecord.uid };
+  } catch (error: any) {
+    console.error("Error creating client:", error);
+
+    // Handle specific Firebase Auth errors
+    if (error.code === "auth/email-already-exists") {
+      return { success: false, error: "Email already exists" };
+    }
+    if (error.code === "auth/weak-password") {
+      return { success: false, error: "Password is too weak" };
+    }
+    if (error.code === "auth/invalid-email") {
+      return { success: false, error: "Invalid email format" };
+    }
+    return { success: false, error: "Failed to create client" };
+  }
+}
+
+/**
+ * Get all clients from users collection where role is "client"
+ */
+export async function getAllClients(): Promise<ClientRecord[]> {
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("role", "==", "client"));
+
+    const querySnapshot = await getDocs(q);
+    const clients: ClientRecord[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      clients.push({
+        uid: doc.id,
+        ...data,
+      } as ClientRecord);
+    });
+
+    //    console.log(`Retrieved ${clients.length} clients from users collection`);
+    return clients;
+  } catch (error) {
+    console.error("Error fetching clients:", error);
+    return [];
+  }
+}
+
+/**
+ * Update client profile in users collection
+ */
+export async function updateClient(
+  uid: string,
+  updates: {
+    email?: string;
+    password?: string;
+    name?: string;
+    phone?: string;
+    avatar?: string;
+    lastLogin?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid) {
+      return {
+        success: false,
+        error: "UID is required",
+      };
+    }
+
+    // console.log(`Updating client: ${uid}`);
+
+    const updateData: any = { ...updates };
+
+    // Update Firebase Auth if email, name, or password is being changed
+    const authUpdates: any = {};
+    if (updates.email) authUpdates.email = updates.email;
+    if (updates.name) authUpdates.displayName = updates.name;
+    if (updates.password) authUpdates.password = updates.password;
+
+    if (Object.keys(authUpdates).length > 0) {
+      await adminAuth.updateUser(uid, authUpdates);
+      //   console.log(`Firebase Auth updated for: ${uid}`);
+    }
+
+    // Revoke refresh tokens to apply changes immediately
+    await adminAuth.revokeRefreshTokens(uid);
+    //  console.log(`Refresh tokens revoked for updated client: ${uid}`);
+
+    // Update Firestore document in users collection
+    const clientRef = doc(db, "users", uid);
+    await updateDoc(clientRef, updateData);
+    // console.log(`Firestore users collection updated for: ${uid}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating client:", error);
+
+    if (error.code === "auth/email-already-exists") {
+      return { success: false, error: "Email already exists" };
+    }
+    if (error.code === "auth/invalid-email") {
+      return { success: false, error: "Invalid email format" };
+    }
+
+    return { success: false, error: "Failed to update client" };
+  }
+}
+
+/**
+ * Delete client from users collection and Firebase Auth
+ */
+export async function deleteClient(
+  uid: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid) {
+      return {
+        success: false,
+        error: "UID is required",
+      };
+    }
+
+    // console.log(`Deleting client: ${uid}`);
+
+    // Delete from Firebase Auth
+    await adminAuth.deleteUser(uid);
+
+    // Delete from Firestore users collection
+    await deleteDoc(doc(db, "users", uid));
+
+    // console.log(`Client deleted from users collection: ${uid}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting client:", error);
+    return { success: false, error: "Failed to delete client" };
+  }
+}
+
+// Developer Management Functions - Using "users" collection with role filter
+export interface DeveloperRecord {
+  uid: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  password: string; // Store for viewing purposes
+  avatar?: string | null;
+  role: "developer";
+  createdAt: string;
+  lastLogin?: string | null;
+}
+
+/**
+ * Create a new developer user
+ */
+export async function createDeveloper(
+  email: string,
+  password: string,
+  name: string
+): Promise<{ success: boolean; error?: string; uid?: string }> {
+  try {
+    if (!email || !password || !name) {
+      return {
+        success: false,
+        error: "Email, password, and name are required",
+      };
+    }
+
+    console.log(`Creating developer: ${email}`);
+    
+    // Create user in Firebase Auth
+    const userRecord = await adminAuth.createUser({
+      email,
+      password,
+      displayName: name,
+      disabled: false,
+    });
+
+    console.log(`User created in Firebase Auth: ${userRecord.uid}`);
+    
+    // Set custom claims - developer role
+    await adminAuth.setCustomUserClaims(userRecord.uid, { role: "developer" });
+    console.log(`Custom claims set for: ${userRecord.uid}`);
+    
+    // Revoke refresh tokens to force immediate token refresh
+    await adminAuth.revokeRefreshTokens(userRecord.uid);
+    console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
+    
+    // Create user profile in Firestore - using "users" collection
+    const developerProfile: DeveloperRecord = {
+      uid: userRecord.uid,
+      email,
+      password, // Store password for admin viewing
+      name,
+      phone: null,
+      role: "developer",
+      avatar: null,
+      createdAt: new Date().toISOString(),
+      lastLogin: null,
+    };
+
+    await setDoc(doc(db, "users", userRecord.uid), developerProfile);
+    console.log(`Developer profile created in Firestore users collection: ${userRecord.uid}`);
+
+    return { success: true, uid: userRecord.uid };
+  } catch (error: any) {
+    console.error("Error creating developer:", error);
+    
+    // Handle specific Firebase Auth errors
+    if (error.code === "auth/email-already-exists") {
+      return { success: false, error: "Email already exists" };
+    }
+    if (error.code === "auth/weak-password") {
+      return { success: false, error: "Password is too weak" };
+    }
+    if (error.code === "auth/invalid-email") {
+      return { success: false, error: "Invalid email format" };
+    }
+    return { success: false, error: "Failed to create developer" };
+  }
+}
+
+/**
+ * Get all developers from users collection where role is "developer"
+ */
+export async function getAllDevelopers(): Promise<DeveloperRecord[]> {
+  try {
+    const usersRef = collection(db, "users");
+    const q = query(
+      usersRef,
+      where("role", "==", "developer")
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const developers: DeveloperRecord[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      developers.push({
+        uid: doc.id,
+        ...data,
+      } as DeveloperRecord);
+    });
+
+    console.log(`Retrieved ${developers.length} developers from users collection`);
+    return developers;
+  } catch (error) {
+    console.error("Error fetching developers:", error);
+    return [];
+  }
+}
+
+/**
+ * Update developer profile in users collection
+ */
+export async function updateDeveloper(
+  uid: string,
+  updates: {
+    email?: string;
+    password?: string;
+    name?: string;
+    phone?: string;
+    avatar?: string;
+    lastLogin?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid) {
+      return {
+        success: false,
+        error: "UID is required",
+      };
+    }
+
+    console.log(`Updating developer: ${uid}`);
+
+    const updateData: any = { ...updates };
+
+    // Update Firebase Auth if email, name, or password is being changed
+    const authUpdates: any = {};
+    if (updates.email) authUpdates.email = updates.email;
+    if (updates.name) authUpdates.displayName = updates.name;
+    if (updates.password) authUpdates.password = updates.password;
+    
+    if (Object.keys(authUpdates).length > 0) {
+      await adminAuth.updateUser(uid, authUpdates);
+      console.log(`Firebase Auth updated for: ${uid}`);
+    }
+
+    // Revoke refresh tokens to apply changes immediately
+    await adminAuth.revokeRefreshTokens(uid);
+    console.log(`Refresh tokens revoked for updated developer: ${uid}`);
+
+    // Update Firestore document in users collection
+    const developerRef = doc(db, "users", uid);
+    await updateDoc(developerRef, updateData);
+    console.log(`Firestore users collection updated for: ${uid}`);
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error updating developer:", error);
+    
+    if (error.code === "auth/email-already-exists") {
+      return { success: false, error: "Email already exists" };
+    }
+    if (error.code === "auth/invalid-email") {
+      return { success: false, error: "Invalid email format" };
+    }
+
+    return { success: false, error: "Failed to update developer" };
+  }
+}
+
+/**
+ * Delete developer from users collection and Firebase Auth
+ */
+export async function deleteDeveloper(uid: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid) {
+      return {
+        success: false,
+        error: "UID is required",
+      };
+    }
+
+    console.log(`Deleting developer: ${uid}`);
+
+    // Delete from Firebase Auth
+    await adminAuth.deleteUser(uid);
+
+    // Delete from Firestore users collection
+    await deleteDoc(doc(db, "users", uid));
+
+    console.log(`Developer deleted from users collection: ${uid}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting developer:", error);
+    return { success: false, error: "Failed to delete developer" };
+  }
+}
+
+

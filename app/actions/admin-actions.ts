@@ -32,6 +32,14 @@ import {
   updateAIKey,
   createAIKey,
   updateApplicationCareerRecommendations,
+  deleteClient,
+  updateClient,
+  getAllClients,
+  createClient,
+  deleteDeveloper,
+  updateDeveloper,
+  getAllDevelopers,
+  createDeveloper,
 } from "@/lib/firebase/admin";
 
 export async function acceptProjectAction(
@@ -594,3 +602,134 @@ export async function fetchAllAIKeysAction(path: string = "/admin/settings") {
     return { success: false, error: error.message || "Failed to fetch AI keys" };
   }
 }
+
+
+// Client Management Actions
+export async function createClientAction(
+  email: string,
+  password: string,
+  name: string,
+  redirectPath: string = "/admin/clients"
+) {
+  const result = await createClient(email, password, name);
+
+  if (result.success) {
+    revalidatePath("/admin/clients");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+export async function fetchAllClientsAction(path: string = "/admin/clients") {
+  try {
+    const clients = await getAllClients();
+    revalidatePath(path);
+    return { success: true, data: clients };
+  } catch (error: any) {
+    console.error("Error fetching clients:", error);
+    return { success: false, error: error.message || "Failed to fetch clients" };
+  }
+}
+
+export async function updateClientAction(
+  uid: string,
+  updates: {
+    email?: string;
+    password?: string;
+    name?: string;
+    phone?: string;
+    avatar?: string;
+    lastLogin?: string;
+  },
+  redirectPath: string = "/admin/clients"
+) {
+  const result = await updateClient(uid, updates);
+  
+  if (result.success) {
+    revalidatePath("/admin/clients");
+    revalidatePath(redirectPath);
+  }
+  
+  return result;
+}
+
+export async function deleteClientAction(
+  uid: string,
+  redirectPath: string = "/admin/clients"
+) {
+  const result = await deleteClient(uid);
+
+  if (result.success) {
+    revalidatePath("/admin/clients");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+// Developer Management Actions
+export async function createDeveloperAction(
+  email: string,
+  password: string,
+  name: string,
+  redirectPath: string = "/admin/developers"
+) {
+  const result = await createDeveloper(email, password, name);
+
+  if (result.success) {
+    revalidatePath("/admin/developers");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+export async function fetchAllDevelopersAction(path: string = "/admin/developers") {
+  try {
+    const developers = await getAllDevelopers();
+    revalidatePath(path);
+    return { success: true, data: developers };
+  } catch (error: any) {
+    console.error("Error fetching developers:", error);
+    return { success: false, error: error.message || "Failed to fetch developers" };
+  }
+}
+
+export async function updateDeveloperAction(
+  uid: string,
+  updates: {
+    email?: string;
+    password?: string;
+    name?: string;
+    phone?: string;
+    avatar?: string;
+    lastLogin?: string;
+  },
+  redirectPath: string = "/admin/developers"
+) {
+  const result = await updateDeveloper(uid, updates);
+  
+  if (result.success) {
+    revalidatePath("/admin/developers");
+    revalidatePath(redirectPath);
+  }
+  
+  return result;
+}
+
+export async function deleteDeveloperAction(
+  uid: string,
+  redirectPath: string = "/admin/developers"
+) {
+  const result = await deleteDeveloper(uid);
+
+  if (result.success) {
+    revalidatePath("/admin/developers");
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+
