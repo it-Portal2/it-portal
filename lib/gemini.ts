@@ -1099,10 +1099,6 @@ export async function generateCareerPathRecommendations(
 
 
   try {
-    // Pre-validation: Only for Highly Recommended candidates
-    if (!candidateData.aiAnalysis || candidateData.aiAnalysis.overallVerdict !== "Highly Recommended") {
-      return [];
-    }
 
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       // Construct career analysis prompt
