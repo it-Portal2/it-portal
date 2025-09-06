@@ -8,7 +8,7 @@ export async function getTasksAction(projectId: string) {
     return await getTasks(projectId);
   }
   
-  export async function setProgressTypeAction(projectId: string, progressType: "task-based" | "manual", path?: string) {
+  export async function setProgressTypeAction(projectId: string, progressType: "task-based" | "manual" | null, path?: string) {
     const result = await setProgressType(projectId, progressType);
     if (result.success && path) revalidatePath(path);
     return result;

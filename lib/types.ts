@@ -25,44 +25,44 @@ export type ProjectStatus =
   | "rejected"
   | "delayed";
 
-  export type Project = {
-    id: string;
-    projectName: string;
-    clientName: string;
-    clientEmail: string;
-    clientPhoneNumber: string;
-    projectBudget: number;
-    finalCost?: number;
-    status: ProjectStatus;
-    deadline?: string;
-    progress: number;
-    submittedAt: string;
-    startDate: string;
-    endDate: string;
-    rejectedDate: string;
-    currency?: "INR" | "USD";
-    rejectionReason?: string;
-    projectOverview: string;
-    cloudinaryQuotationUrl?: string;
-    cloudinaryDocumentationUrl?: string;
-    progressType?: "task-based" | "manual"; // New field to lock tracking method
-    isCompleted?: boolean; // Flag to lock edits when progress reaches 100%
-    designLink: string | null; // Added design link field
-    hasExistingDesign: boolean; // Added flag to track if user has existing design
-  };
-  export type ClientTask = {
-    id: string;
-    name: string;
-    completed: boolean;
-  };
-  export type Task = {
-    id: string;
-    name: string;
-    projectId: string;
-    projectName: string;
-    status: "not-started" | "in-progress" | "completed";
-    deadline?: string; // Optional, can be set if needed
-  };
+export type Project = {
+  id: string;
+  projectName: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhoneNumber: string;
+  projectBudget: number;
+  finalCost?: number;
+  status: ProjectStatus;
+  deadline?: string;
+  progress: number;
+  submittedAt: string;
+  startDate: string;
+  endDate: string;
+  rejectedDate: string;
+  currency?: "INR" | "USD";
+  rejectionReason?: string;
+  projectOverview: string;
+  cloudinaryQuotationUrl?: string;
+  cloudinaryDocumentationUrl?: string;
+  progressType?: "task-based" | "manual" | null;
+  isCompleted?: boolean; // Flag to lock edits when progress reaches 100%
+  designLink: string | null; // Added design link field
+  hasExistingDesign: boolean; // Added flag to track if user has existing design
+};
+export type ClientTask = {
+  id: string;
+  name: string;
+  completed: boolean;
+};
+export type Task = {
+  id: string;
+  name: string;
+  projectId: string;
+  projectName: string;
+  status: "not-started" | "in-progress" | "completed";
+  deadline?: string; // Optional, can be set if needed
+};
 
 // export type ProjectTask = {
 //   id: string;
@@ -74,7 +74,6 @@ export type ProjectStatus =
 // };
 
 // export type TaskStatus = "not-started" | "in-progress" | "completed";
-
 
 // export interface TeamMember {
 //   id: string;
@@ -137,7 +136,11 @@ export type AIAnalysisStatus =
   | "holistic-analyzing"
   | "analyzed";
 
-export type AIVerdict = "Highly Recommended" | "Recommended" | "Not Recommended" | "Requires Review";
+export type AIVerdict =
+  | "Highly Recommended"
+  | "Recommended"
+  | "Not Recommended"
+  | "Requires Review";
 
 export interface AIAnalysis {
   originalityScores: OriginalityScore[];
@@ -166,7 +169,6 @@ export interface Application {
   aiAnalysis?: AIAnalysis | null;
   careerRecommendations?: string[];
 }
-
 
 // Props interface for the client component
 export interface ApplicationDetailClientProps {
@@ -200,10 +202,10 @@ export interface InsertApplication {
 }
 // AI Key Database Types
 export interface AIKeyFromDB {
-  aiId: string;        // Unique identifier (replaces Firebase doc id)
-  apiKey: string;      // The actual API key
-  priority: number;    // Priority order (1 = highest)
-  status: "active" | "inactive";  // Key status
+  aiId: string; // Unique identifier (replaces Firebase doc id)
+  apiKey: string; // The actual API key
+  priority: number; // Priority order (1 = highest)
+  status: "active" | "inactive"; // Key status
 }
 
 // Retry Strategy Types
@@ -214,16 +216,16 @@ export interface RetryAttempt {
 }
 
 // Error Classification Types
-export type AIErrorType = 
-  | 'timeout' 
-  | 'auth' 
-  | 'quota' 
-  | 'network' 
-  | 'parsing' 
-  | 'validation' 
-  | 'database'
-  | 'configuration'
-  | 'unknown';
+export type AIErrorType =
+  | "timeout"
+  | "auth"
+  | "quota"
+  | "network"
+  | "parsing"
+  | "validation"
+  | "database"
+  | "configuration"
+  | "unknown";
 
 export interface ClassifiedError {
   type: AIErrorType;
@@ -255,5 +257,5 @@ export const GEMINI_CONFIG = {
   GENERATION_CONFIG: {
     temperature: 0.1,
     maxOutputTokens: 5120,
-  }
+  },
 } as const;

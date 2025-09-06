@@ -11,6 +11,7 @@ interface DocumentationResult {
     improvedDocumentation?: any;
   } | null;
 }
+
 interface TasksResult {
   success: boolean;
   message: string;
@@ -18,6 +19,7 @@ interface TasksResult {
     aiGeneratedTasks?: any;
   } | null;
 }
+
 /**
  * Sanitizes text to only include alphabetic characters
  * @param text - The text to sanitize
@@ -99,6 +101,10 @@ export async function generateDeveloperDocumentationFromPdf(
     };
   }
 }
+
+/**
+ * Enhanced task generation function with better error handling and JSON parsing
+ */
 export async function generateTasksFromDeveloperDocumentation(
   uploadResponse: string
 ): Promise<ClientTask[]> {
@@ -107,26 +113,72 @@ export async function generateTasksFromDeveloperDocumentation(
   }
 
   try {
+    
     // Extract text from PDF
     const extractedText = await extractTextFromPdf(uploadResponse);
+  //  console.log("PDF text extraction completed, length:", extractedText.length);
 
     // Process text: split into lines, sanitize, and join
     const processedTextLines = extractedText
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
+      
     if (processedTextLines.length === 0) {
       throw new Error("No valid text content found in the PDF");
     }
+    
     const extractedTextParagraph = processedTextLines.join(" ");
+   // console.log("Text processing completed, processed length:", extractedTextParagraph.length);
 
-    // Generate tasks using Gemini AI
+    // Generate tasks using Gemini AI with enhanced error handling
+   // console.log("Calling Gemini AI for task generation...");
     const aiGeneratedTasks = await generateTasksFromDeveloperDocumentationFromGeminiAI(extractedTextParagraph);
+    
+    // Validate the response
+    if (!aiGeneratedTasks || !Array.isArray(aiGeneratedTasks)) {
+      console.error("Invalid AI response:", aiGeneratedTasks);
+      throw new Error("AI returned invalid task format - expected an array of tasks");
+    }
+    
+    if (aiGeneratedTasks.length === 0) {
+      throw new Error("No tasks were generated from the documentation");
+    }
+    
+    // Validate each task structure
+    for (let i = 0; i < aiGeneratedTasks.length; i++) {
+      const task = aiGeneratedTasks[i];
+      if (!task.id || !task.name || typeof task.completed !== 'boolean') {
+        console.error(`Invalid task structure at index ${i}:`, task);
+        throw new Error(`Invalid task structure at index ${i} - missing required fields`);
+      }
+    }
 
+    console.log("Task generation completed successfully, tasks count:", aiGeneratedTasks.length);
     return aiGeneratedTasks;
+    
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-    console.error("Task generation failed:", errorMessage);
-    throw new Error(errorMessage);
+    // Enhanced error logging
+    console.error("Task generation process failed:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      uploadResponse: uploadResponse.substring(0, 100) + "..."
+    });
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes("extractTextFromPdf")) {
+        throw new Error(`PDF processing failed: ${error.message}. Please ensure the PDF is not corrupted and contains readable text.`);
+      }
+      if (error.message.includes("generateTasksFromDeveloperDocumentationFromGeminiAI")) {
+        throw new Error(`AI task generation failed: ${error.message}. This might be a temporary issue - please try again.`);
+      }
+      if (error.message.includes("JSON")) {
+        throw new Error(`Task parsing failed: The AI response could not be processed. Please try again.`);
+      }
+      throw new Error(`Task generation failed: ${error.message}`);
+    }
+    
+    throw new Error("Task generation failed due to an unexpected error. Please try again.");
   }
 }

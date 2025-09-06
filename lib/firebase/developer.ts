@@ -36,7 +36,7 @@ export async function getTasks(
   
 export async function setProgressType(
   projectId: string,
-  progressType: "task-based" | "manual"
+  progressType: "task-based" | "manual" | null,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const projectRef = doc(db, "Projects", projectId);

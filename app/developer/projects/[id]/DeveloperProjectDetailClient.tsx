@@ -177,9 +177,15 @@ export default function DeveloperProjectDetailClient({
       setLocalProgress(project?.progress || 0); // Reset local progress
     }
   };
+
   const handleGenerateTasks = async () => {
-    if (!project || project.progressType || !project.cloudinaryDocumentationUrl)
+    if (
+      !project ||
+      project.progressType ||
+      !project.cloudinaryDocumentationUrl
+    ) {
       return;
+    }
 
     setGeneratingTasks(true);
     toast.loading("Analyzing documentation and generating tasks...", {
@@ -187,41 +193,165 @@ export default function DeveloperProjectDetailClient({
     });
 
     try {
+
+      // Step 1: Generate AI tasks first (most likely to fail)
+      const aiGeneratedTasks = await generateTasksFromDeveloperDocumentation(
+        project.cloudinaryDocumentationUrl
+      );
+
+      //    console.log("AI tasks generated:", aiGeneratedTasks);
+
+      // Validate AI response more thoroughly
+      if (
+        !aiGeneratedTasks ||
+        !Array.isArray(aiGeneratedTasks) ||
+        aiGeneratedTasks.length === 0
+      ) {
+        throw new Error(
+          "No tasks were generated from the documentation. Please ensure your documentation contains actionable development steps."
+        );
+      }
+
+      // Validate each task structure
+      const invalidTasks = aiGeneratedTasks.filter(
+        (task, index) =>
+          !task.name ||
+          typeof task.name !== "string" ||
+          task.name.trim().length === 0 ||
+          typeof task.completed !== "boolean"
+      );
+
+      if (invalidTasks.length > 0) {
+        console.error("Invalid tasks found:", invalidTasks);
+        throw new Error(
+          "Some generated tasks have invalid format. Please try regenerating tasks."
+        );
+      }
+
+      // Step 2: Prepare Firebase tasks (validation happens here)
+      const firebaseTasks: Task[] = aiGeneratedTasks.map((task, index) => {
+        return {
+          ...task,
+          projectId: project.id,
+          projectName: project.projectName,
+          status: "not-started" as const,
+        };
+      });
+
+      //  console.log("Firebase tasks prepared:", firebaseTasks);
+
+      // Step 3: Atomic Firebase operations (all or nothing approach)
+      // Update progress type first
       const typeResult = await setProgressTypeAction(
         project.id,
         "task-based",
         `/developer/projects/${project.id}`
       );
+
       if (!typeResult.success) {
+        console.error("Failed to set progress type:", typeResult.error);
         throw new Error(typeResult.error || "Failed to set progress type");
       }
 
-      const aiGeneratedTasks = await generateTasksFromDeveloperDocumentation(
-        project.cloudinaryDocumentationUrl
-      );
-      const firebaseTasks: Task[] = aiGeneratedTasks.map((task) => ({
-        ...task,
-        projectId: project.id,
-        projectName: project.projectName,
-        status: "not-started",
-      }));
+      //  console.log("Progress type set successfully");
 
-      const createResult = await createTasksAction(firebaseTasks, project.id); // Pass projectId
+      // Step 4: Create tasks in Firebase
+      const createResult = await createTasksAction(firebaseTasks, project.id);
+
       if (!createResult.success) {
+        console.error("Failed to create tasks:", createResult.error);
+        // Rollback progress type if task creation fails
+        await setProgressTypeAction(
+          project.id,
+          null, // Reset to null to allow retry
+          `/developer/projects/${project.id}`
+        );
         throw new Error(createResult.error || "Failed to store tasks");
       }
 
+      //      console.log("Tasks created successfully in Firebase");
+
+      // Step 5: Update local state only after all Firebase operations succeed
       setTasks(aiGeneratedTasks);
-      toast.success("Tasks generated and stored successfully!", {
-        id: "generate-tasks",
-      });
-    } catch (error) {
-      toast.error(
-        `Task generation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+
+      toast.success(
+        `Successfully generated and stored ${aiGeneratedTasks.length} tasks!`,
         { id: "generate-tasks" }
       );
+    } catch (error) {
+      console.error("Task generation process failed:", {
+        error,
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      let errorMessage = "Unknown error occurred";
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      }
+
+      // More specific error handling
+      if (errorMessage.includes("extractTextFromPdf")) {
+        toast.error(
+          "Failed to read PDF content. Please ensure the PDF is not corrupted and contains readable text.",
+          {
+            id: "generate-tasks",
+          }
+        );
+      } else if (errorMessage.includes("AI response parsing failed")) {
+        toast.error(
+          "AI service is temporarily unavailable. Please try again in a few moments.",
+          {
+            id: "generate-tasks",
+          }
+        );
+      } else if (errorMessage.includes("No tasks were generated")) {
+        toast.error(
+          "Could not generate tasks from this documentation. Please ensure it contains clear development instructions.",
+          {
+            id: "generate-tasks",
+          }
+        );
+      } else if (errorMessage.includes("Invalid task")) {
+        toast.error(
+          "Generated tasks had formatting issues. Please try again.",
+          {
+            id: "generate-tasks",
+          }
+        );
+      } else if (errorMessage.includes("Failed to set progress type")) {
+        toast.error(
+          "Database error occurred. Please check your connection and try again.",
+          {
+            id: "generate-tasks",
+          }
+        );
+      } else if (errorMessage.includes("Failed to store tasks")) {
+        toast.error("Could not save tasks to database. Please try again.", {
+          id: "generate-tasks",
+        });
+      } else {
+        toast.error(`Task generation failed: ${errorMessage}`, {
+          id: "generate-tasks",
+        });
+      }
+
+      // Ensure Firebase state allows retry by resetting progress type if needed
+      try {
+        await setProgressTypeAction(
+          project.id,
+          null,
+          `/developer/projects/${project.id}`
+        );
+
+        console.log("Progress type ensured to be reset");
+      } catch (rollbackError) {
+        console.error("Failed to reset progress type:", rollbackError);
+        toast.error("Please refresh the page to try again.");
+      }
     } finally {
       setGeneratingTasks(false);
     }

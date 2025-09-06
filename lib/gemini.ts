@@ -15,11 +15,7 @@ import {
   validateQuestionStructure,
 } from "./analysis-utils";
 import { getActiveGoogleAIKeys } from "@/lib/firebase/admin";
-import {
-  AIKeyFromDB,
-  AttemptResult,
-  GEMINI_CONFIG,
-} from "@/lib/types";
+import { AIKeyFromDB, AttemptResult, GEMINI_CONFIG } from "@/lib/types";
 import {
   classifyAndLogError,
   generateUserFriendlyErrorMessage,
@@ -54,8 +50,6 @@ async function tryWithDatabaseKeysOptimized<T>(
     .substr(2, 9)}`;
 
   try {
-
-
     // 1. Fetch active Google AI keys from database
     const activeKeys = await getActiveGoogleAIKeys();
 
@@ -73,8 +67,6 @@ async function tryWithDatabaseKeysOptimized<T>(
       );
     }
 
-
-
     // 2. Generate dynamic retry strategy
     const retryStrategy = generateDynamicRetryStrategy(activeKeys.length);
 
@@ -89,8 +81,6 @@ async function tryWithDatabaseKeysOptimized<T>(
         "STRATEGY_ERROR: Unable to generate retry strategy - insufficient time budget or no keys available."
       );
     }
-
-
 
     // 3. Execute attempts with rotating key strategy
     let lastError: Error | null = null;
@@ -130,7 +120,6 @@ async function tryWithDatabaseKeysOptimized<T>(
           attempt.timeout,
           `Key "${key.aiId}" rotation ${attempt.rotation}`
         );
-
 
         return result;
       } catch (error) {
@@ -296,7 +285,6 @@ export async function analyzeCompleteApplicationOptimized(
   aiAnalysis: AIAnalysis;
   overallScore: number;
 }> {
-
   try {
     // Pre-validation with detailed error messages
     if (!candidateData.aiQuestions || candidateData.aiQuestions.length === 0) {
@@ -316,7 +304,7 @@ export async function analyzeCompleteApplicationOptimized(
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
+
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       // Parse questions with type detection from ID
       const questionAnswerPairs =
@@ -440,7 +428,6 @@ JSON OUTPUT:
           );
           throw new Error("Missing required analysis sections");
         }
-
       } catch (parseError) {
         console.error(
           `[GEMINI_ANALYSIS] JSON parsing failed, attempting recovery`,
@@ -465,7 +452,6 @@ JSON OUTPUT:
               .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g, ': "$1"$2');
 
             analysisResult = JSON.parse(fixedJson);
-
           } catch (recoveryError) {
             console.error(`[GEMINI_ANALYSIS] JSON parsing recovery failed`, {
               keyId: keyInfo.aiId,
@@ -511,10 +497,11 @@ JSON OUTPUT:
         0,
         Math.min(10, analysisResult.holisticAssessment.overallScore || 0)
       );
-      
+
       // Get verdict directly from AI response
-      const aiVerdict = analysisResult.holisticAssessment.verdict || "Requires Review";
-      
+      const aiVerdict =
+        analysisResult.holisticAssessment.verdict || "Requires Review";
+
       // Map AI verdict to your AIVerdict type
       let overallVerdict: AIVerdict;
       switch (aiVerdict) {
@@ -545,7 +532,6 @@ JSON OUTPUT:
       return { aiAnalysis, overallScore: score };
     });
   } catch (error) {
-
     // Re-throw custom errors as-is (they already have user-friendly messages)
     if (
       error instanceof GeminiConfigurationError ||
@@ -593,7 +579,6 @@ function cleanJsonResponse(response: string): string {
 export async function quickAnalyze(
   candidateData: Application
 ): Promise<AIVerdict> {
-
   try {
     const result = await analyzeCompleteApplicationOptimized(candidateData);
 
@@ -611,9 +596,7 @@ export async function quickAnalyze(
 export async function generateImprovedDocumentationFromGeminiAI(
   textContent: string
 ): Promise<any> {
-
   try {
-
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       const PROMPT = `
       You are an expert Project Architect & Senior Developer.
@@ -752,18 +735,18 @@ export async function generateImprovedDocumentationFromGeminiAI(
       const response = await result.response.text();
 
       // Remove any unnecessary AI-generated intro
-         let cleanedResponse = response
+      let cleanedResponse = response
         .replace(/```html\n?/gi, "")
         .replace(/```/g, "")
         .replace(/\*?\n\n##/g, "##")
         .replace(/body\s*{[^}]*}/g, "")
         .trim();
 
-      
       return cleanedResponse;
     });
   } catch (error) {
-    console.error(`Documentation generation failed`, {    errorMessage: error instanceof Error ? error.message : "Unknown error",
+    console.error(`Documentation generation failed`, {
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
 
     if (error instanceof Error) {
@@ -791,7 +774,6 @@ export async function generateDocumentationFromGeminiAI(
   projectOverview: string,
   developmentAreas: string[]
 ): Promise<any> {
-
   try {
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       const PROMPT = `
@@ -972,13 +954,10 @@ export async function generateDocumentationFromGeminiAI(
       return cleanedResponse;
     });
   } catch (error) {
-    console.error(
-      `Project documentation generation failed`,
-      {
-        projectName,
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-      }
-    );
+    console.error(`Project documentation generation failed`, {
+      projectName,
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
 
     if (error instanceof Error) {
       const apiError = error as APIError;
@@ -1003,13 +982,8 @@ export async function generateDocumentationFromGeminiAI(
 export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
   textContent: string
 ): Promise<ClientTask[]> {
-
-
   try {
-
-
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
-
       const PROMPT = `
         You are an expert Project Architect & Senior Developer.
         Your task is to analyze the provided developer documentation text and generate a concise, actionable list of tasks for a developer to implement the project. The tasks should be specific, clear, and focused on development work.
@@ -1023,64 +997,193 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
         - Generate a list of tasks based on the documentation.
         - Each task should be a single, actionable development step.
         - Avoid vague tasks like "Build the app" — break them into smaller, specific steps.
+        - Generate between 8-15 tasks depending on project complexity.
         - Return the response as a JSON array of objects with the following structure:
           - \`id\`: a unique string identifier (e.g., "task-1", "task-2")
           - \`name\`: a concise description of the task (e.g., "Set up Firebase authentication")
           - \`completed\`: a boolean, always set to false
   
         ## Response Format
-        Return the tasks in this exact JSON format:
-        \`\`\`json
+        Return ONLY valid JSON in this exact format (no markdown, no code blocks, no additional text):
         [
-          {"id": "task-1", "name": "Set up project repository", "completed": false},
-          {"id": "task-2", "name": "Design database schema", "completed": false}
+          {"id": "task-1", "name": "Set up project repository and initialize version control", "completed": false},
+          {"id": "task-2", "name": "Design and implement database schema", "completed": false},
+          {"id": "task-3", "name": "Create user authentication system", "completed": false},
+          {"id": "task-4", "name": "Build main dashboard UI components", "completed": false},
+          {"id": "task-5", "name": "Implement API endpoints for data management", "completed": false}
         ]
-        \`\`\`
   
-        ## Output
-        Provide only the JSON array of tasks, with no additional text or markdown outside the JSON.
+        IMPORTANT: Return ONLY the JSON array. No explanatory text, no markdown formatting, no code blocks.
       `;
 
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
-      console.info(
-        ` Task generation response received`,
-        {
-   
-          keyId: keyInfo.aiId,
-          responseLength: response.length,
+      console.info(`[GEMINI_TASK_GENERATION] Raw response received`, {
+        keyId: keyInfo.aiId,
+        responseLength: response.length,
+        responsePreview: response.substring(0, 200),
+      });
+
+      // Enhanced JSON cleaning function
+      function cleanTasksJsonResponse(response: string): string {
+        let cleaned = response.trim();
+
+        // Remove common markdown patterns
+        cleaned = cleaned.replace(/```json\s*/gi, "");
+        cleaned = cleaned.replace(/```javascript\s*/gi, "");
+        cleaned = cleaned.replace(/```\s*/g, "");
+        cleaned = cleaned.replace(/`+/g, "");
+
+        // Remove any explanatory text before the JSON
+        cleaned = cleaned.replace(/^[^[\{]*/, "");
+
+        // Remove any explanatory text after the JSON
+        cleaned = cleaned.replace(/[^\]\}]*$/, "");
+
+        // Find the JSON array bounds
+        const firstBracket = cleaned.indexOf("[");
+        const lastBracket = cleaned.lastIndexOf("]");
+
+        if (
+          firstBracket !== -1 &&
+          lastBracket !== -1 &&
+          lastBracket > firstBracket
+        ) {
+          cleaned = cleaned.substring(firstBracket, lastBracket + 1);
         }
-      );
 
-      const cleanedResponse = response.replace(/^``````$/g, "").trim();
-      const tasks: ClientTask[] = JSON.parse(cleanedResponse);
+        // Fix common JSON issues
+        cleaned = cleaned
+          .replace(/,(\s*[\]\}])/g, "$1") // Remove trailing commas
+          .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":') // Quote unquoted keys
+          .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,\]\}])/g, ': "$1"$2'); // Quote unquoted values
 
-      if (
-        !Array.isArray(tasks) ||
-        tasks.some((t) => !t.id || !t.name || typeof t.completed !== "boolean")
-      ) {
-        console.error(`[GEMINI_TASK_GENERATION] Invalid task format returned`, {
-          keyId: keyInfo.aiId,
-          tasksLength: Array.isArray(tasks) ? tasks.length : "not_array",
-        });
-        throw new Error("Invalid task format returned by AI");
+        return cleaned.trim();
       }
 
-      console.info(
-        `[GEMINI_TASK_GENERATION] Task generation completed successfully`,
-        {
-          keyId: keyInfo.aiId,
-          tasksGenerated: tasks.length,
-        }
-      );
+      const cleanedResponse = cleanTasksJsonResponse(response);
 
-      return tasks;
+      console.info(`[GEMINI_TASK_GENERATION] Cleaned response`, {
+        keyId: keyInfo.aiId,
+        cleanedLength: cleanedResponse.length,
+        cleanedPreview: cleanedResponse.substring(0, 300),
+      });
+
+      let tasks: ClientTask[];
+
+      try {
+        tasks = JSON.parse(cleanedResponse);
+      } catch (parseError) {
+        console.error(
+          `[GEMINI_TASK_GENERATION] JSON parsing failed, attempting manual extraction`,
+          {
+            keyId: keyInfo.aiId,
+            parseError:
+              parseError instanceof Error
+                ? parseError.message
+                : "Unknown parse error",
+            cleanedResponse: cleanedResponse.substring(0, 500),
+          }
+        );
+
+        // Fallback: Try to extract tasks manually using regex
+        try {
+          const taskMatches = cleanedResponse.match(
+            /\{\s*"id"\s*:\s*"[^"]+"\s*,\s*"name"\s*:\s*"[^"]+"\s*,\s*"completed"\s*:\s*false\s*\}/g
+          );
+
+          if (taskMatches && taskMatches.length > 0) {
+            tasks = taskMatches.map((match) => JSON.parse(match));
+            console.info(
+              `[GEMINI_TASK_GENERATION] Manual extraction successful`,
+              {
+                keyId: keyInfo.aiId,
+                extractedTasks: tasks.length,
+              }
+            );
+          } else {
+            throw new Error(
+              "Could not extract tasks from response using regex"
+            );
+          }
+        } catch (regexError) {
+          console.error(
+            `[GEMINI_TASK_GENERATION] Manual extraction also failed`,
+            {
+              keyId: keyInfo.aiId,
+              regexError:
+                regexError instanceof Error
+                  ? regexError.message
+                  : "Unknown regex error",
+            }
+          );
+          throw new Error(
+            `JSON parsing failed: ${
+              parseError instanceof Error
+                ? parseError.message
+                : "Unknown parsing error"
+            }`
+          );
+        }
+      }
+
+      // Validate the parsed tasks
+      if (!Array.isArray(tasks)) {
+        throw new Error("Response is not an array");
+      }
+
+      if (tasks.length === 0) {
+        throw new Error("No tasks found in response");
+      }
+
+      // Validate each task structure and add fallback values
+      const validatedTasks = tasks
+        .map((task, index) => {
+          if (!task || typeof task !== "object") {
+            throw new Error(`Invalid task object at index ${index}`);
+          }
+
+          return {
+            id: task.id || `task-${index + 1}-${Date.now()}`,
+            name: task.name || `Task ${index + 1}`,
+            completed: Boolean(task.completed), // Ensure boolean
+          };
+        })
+        .filter((task) => task.name.trim().length > 0); // Remove empty tasks
+
+      if (validatedTasks.length === 0) {
+        throw new Error("No valid tasks after validation");
+      }
+
+      // console.info(
+      //   `[GEMINI_TASK_GENERATION] Task generation completed successfully`,
+      //   {
+      //     keyId: keyInfo.aiId,
+      //     originalTasksCount: tasks.length,
+      //     validatedTasksCount: validatedTasks.length,
+      //     sampleTask: validatedTasks[0],
+      //   }
+      // );
+
+      return validatedTasks;
     });
   } catch (error) {
-    console.error(`Task generation failed`, {
+    console.error(`[GEMINI_TASK_GENERATION] Task generation failed`, {
       errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorStack: error instanceof Error ? error.stack : undefined,
     });
+
+    // Provide more specific error messages
+    if (
+      error instanceof Error &&
+      error.message.includes("JSON parsing failed")
+    ) {
+      throw new Error(
+        `AI response parsing failed. This is usually temporary - retry now.`
+      );
+    }
+
     throw new Error(
       `Task generation failed: ${
         error instanceof Error ? error.message : "Unknown error"
@@ -1096,10 +1199,7 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
 export async function generateCareerPathRecommendations(
   candidateData: Application
 ): Promise<string[]> {
-
-
   try {
-
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       // Construct career analysis prompt
       const PROMPT = `You are a highly experienced global career advisor. 
@@ -1117,11 +1217,24 @@ Skills: ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
 Summary: ${candidateData.resumeAnalysis?.summary || "N/A"}
 
 AI ANALYSIS INSIGHTS:
-${candidateData?.aiAnalysis?.aiRecommendation || "No specific insights available"}
+${
+  candidateData?.aiAnalysis?.aiRecommendation ||
+  "No specific insights available"
+}
 
 TECHNICAL COMPETENCY:
-Average Correctness Score: ${(candidateData?.aiAnalysis?.correctnessScores || []).reduce((acc, curr) => acc + curr.score, 0) / (candidateData?.aiAnalysis?.correctnessScores?.length || 1) || 0}/10
-Average Authenticity: ${(candidateData?.aiAnalysis?.originalityScores ?? []).reduce((acc, curr) => acc + curr.score, 0) / (candidateData?.aiAnalysis?.originalityScores?.length || 1) || 0}%
+Average Correctness Score: ${
+        (candidateData?.aiAnalysis?.correctnessScores || []).reduce(
+          (acc, curr) => acc + curr.score,
+          0
+        ) / (candidateData?.aiAnalysis?.correctnessScores?.length || 1) || 0
+      }/10
+Average Authenticity: ${
+        (candidateData?.aiAnalysis?.originalityScores ?? []).reduce(
+          (acc, curr) => acc + curr.score,
+          0
+        ) / (candidateData?.aiAnalysis?.originalityScores?.length || 1) || 0
+      }%
 
 INSTRUCTIONS:
 1. Consider all global job roles across industries and domains (do not limit to a specific sector).
@@ -1140,16 +1253,17 @@ Return exactly 3 job role titles, one per line, no additional text:
       const result = await model.generateContent(PROMPT);
       const response = await result.response.text();
 
-     
       const jobRoles: string[] = response
-        .split('\n')
-        .map((line: string) => line.trim()) 
-        .filter((line: string) => line.length > 0 && !line.includes('[') && !line.includes(']'))
-        .slice(0, 3); 
+        .split("\n")
+        .map((line: string) => line.trim())
+        .filter(
+          (line: string) =>
+            line.length > 0 && !line.includes("[") && !line.includes("]")
+        )
+        .slice(0, 3);
 
       return jobRoles;
     });
-
   } catch (error) {
     throw new Error(
       error instanceof Error
@@ -1159,12 +1273,11 @@ Return exactly 3 job role titles, one per line, no additional text:
   }
 }
 
-
 /**
  * Analyze resume PDF and extract key information
  */
 export async function analyzeResumeWithAI(
-  base64Data: string, 
+  base64Data: string,
   mimeType: string
 ): Promise<{
   skills: string[];
@@ -1173,13 +1286,15 @@ export async function analyzeResumeWithAI(
   summary: string;
 }> {
   const analysisStartTime = Date.now();
-  const resumeAnalysisId = `resume_analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const resumeAnalysisId = `resume_analysis_${Date.now()}_${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
 
   try {
     console.info(`[GEMINI_RESUME_ANALYSIS] Starting resume analysis`, {
       resumeAnalysisId,
       timestamp: new Date().toISOString(),
-      phase: 'resume_analysis_start'
+      phase: "resume_analysis_start",
     });
 
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
@@ -1187,7 +1302,7 @@ export async function analyzeResumeWithAI(
         resumeAnalysisId,
         keyId: keyInfo.aiId,
         keyPriority: keyInfo.priority,
-        phase: 'prompt_preparation'
+        phase: "prompt_preparation",
       });
 
       const prompt = `You are an expert HR professional and resume analyzer. Analyze this resume document carefully and extract key information.
@@ -1227,57 +1342,64 @@ Be precise and handle missing information gracefully by using appropriate defaul
         {
           inlineData: {
             data: base64Data,
-            mimeType: mimeType
-          }
+            mimeType: mimeType,
+          },
         },
-        { text: prompt }
+        { text: prompt },
       ]);
 
       const response = await result.response.text();
-      
+
       // Clean and parse response
       const cleanedResponse = cleanJsonResponse(response);
       const analysis = JSON.parse(cleanedResponse);
-      
+
       // Validate and set defaults
-      if (!analysis.skills || !Array.isArray(analysis.skills) || analysis.skills.length === 0) {
+      if (
+        !analysis.skills ||
+        !Array.isArray(analysis.skills) ||
+        analysis.skills.length === 0
+      ) {
         analysis.skills = ["General skills"];
       }
-      
+
       if (!analysis.experience) {
         analysis.experience = "0 years, Fresher/Entry level";
       }
-      
+
       if (!analysis.education) {
         analysis.education = "Not specified";
       }
-      
+
       if (!analysis.summary) {
-        analysis.summary = "Candidate with available qualifications seeking opportunities.";
+        analysis.summary =
+          "Candidate with available qualifications seeking opportunities.";
       }
 
       const totalAnalysisTime = Date.now() - analysisStartTime;
-      
-      console.info(`[GEMINI_RESUME_ANALYSIS] Resume analysis completed successfully`, {
-        resumeAnalysisId,
-        keyId: keyInfo.aiId,
-        totalAnalysisTimeMs: totalAnalysisTime,
-        skillsFound: analysis.skills.length,
-        phase: 'resume_analysis_complete'
-      });
+
+      console.info(
+        `[GEMINI_RESUME_ANALYSIS] Resume analysis completed successfully`,
+        {
+          resumeAnalysisId,
+          keyId: keyInfo.aiId,
+          totalAnalysisTimeMs: totalAnalysisTime,
+          skillsFound: analysis.skills.length,
+          phase: "resume_analysis_complete",
+        }
+      );
 
       return analysis;
     });
-
   } catch (error) {
     const totalTime = Date.now() - analysisStartTime;
-    
+
     console.error(`[GEMINI_RESUME_ANALYSIS] Resume analysis failed`, {
       resumeAnalysisId,
       totalTimeMs: totalTime,
-      errorType: error?.constructor?.name || 'Unknown',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      phase: 'resume_analysis_failed'
+      errorType: error?.constructor?.name || "Unknown",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      phase: "resume_analysis_failed",
     });
 
     throw new Error(
@@ -1291,31 +1413,34 @@ Be precise and handle missing information gracefully by using appropriate defaul
 /**
  * Generate exactly 10 interview questions based on resume analysis
  */
-export async function generateInterviewQuestions(
-  resumeData: {
-    skills: string[];
-    experience: string;
-    education: string;
-    summary: string;
-  }
-): Promise<Array<{ id: string; question: string; answer: string }>> {
+export async function generateInterviewQuestions(resumeData: {
+  skills: string[];
+  experience: string;
+  education: string;
+  summary: string;
+}): Promise<Array<{ id: string; question: string; answer: string }>> {
   const questionStartTime = Date.now();
-  const questionGenerationId = `question_gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const questionGenerationId = `question_gen_${Date.now()}_${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
 
   try {
-    console.info(`[GEMINI_QUESTION_GENERATION] Starting interview question generation`, {
-      questionGenerationId,
-      timestamp: new Date().toISOString(),
-      skillsCount: resumeData.skills.length,
-      phase: 'question_generation_start'
-    });
+    console.info(
+      `[GEMINI_QUESTION_GENERATION] Starting interview question generation`,
+      {
+        questionGenerationId,
+        timestamp: new Date().toISOString(),
+        skillsCount: resumeData.skills.length,
+        phase: "question_generation_start",
+      }
+    );
 
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
       console.info(`[GEMINI_QUESTION_GENERATION] Processing with API key`, {
         questionGenerationId,
         keyId: keyInfo.aiId,
         keyPriority: keyInfo.priority,
-        phase: 'prompt_preparation'
+        phase: "prompt_preparation",
       });
 
       const prompt = `You are a senior HR director at a Fortune 500 company. Based on the candidate's resume analysis, generate EXACTLY 10 interview questions for this candidate.
@@ -1387,46 +1512,48 @@ Generate exactly 10 questions following this distribution. Make them specific to
 
       const result = await model.generateContent(prompt);
       const response = await result.response.text();
-      
+
       // Clean and parse response
       const cleanedResponse = cleanJsonResponse(response);
       const data = JSON.parse(cleanedResponse);
-      
+
       if (!data.questions || !Array.isArray(data.questions)) {
         throw new Error("Invalid questions format in AI response");
       }
-      
+
       const questions = data.questions.map((q: any, index: number) => ({
         id: q.id || `question_${index + 1}_${Date.now()}`,
         question: q.question,
-        answer: ""
+        answer: "",
       }));
-      
+
       // Ensure exactly 10 questions
       const finalQuestions = questions.slice(0, 10);
 
       const totalQuestionTime = Date.now() - questionStartTime;
-      
-      console.info(`[GEMINI_QUESTION_GENERATION] Question generation completed successfully`, {
-        questionGenerationId,
-        keyId: keyInfo.aiId,
-        totalQuestionTimeMs: totalQuestionTime,
-        questionsGenerated: finalQuestions.length,
-        phase: 'question_generation_complete'
-      });
+
+      console.info(
+        `[GEMINI_QUESTION_GENERATION] Question generation completed successfully`,
+        {
+          questionGenerationId,
+          keyId: keyInfo.aiId,
+          totalQuestionTimeMs: totalQuestionTime,
+          questionsGenerated: finalQuestions.length,
+          phase: "question_generation_complete",
+        }
+      );
 
       return finalQuestions;
     });
-
   } catch (error) {
     const totalTime = Date.now() - questionStartTime;
-    
+
     console.error(`[GEMINI_QUESTION_GENERATION] Question generation failed`, {
       questionGenerationId,
       totalTimeMs: totalTime,
-      errorType: error?.constructor?.name || 'Unknown',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      phase: 'question_generation_failed'
+      errorType: error?.constructor?.name || "Unknown",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      phase: "question_generation_failed",
     });
 
     throw new Error(
