@@ -40,7 +40,10 @@ import {
   updateDeveloper,
   getAllDevelopers,
   createDeveloper,
+  removeProjectDocument,
+  addProjectDocuments,
 } from "@/lib/firebase/admin";
+import { ProjectDocument } from "@/lib/types";
 
 export async function acceptProjectAction(
   projectId: string,
@@ -74,7 +77,47 @@ export async function rejectProjectAction(
 
   return result;
 }
+/**
+ * Add documents to project action
+ */
+export async function addProjectDocumentsAction(
+  projectId: string,
+  documentType: "quotation" | "developer",
+  documents: Omit<ProjectDocument, "id" | "version">[],
+  redirectPath: string = "/admin/ongoing"
+) {
+  const result = await addProjectDocuments(projectId, documentType, documents);
 
+  if (result.success) {
+    revalidatePath("/admin/ongoing");
+    revalidatePath("/admin/completed");
+    revalidatePath(`/admin/ongoing/${projectId}`);
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
+
+/**
+ * Remove document from project action
+ */
+export async function removeProjectDocumentAction(
+  projectId: string,
+  documentType: "quotation" | "developer",
+  documentId: string,
+  redirectPath: string = "/admin/ongoing"
+) {
+  const result = await removeProjectDocument(projectId, documentType, documentId);
+
+  if (result.success) {
+    revalidatePath("/admin/ongoing");
+    revalidatePath("/admin/completed");
+    revalidatePath(`/admin/ongoing/${projectId}`);
+    revalidatePath(redirectPath);
+  }
+
+  return result;
+}
 export async function completeProjectAction(
   projectId: string,
   redirectPath: string = "/admin/completed"

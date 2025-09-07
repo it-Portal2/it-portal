@@ -10,6 +10,8 @@ import {
   query,
   addDoc,
   orderBy,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "@/firebase";
 import { PaymentRecord } from "./client";
@@ -18,6 +20,7 @@ import {
   Application,
   CorrectnessScore,
   OriginalityScore,
+  ProjectDocument,
 } from "../types";
 import { adminAuth } from "@/firebaseAdmin";
 
@@ -46,6 +49,137 @@ export async function acceptProject(
   } catch (error) {
     console.error("Error accepting project:", error);
     return { success: false, error: "Failed to accept project" };
+  }
+}
+
+/**
+ * Add documents to a project (quotation or developer documents)
+ */
+export async function addProjectDocuments(
+  projectId: string,
+  documentType: "quotation" | "developer",
+  documents: Omit<ProjectDocument, "id" | "version">[]
+): Promise<{ success: boolean; error?: string; documentIds?: string[] }> {
+  try {
+    if (!projectId || !documents || documents.length === 0) {
+      return {
+        success: false,
+        error: "Project ID and documents are required",
+      };
+    }
+
+    console.log(
+      `Adding ${documents.length} ${documentType} documents to project: ${projectId}`
+    );
+
+    const projectRef = doc(db, "Projects", projectId);
+    const projectDoc = await getDoc(projectRef);
+
+    if (!projectDoc.exists()) {
+      return {
+        success: false,
+        error: "Project not found",
+      };
+    }
+
+    const projectData = projectDoc.data();
+    const fieldName =
+      documentType === "quotation"
+        ? "quotationDocuments"
+        : "developerDocuments";
+    const existingDocuments = projectData[fieldName] || [];
+
+    // Generate unique IDs and version numbers for new documents
+    const newDocuments: ProjectDocument[] = documents.map((doc, index) => {
+      const documentId = `${documentType}_${Date.now()}_${index}`;
+
+      return {
+        ...doc,
+        id: documentId,
+      };
+    });
+
+    // Update the project with new documents
+    await updateDoc(projectRef, {
+      [fieldName]: arrayUnion(...newDocuments),
+    });
+
+    console.log(
+      `Successfully added ${newDocuments.length} documents to project: ${projectId}`
+    );
+
+    return {
+      success: true,
+      documentIds: newDocuments.map((doc) => doc.id),
+    };
+  } catch (error) {
+    console.error("Error adding project documents:", error);
+    return { success: false, error: "Failed to add documents to project" };
+  }
+}
+
+/**
+ * Remove a document from a project
+ */
+export async function removeProjectDocument(
+  projectId: string,
+  documentType: "quotation" | "developer",
+  documentId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!projectId || !documentId) {
+      return {
+        success: false,
+        error: "Project ID and document ID are required",
+      };
+    }
+
+    console.log(
+      `Removing ${documentType} document ${documentId} from project: ${projectId}`
+    );
+
+    const projectRef = doc(db, "Projects", projectId);
+    const projectDoc = await getDoc(projectRef);
+
+    if (!projectDoc.exists()) {
+      return {
+        success: false,
+        error: "Project not found",
+      };
+    }
+
+    const projectData = projectDoc.data();
+    const fieldName =
+      documentType === "quotation"
+        ? "quotationDocuments"
+        : "developerDocuments";
+    const existingDocuments = projectData[fieldName] || [];
+
+    // Find the document to remove
+    const documentToRemove = existingDocuments.find(
+      (doc: ProjectDocument) => doc.id === documentId
+    );
+
+    if (!documentToRemove) {
+      return {
+        success: false,
+        error: "Document not found",
+      };
+    }
+
+    // Remove the document
+    await updateDoc(projectRef, {
+      [fieldName]: arrayRemove(documentToRemove),
+    });
+
+    console.log(
+      `Successfully removed document ${documentId} from project: ${projectId}`
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error removing project document:", error);
+    return { success: false, error: "Failed to remove document from project" };
   }
 }
 
@@ -1434,7 +1568,7 @@ export async function createDeveloper(
     }
 
     console.log(`Creating developer: ${email}`);
-    
+
     // Create user in Firebase Auth
     const userRecord = await adminAuth.createUser({
       email,
@@ -1444,15 +1578,15 @@ export async function createDeveloper(
     });
 
     console.log(`User created in Firebase Auth: ${userRecord.uid}`);
-    
+
     // Set custom claims - developer role
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: "developer" });
     console.log(`Custom claims set for: ${userRecord.uid}`);
-    
+
     // Revoke refresh tokens to force immediate token refresh
     await adminAuth.revokeRefreshTokens(userRecord.uid);
     console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
-    
+
     // Create user profile in Firestore - using "users" collection
     const developerProfile: DeveloperRecord = {
       uid: userRecord.uid,
@@ -1467,12 +1601,14 @@ export async function createDeveloper(
     };
 
     await setDoc(doc(db, "users", userRecord.uid), developerProfile);
-    console.log(`Developer profile created in Firestore users collection: ${userRecord.uid}`);
+    console.log(
+      `Developer profile created in Firestore users collection: ${userRecord.uid}`
+    );
 
     return { success: true, uid: userRecord.uid };
   } catch (error: any) {
     console.error("Error creating developer:", error);
-    
+
     // Handle specific Firebase Auth errors
     if (error.code === "auth/email-already-exists") {
       return { success: false, error: "Email already exists" };
@@ -1493,11 +1629,8 @@ export async function createDeveloper(
 export async function getAllDevelopers(): Promise<DeveloperRecord[]> {
   try {
     const usersRef = collection(db, "users");
-    const q = query(
-      usersRef,
-      where("role", "==", "developer")
-    );
-    
+    const q = query(usersRef, where("role", "==", "developer"));
+
     const querySnapshot = await getDocs(q);
     const developers: DeveloperRecord[] = [];
 
@@ -1509,7 +1642,9 @@ export async function getAllDevelopers(): Promise<DeveloperRecord[]> {
       } as DeveloperRecord);
     });
 
-    console.log(`Retrieved ${developers.length} developers from users collection`);
+    console.log(
+      `Retrieved ${developers.length} developers from users collection`
+    );
     return developers;
   } catch (error) {
     console.error("Error fetching developers:", error);
@@ -1548,7 +1683,7 @@ export async function updateDeveloper(
     if (updates.email) authUpdates.email = updates.email;
     if (updates.name) authUpdates.displayName = updates.name;
     if (updates.password) authUpdates.password = updates.password;
-    
+
     if (Object.keys(authUpdates).length > 0) {
       await adminAuth.updateUser(uid, authUpdates);
       console.log(`Firebase Auth updated for: ${uid}`);
@@ -1566,7 +1701,7 @@ export async function updateDeveloper(
     return { success: true };
   } catch (error: any) {
     console.error("Error updating developer:", error);
-    
+
     if (error.code === "auth/email-already-exists") {
       return { success: false, error: "Email already exists" };
     }
@@ -1581,7 +1716,9 @@ export async function updateDeveloper(
 /**
  * Delete developer from users collection and Firebase Auth
  */
-export async function deleteDeveloper(uid: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteDeveloper(
+  uid: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     if (!uid) {
       return {
@@ -1605,5 +1742,3 @@ export async function deleteDeveloper(uid: string): Promise<{ success: boolean; 
     return { success: false, error: "Failed to delete developer" };
   }
 }
-
-

@@ -25,6 +25,14 @@ export type ProjectStatus =
   | "rejected"
   | "delayed";
 
+export type ProjectDocument = {
+  id: string;
+  fileName: string;
+  cloudinaryUrl: string;
+};
+
+export type DocumentType = "quotation" | "developer";
+
 export type Project = {
   id: string;
   projectName: string;
@@ -43,8 +51,15 @@ export type Project = {
   currency?: "INR" | "USD";
   rejectionReason?: string;
   projectOverview: string;
+
+  // Legacy single document fields (keep for backward compatibility)
   cloudinaryQuotationUrl?: string;
   cloudinaryDocumentationUrl?: string;
+  
+  // New document arrays
+  quotationDocuments?: ProjectDocument[];
+  developerDocuments?: ProjectDocument[];
+
   progressType?: "task-based" | "manual" | null;
   isCompleted?: boolean; // Flag to lock edits when progress reaches 100%
   designLink: string | null; // Added design link field
