@@ -30,6 +30,7 @@ import {
   DollarSign,
   FileText,
   User,
+  Globe,
 } from "lucide-react"
 import ProjectTable from "@/components/ui-custom/ProjectTable"
 import { motion } from "framer-motion"
@@ -62,6 +63,24 @@ type PaymentDetailsForm = {
   }
 }
 
+type InternationalBankAccount = {
+  id: string
+  country: string
+  payment_method: string
+  routing_number?: string
+  account_number?: string
+  iban?: string
+  bic_swift_code?: string
+  bsb_number?: string
+  institution_number?: string
+  transit_number?: string
+  account_type: string
+  bank_name: string
+  beneficiary_address: string
+  beneficiary_bank_country?: string
+  account_holder_name: string
+}
+
 type PaymentRecord = {
   id?: string
   clientName: string
@@ -87,6 +106,263 @@ type ReceiptForm = {
   paymentType: "full" | "installment"
   installmentPercentage: string
   totalProjectAmount: string
+}
+
+// International Bank Details Modal Component
+const InternationalBankDetailsModal = () => {
+  const internationalAccounts: InternationalBankAccount[] = [
+    {
+      id: "US",
+      country: "United States",
+      payment_method: "ACH",
+      routing_number: "026073150",
+      account_number: "8335166394",
+      account_type: "Business checking account",
+      bank_name: "Community Federal Savings Bank",
+      beneficiary_address: "5 Penn Plaza, 14th Floor, New York, NY 10001, US",
+      account_holder_name: "CEHPOINT"
+    },
+    {
+      id: "UK",
+      country: "United Kingdom",
+      payment_method: "SWIFT (International wire)",
+      iban: "GB60TCCL04140475392256",
+      bic_swift_code: "TCCLGB3L",
+      account_type: "Business checking account",
+      bank_name: "The Currency Cloud Limited",
+      beneficiary_address: "12 Steward Street, The Steward Building, London, E1 6FQ, Great Britain",
+      beneficiary_bank_country: "United Kingdom",
+      account_holder_name: "CEHPOINT"
+    },
+    {
+      id: "DE",
+      country: "Germany",
+      payment_method: "SEPA / SEPA Instant",
+      iban: "DE72202208000056418342",
+      bic_swift_code: "SXPYDEHH",
+      account_type: "Business checking account",
+      bank_name: "Banking Circle",
+      beneficiary_address: "Banking Circle S.A. - German Branch, Maximilianstraße 54, 80538 München",
+      account_holder_name: "CEHPOINT"
+    },
+    {
+      id: "AU",
+      country: "Australia",
+      payment_method: "BECS / NPP / Osko",
+      account_number: "056418342",
+      bsb_number: "252000",
+      account_type: "Business checking account",
+      bank_name: "BC Payments",
+      beneficiary_address: "Level 11/10 Carrington St, Sydney NSW 2000, Australia",
+      account_holder_name: "CEHPOINT"
+    },
+    {
+      id: "CA",
+      country: "Canada",
+      payment_method: "EFT",
+      account_number: "951160480",
+      routing_number: "035210009",
+      institution_number: "352",
+      transit_number: "10009",
+      account_type: "Business checking account",
+      bank_name: "Digital Commerce Bank",
+      beneficiary_address: "736 Meridian Road N.E, Calgary, Alberta, CA",
+      account_holder_name: "CEHPOINT"
+    }
+  ]
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success("Copied to clipboard")
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="flex items-center gap-2 w-full">
+          <Globe className="h-4 w-4" />
+          View International Bank Details
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            International Bank Account Details
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-6">
+          {internationalAccounts.map((account) => (
+            <Card key={account.id} className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-purple-600" />
+                    {account.country}
+                  </span>
+                  <Badge variant="secondary">{account.payment_method}</Badge>
+                </CardTitle>
+                <CardDescription>{account.bank_name}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">Account Holder</Label>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">{account.account_holder_name}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(account.account_holder_name)}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">Account Type</Label>
+                    <p className="text-sm font-medium">{account.account_type}</p>
+                  </div>
+                  
+                  {account.iban && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">IBAN</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.iban}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.iban!)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {account.bic_swift_code && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">BIC/SWIFT Code</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.bic_swift_code}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.bic_swift_code!)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {account.account_number && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Account Number</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.account_number}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.account_number!)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {account.routing_number && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Routing Number</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.routing_number}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.routing_number!)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {account.bsb_number && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">BSB Number</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.bsb_number}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.bsb_number!)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {account.institution_number && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Institution Number</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.institution_number}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.institution_number!)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {account.transit_number && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Transit Number</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.transit_number}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(account.transit_number!)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="pt-2 border-t">
+                  <Label className="text-xs font-medium text-muted-foreground">Beneficiary Address</Label>
+                  <p className="text-sm">{account.beneficiary_address}</p>
+                </div>
+                
+                {account.beneficiary_bank_country && (
+                  <div>
+                    <Label className="text-xs font-medium text-muted-foreground">Beneficiary Bank Country</Label>
+                    <p className="text-sm">{account.beneficiary_bank_country}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 // View Details Dialog Component
@@ -123,7 +399,6 @@ const ViewDetailsDialog = ({ record }: { record: PaymentRecord }) => {
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
-          {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-3">
@@ -177,7 +452,6 @@ const ViewDetailsDialog = ({ record }: { record: PaymentRecord }) => {
             </Card>
           </div>
 
-          {/* Project and Payment Details */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center gap-2">
@@ -226,7 +500,6 @@ const ViewDetailsDialog = ({ record }: { record: PaymentRecord }) => {
             </CardContent>
           </Card>
 
-          {/* Receipt */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Payment Receipt</CardTitle>
@@ -261,29 +534,12 @@ const ViewDetailsDialog = ({ record }: { record: PaymentRecord }) => {
 }
 
 const Payment = () => {
-  const { profile, setProfile } = useAuthStore()
+  const { profile } = useAuthStore()
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsForm>({
-    paypal: {
-      email: "",
-      accountName: "",
-      paypalLink: "",
-    },
-    upi: {
-      upiId: "",
-      qrCodeUrl: "",
-    },
-    bankDetails: {
-      accountHolderName: "",
-      accountNumber: "",
-      bankName: "",
-      ifscCode: "",
-      branchName: "",
-    },
-    crypto: {
-      walletAddress: "",
-      network: "",
-      qrCodeUrl: "",
-    },
+    paypal: { email: "", accountName: "", paypalLink: "" },
+    upi: { upiId: "", qrCodeUrl: "" },
+    bankDetails: { accountHolderName: "", accountNumber: "", bankName: "", ifscCode: "", branchName: "" },
+    crypto: { walletAddress: "", network: "", qrCodeUrl: "" },
   })
   const [receiptForm, setReceiptForm] = useState<ReceiptForm>({
     projectName: "",
@@ -296,20 +552,14 @@ const Payment = () => {
     totalProjectAmount: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
- // State for payment records
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  
   const getCurrencySymbol = (currency: string) => {
-    switch (currency) {
-      case "USD":
-        return "$"
-      case "INR":
-        return "₹"
-      default:
-        return "₹"
-    }
+    return currency === "USD" ? "$" : "₹"
   }
-    const fetchPaymentRecords = async () => {
+  
+  const fetchPaymentRecords = async () => {
     setIsLoading(true)
     try {
       const result = await fetchClientPaymentRecordsAction(profile?.email || "")
@@ -324,6 +574,7 @@ const Payment = () => {
       setIsLoading(false)
     }
   }
+  
   useEffect(() => {
     if (profile?.email) {
       fetchPaymentRecords()
@@ -342,11 +593,7 @@ const Payment = () => {
       if (result.success && result.data && result.data.length > 0) {
         const paymentData = result.data[0]
         setPaymentDetails({
-          paypal: paymentData.paypal || {
-            email: "",
-            accountName: "",
-            paypalLink: "",
-          },
+          paypal: paymentData.paypal || { email: "", accountName: "", paypalLink: "" },
           upi: paymentData.upi || { upiId: "", qrCodeUrl: "" },
           bankDetails: paymentData.bankDetails || {
             accountHolderName: "",
@@ -355,11 +602,7 @@ const Payment = () => {
             ifscCode: "",
             branchName: "",
           },
-          crypto: paymentData.crypto || {
-            walletAddress: "",
-            network: "",
-            qrCodeUrl: "",
-          },
+          crypto: paymentData.crypto || { walletAddress: "", network: "", qrCodeUrl: "" },
         })
       } else if (result.error && result.error !== "Payment details not found") {
         toast.error(result.error)
@@ -370,10 +613,7 @@ const Payment = () => {
   }
 
   const handleReceiptFormChange = (field: keyof ReceiptForm, value: string | File | null) => {
-    setReceiptForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
+    setReceiptForm((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleReceiptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -382,15 +622,8 @@ const Payment = () => {
     }
   }
 
- // Updated submit handler
   const handleSubmitReceipt = async () => {
-    if (
-      !receiptForm.projectName ||
-      !receiptForm.amount ||
-      !receiptForm.currency ||
-      !receiptForm.paymentMode ||
-      !receiptForm.receipt
-    ) {
+    if (!receiptForm.projectName || !receiptForm.amount || !receiptForm.currency || !receiptForm.paymentMode || !receiptForm.receipt) {
       toast.error("Please fill all required fields and upload a receipt")
       return
     }
@@ -404,10 +637,8 @@ const Payment = () => {
 
     setIsSubmitting(true)
     try {
-      // Upload receipt to Cloudinary
       const receiptUrl = await uploadReceiptToCloudinary(receiptForm.receipt)
       
-      // Prepare payment data
       const paymentData: PaymentFormData = {
         clientName: profile?.name || "Unknown",
         projectName: receiptForm.projectName,
@@ -425,14 +656,11 @@ const Payment = () => {
         })
       }
 
-      // Submit payment record
       const result = await submitPaymentRecordAction(paymentData, "/client/payment")
       
       if (result.success) {
         toast.success("Payment receipt submitted successfully")
-        // Refresh payment records
         await fetchPaymentRecords()
-        // Reset form
         setReceiptForm({
           projectName: "",
           amount: "",
@@ -466,10 +694,7 @@ const Payment = () => {
 
   const hasPayPal = paymentDetails.paypal.email && paymentDetails.paypal.accountName
   const hasUPI = paymentDetails.upi.upiId
-  const hasBankDetails =
-    paymentDetails.bankDetails.accountHolderName &&
-    paymentDetails.bankDetails.accountNumber &&
-    paymentDetails.bankDetails.bankName
+  const hasBankDetails = paymentDetails.bankDetails.accountHolderName && paymentDetails.bankDetails.accountNumber && paymentDetails.bankDetails.bankName
   const hasCrypto = paymentDetails.crypto.walletAddress && paymentDetails.crypto.network
 
   return (
@@ -479,7 +704,6 @@ const Payment = () => {
       description="Manage your payment details and receipts"
     >
       <div className="space-y-8">
-        {/* Information Alert */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <Alert className="border-blue-200 bg-blue-50 text-blue-800">
             <Info className="h-4 w-4" />
@@ -492,7 +716,6 @@ const Payment = () => {
           </Alert>
         </motion.div>
 
-        {/* Payment Details Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -500,7 +723,6 @@ const Payment = () => {
           className="space-y-6"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* PayPal Card */}
             {hasPayPal && (
               <Card className="relative overflow-hidden">
                 <CardHeader className="pb-3">
@@ -556,7 +778,6 @@ const Payment = () => {
               </Card>
             )}
 
-            {/* UPI Card */}
             {hasUPI && (
               <Card className="relative overflow-hidden">
                 <CardHeader className="pb-3">
@@ -586,11 +807,7 @@ const Payment = () => {
                       <Label className="text-xs font-medium text-muted-foreground">QR Code</Label>
                       <div className="mt-2">
                         <img
-                          src={
-                            paymentDetails.upi.qrCodeUrl ||
-                            "/placeholder.svg?height=200&width=200" ||
-                            "/placeholder.svg"
-                          }
+                          src={paymentDetails.upi.qrCodeUrl || "/placeholder.svg"}
                           alt="UPI QR Code"
                           className="w-32 h-32 object-cover rounded-lg border mx-auto"
                         />
@@ -601,17 +818,23 @@ const Payment = () => {
               </Card>
             )}
 
-            {/* Bank Details Card */}
             {hasBankDetails && (
               <Card className="relative overflow-hidden">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-purple-600" />
-                    Bank Transfer
+                    Bank Transfer (India)
                   </CardTitle>
-                  <CardDescription>Bank account details</CardDescription>
+                  <CardDescription>Indian bank account details</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <Alert className="border-orange-200 bg-orange-50">
+                    <Info className="h-4 w-4 text-orange-600" />
+                    <AlertDescription className="text-xs text-orange-800">
+                      <strong>For Indian Payments:</strong> Please add 18% GST to the invoice amount
+                    </AlertDescription>
+                  </Alert>
+                  
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground">Account Holder</Label>
                     <p className="text-sm font-medium">{paymentDetails.bankDetails.accountHolderName}</p>
@@ -645,11 +868,16 @@ const Payment = () => {
                       </Button>
                     </div>
                   </div>
+                  
+                  <Separator className="my-2" />
+                  
+                  <div className="pt-2">
+                    <InternationalBankDetailsModal />
+                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Crypto Card */}
             {hasCrypto && (
               <Card className="relative overflow-hidden">
                 <CardHeader className="pb-3">
@@ -685,11 +913,7 @@ const Payment = () => {
                       <Label className="text-xs font-medium text-muted-foreground">QR Code</Label>
                       <div className="mt-2">
                         <img
-                          src={
-                            paymentDetails.crypto.qrCodeUrl ||
-                            "/placeholder.svg?height=200&width=200" ||
-                            "/placeholder.svg"
-                          }
+                          src={paymentDetails.crypto.qrCodeUrl || "/placeholder.svg"}
                           alt="Crypto QR Code"
                           className="w-32 h-32 object-cover rounded-lg border mx-auto"
                         />
@@ -717,7 +941,6 @@ const Payment = () => {
 
         <Separator />
 
-        {/* Receipt Upload Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -732,7 +955,6 @@ const Payment = () => {
               <CardDescription>Upload your payment receipt for verification</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Payment Type Selection */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Payment Type *</Label>
                 <RadioGroup
@@ -755,7 +977,6 @@ const Payment = () => {
                 </RadioGroup>
               </div>
 
-              {/* Basic Form Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="projectName">Project Name *</Label>
@@ -818,7 +1039,6 @@ const Payment = () => {
                 </div>
               </div>
 
-              {/* Installment-specific fields */}
               {receiptForm.paymentType === "installment" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
                   <div className="space-y-2">
@@ -858,7 +1078,6 @@ const Payment = () => {
                 </div>
               )}
 
-              {/* Receipt Upload */}
               <div className="space-y-2">
                 <Label htmlFor="receipt">Upload Receipt *</Label>
                 <Input
@@ -885,7 +1104,6 @@ const Payment = () => {
 
         <Separator />
 
-        {/* Payment Records Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
