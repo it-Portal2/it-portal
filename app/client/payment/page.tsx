@@ -31,6 +31,7 @@ import {
   FileText,
   User,
   Globe,
+  Loader2,
 } from "lucide-react"
 import ProjectTable from "@/components/ui-custom/ProjectTable"
 import { motion } from "framer-motion"
@@ -554,6 +555,7 @@ const Payment = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingPaymentDetails, setIsLoadingPaymentDetails] = useState(true)
   
   const getCurrencySymbol = (currency: string) => {
     return currency === "USD" ? "$" : "₹"
@@ -588,6 +590,7 @@ const Payment = () => {
 
   const handleLoadPaymentDetails = async () => {
     if (!profile?.uid) return
+    setIsLoadingPaymentDetails(true)
     try {
       const result = await getAllPaymentDetailsAction()
       if (result.success && result.data && result.data.length > 0) {
@@ -609,6 +612,8 @@ const Payment = () => {
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to load payment details")
+    } finally {
+      setIsLoadingPaymentDetails(false)
     }
   }
 
@@ -722,220 +727,234 @@ const Payment = () => {
           transition={{ duration: 0.3, delay: 0.1 }}
           className="space-y-6"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {hasPayPal && (
-              <Card className="relative overflow-hidden">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-blue-600" />
-                    PayPal
-                  </CardTitle>
-                  <CardDescription>PayPal payment details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Email</Label>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{paymentDetails.paypal.email}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(paymentDetails.paypal.email)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Account Name</Label>
-                    <p className="text-sm font-medium">{paymentDetails.paypal.accountName}</p>
-                  </div>
-                  {paymentDetails.paypal.paypalLink && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">PayPal Link</Label>
-                      <div className="flex items-center justify-between">
-                        <a
-                          href={paymentDetails.paypal.paypalLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm font-medium text-blue-600 hover:underline"
-                        >
-                          PayPal.me
-                        </a>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(paymentDetails.paypal.paypalLink)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {hasUPI && (
-              <Card className="relative overflow-hidden">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <Smartphone className="h-5 w-5 text-green-600" />
-                    UPI
-                  </CardTitle>
-                  <CardDescription>UPI payment details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">UPI ID</Label>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{paymentDetails.upi.upiId}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(paymentDetails.upi.upiId)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  {paymentDetails.upi.qrCodeUrl && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">QR Code</Label>
-                      <div className="mt-2">
-                        <img
-                          src={paymentDetails.upi.qrCodeUrl || "/placeholder.svg"}
-                          alt="UPI QR Code"
-                          className="w-32 h-32 object-cover rounded-lg border mx-auto"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {hasBankDetails && (
-              <Card className="relative overflow-hidden">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                    Bank Transfer (India)
-                  </CardTitle>
-                  <CardDescription>Indian bank account details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Alert className="border-orange-200 bg-orange-50">
-                    <Info className="h-4 w-4 text-orange-600" />
-                    <AlertDescription className="text-xs text-orange-800">
-                      <strong>For Indian Payments:</strong> Please add 18% GST to the invoice amount
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Account Holder</Label>
-                    <p className="text-sm font-medium">{paymentDetails.bankDetails.accountHolderName}</p>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Account Number</Label>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">****{paymentDetails.bankDetails.accountNumber.slice(-4)}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(paymentDetails.bankDetails.accountNumber)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Bank & IFSC</Label>
-                    <p className="text-sm font-medium">{paymentDetails.bankDetails.bankName}</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-muted-foreground">{paymentDetails.bankDetails.ifscCode}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(paymentDetails.bankDetails.ifscCode)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <Separator className="my-2" />
-                  
-                  <div className="pt-2">
-                    <InternationalBankDetailsModal />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {hasCrypto && (
-              <Card className="relative overflow-hidden">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <Bitcoin className="h-5 w-5 text-orange-600" />
-                    Cryptocurrency
-                  </CardTitle>
-                  <CardDescription>Cryptocurrency payment details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Wallet Address</Label>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium truncate max-w-[200px]">
-                        {paymentDetails.crypto.walletAddress}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(paymentDetails.crypto.walletAddress)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">Network</Label>
-                    <p className="text-sm font-medium">{paymentDetails.crypto.network}</p>
-                  </div>
-                  {paymentDetails.crypto.qrCodeUrl && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">QR Code</Label>
-                      <div className="mt-2">
-                        <img
-                          src={paymentDetails.crypto.qrCodeUrl || "/placeholder.svg"}
-                          alt="Crypto QR Code"
-                          className="w-32 h-32 object-cover rounded-lg border mx-auto"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {!hasPayPal && !hasUPI && !hasBankDetails && !hasCrypto && (
-            <Card className="text-center py-8">
-              <CardContent>
-                <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Payment Methods Configured</h3>
-                <p className="text-muted-foreground mb-4">
-                  Configure your payment methods in settings to start receiving payments
-                </p>
-                <Button>Configure Payment Methods</Button>
-              </CardContent>
+          {isLoadingPaymentDetails ? (
+            <Card className="p-12">
+              <div className="flex flex-col items-center justify-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold">Loading Payment Details</h3>
+                  <p className="text-sm text-muted-foreground">Please wait while we fetch your payment information...</p>
+                </div>
+              </div>
             </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {hasPayPal && (
+                  <Card className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="h-5 w-5 text-blue-600" />
+                        PayPal
+                      </CardTitle>
+                      <CardDescription>PayPal payment details</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Email</Label>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{paymentDetails.paypal.email}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(paymentDetails.paypal.email)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Account Name</Label>
+                        <p className="text-sm font-medium">{paymentDetails.paypal.accountName}</p>
+                      </div>
+                      {paymentDetails.paypal.paypalLink && (
+                        <div>
+                          <Label className="text-xs font-medium text-muted-foreground">PayPal Link</Label>
+                          <div className="flex items-center justify-between">
+                            <a
+                              href={paymentDetails.paypal.paypalLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm font-medium text-blue-600 hover:underline"
+                            >
+                              PayPal.me
+                            </a>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copyToClipboard(paymentDetails.paypal.paypalLink)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {hasUPI && (
+                  <Card className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Smartphone className="h-5 w-5 text-green-600" />
+                        UPI
+                      </CardTitle>
+                      <CardDescription>UPI payment details</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">UPI ID</Label>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{paymentDetails.upi.upiId}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(paymentDetails.upi.upiId)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      {paymentDetails.upi.qrCodeUrl && (
+                        <div>
+                          <Label className="text-xs font-medium text-muted-foreground">QR Code</Label>
+                          <div className="mt-2">
+                            <img
+                              src={paymentDetails.upi.qrCodeUrl || "/placeholder.svg"}
+                              alt="UPI QR Code"
+                              className="w-32 h-32 object-cover rounded-lg border mx-auto"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {hasBankDetails && (
+                  <Card className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Building2 className="h-5 w-5 text-purple-600" />
+                        Bank Transfer (India)
+                      </CardTitle>
+                      <CardDescription>Indian bank account details</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <Alert className="border-orange-200 bg-orange-50">
+                        <Info className="h-4 w-4 text-orange-600" />
+                        <AlertDescription className="text-xs text-orange-800">
+                          <strong>For Indian Payments:</strong> Please add 18% GST to the invoice amount
+                        </AlertDescription>
+                      </Alert>
+                      
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Account Holder</Label>
+                        <p className="text-sm font-medium">{paymentDetails.bankDetails.accountHolderName}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Account Number</Label>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">****{paymentDetails.bankDetails.accountNumber.slice(-4)}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(paymentDetails.bankDetails.accountNumber)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Bank & IFSC</Label>
+                        <p className="text-sm font-medium">{paymentDetails.bankDetails.bankName}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">{paymentDetails.bankDetails.ifscCode}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(paymentDetails.bankDetails.ifscCode)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Separator className="my-2" />
+                      
+                      <div className="pt-2">
+                        <InternationalBankDetailsModal />
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {hasCrypto && (
+                  <Card className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Bitcoin className="h-5 w-5 text-orange-600" />
+                        Cryptocurrency
+                      </CardTitle>
+                      <CardDescription>Cryptocurrency payment details</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Wallet Address</Label>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium truncate max-w-[200px]">
+                            {paymentDetails.crypto.walletAddress}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => copyToClipboard(paymentDetails.crypto.walletAddress)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Network</Label>
+                        <p className="text-sm font-medium">{paymentDetails.crypto.network}</p>
+                      </div>
+                      {paymentDetails.crypto.qrCodeUrl && (
+                        <div>
+                          <Label className="text-xs font-medium text-muted-foreground">QR Code</Label>
+                          <div className="mt-2">
+                            <img
+                              src={paymentDetails.crypto.qrCodeUrl || "/placeholder.svg"}
+                              alt="Crypto QR Code"
+                              className="w-32 h-32 object-cover rounded-lg border mx-auto"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {!hasPayPal && !hasUPI && !hasBankDetails && !hasCrypto && (
+                <Card className="text-center py-8">
+                  <CardContent>
+                    <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No Payment Methods Configured</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Configure your payment methods in settings to start receiving payments
+                    </p>
+                    <Button>Configure Payment Methods</Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </motion.div>
 
