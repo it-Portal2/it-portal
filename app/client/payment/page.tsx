@@ -69,6 +69,7 @@ type InternationalBankAccount = {
   country: string
   payment_method: string
   routing_number?: string
+  fedwire_routing_number?: string  
   account_number?: string
   iban?: string
   bic_swift_code?: string
@@ -110,7 +111,7 @@ type ReceiptForm = {
 }
 
 // International Bank Details Modal Component
-const InternationalBankDetailsModal = () => {
+const InternationalBankDetailsModal = () => { 
   const internationalAccounts: InternationalBankAccount[] = [
     {
       id: "US",
@@ -123,6 +124,21 @@ const InternationalBankDetailsModal = () => {
       beneficiary_address: "5 Penn Plaza, 14th Floor, New York, NY 10001, US",
       account_holder_name: "CEHPOINT"
     },
+    {
+      id: "US-1",
+      country: "United States",
+      payment_method: "ACH / Fedwire / SWIFT",
+      bank_name: "JPMorgan Chase & Co.",
+      account_number: "20000045876362",
+      account_type: "Business Checking",
+      account_holder_name: "CEHPOINT",
+      beneficiary_address: "383 Madison Ave, New York, NY 10179, USA",
+
+      routing_number: "028000024",         
+      fedwire_routing_number: "021000021",  
+      bic_swift_code: "CHASUS33XXX"         
+    },
+
     {
       id: "UK",
       country: "United Kingdom",
@@ -192,6 +208,7 @@ const InternationalBankDetailsModal = () => {
             International Bank Account Details
           </DialogTitle>
         </DialogHeader>
+
         <div className="space-y-6">
           {internationalAccounts.map((account) => (
             <Card key={account.id} className="border-2">
@@ -205,162 +222,152 @@ const InternationalBankDetailsModal = () => {
                 </CardTitle>
                 <CardDescription>{account.bank_name}</CardDescription>
               </CardHeader>
+
               <CardContent className="space-y-3">
+
+                {/* Field Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  {/* Account Holder */}
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground">Account Holder</Label>
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">{account.account_holder_name}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyToClipboard(account.account_holder_name)}
-                        className="h-6 w-6 p-0"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.account_holder_name)} className="h-6 w-6 p-0">
                         <Copy className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
+
+                  {/* Account Type */}
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground">Account Type</Label>
                     <p className="text-sm font-medium">{account.account_type}</p>
                   </div>
-                  
+
+                  {/* IBAN */}
                   {account.iban && (
                     <div>
                       <Label className="text-xs font-medium text-muted-foreground">IBAN</Label>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium font-mono">{account.iban}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.iban!)}
-                          className="h-6 w-6 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.iban!)} className="h-6 w-6 p-0">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   )}
-                  
+
+                  {/* SWIFT/BIC */}
                   {account.bic_swift_code && (
                     <div>
                       <Label className="text-xs font-medium text-muted-foreground">BIC/SWIFT Code</Label>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium font-mono">{account.bic_swift_code}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.bic_swift_code!)}
-                          className="h-6 w-6 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.bic_swift_code!)} className="h-6 w-6 p-0">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   )}
-                  
+
+                  {/* Account Number */}
                   {account.account_number && (
                     <div>
                       <Label className="text-xs font-medium text-muted-foreground">Account Number</Label>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium font-mono">{account.account_number}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.account_number!)}
-                          className="h-6 w-6 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.account_number!)} className="h-6 w-6 p-0">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   )}
-                  
+
+                  {/* Routing Number */}
                   {account.routing_number && (
                     <div>
-                      <Label className="text-xs font-medium text-muted-foreground">Routing Number</Label>
+                      <Label className="text-xs font-medium text-muted-foreground">Routing Number (ACH)</Label>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium font-mono">{account.routing_number}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.routing_number!)}
-                          className="h-6 w-6 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.routing_number!)} className="h-6 w-6 p-0">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   )}
-                  
+
+                  {/* Fedwire Routing Number (NEW) */}
+                  {account.fedwire_routing_number && (
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">Fedwire Routing Number</Label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium font-mono">{account.fedwire_routing_number}</p>
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.fedwire_routing_number!)} className="h-6 w-6 p-0">
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* BSB */}
                   {account.bsb_number && (
                     <div>
                       <Label className="text-xs font-medium text-muted-foreground">BSB Number</Label>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium font-mono">{account.bsb_number}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.bsb_number!)}
-                          className="h-6 w-6 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.bsb_number!)} className="h-6 w-6 p-0">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   )}
-                  
+
+                  {/* Institution Number */}
                   {account.institution_number && (
                     <div>
                       <Label className="text-xs font-medium text-muted-foreground">Institution Number</Label>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium font-mono">{account.institution_number}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.institution_number!)}
-                          className="h-6 w-6 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.institution_number!)} className="h-6 w-6 p-0">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   )}
-                  
+
+                  {/* Transit Number */}
                   {account.transit_number && (
                     <div>
                       <Label className="text-xs font-medium text-muted-foreground">Transit Number</Label>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium font-mono">{account.transit_number}</p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.transit_number!)}
-                          className="h-6 w-6 p-0"
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(account.transit_number!)} className="h-6 w-6 p-0">
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                   )}
+
                 </div>
-                
+
                 <div className="pt-2 border-t">
                   <Label className="text-xs font-medium text-muted-foreground">Beneficiary Address</Label>
                   <p className="text-sm">{account.beneficiary_address}</p>
                 </div>
-                
+
                 {account.beneficiary_bank_country && (
                   <div>
                     <Label className="text-xs font-medium text-muted-foreground">Beneficiary Bank Country</Label>
                     <p className="text-sm">{account.beneficiary_bank_country}</p>
                   </div>
                 )}
+
               </CardContent>
             </Card>
           ))}
         </div>
+
       </DialogContent>
     </Dialog>
   )
