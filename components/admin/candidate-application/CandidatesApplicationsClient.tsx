@@ -5,13 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Eye, Trash2, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Search, Eye, Trash2, Clock, CheckCircle, XCircle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
 import ProjectTable from "@/components/ui-custom/ProjectTable";
 import { Application } from "@/lib/types";
 import { deleteApplicationAction } from "@/app/actions/admin-actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ApplicationStatus = "Pending" | "Accepted" | "Rejected";
 
@@ -78,9 +84,8 @@ const CandidatesApplicationsClient = ({
   candidatesData: Application[] | undefined;
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
-    "all"
-  );
+  const [skillSearchTerm, setSkillSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">("all");
   const candidates = candidatesData ?? [];
   const [filteredData, setFilteredData] = useState<Application[]>(candidates);
 
@@ -94,7 +99,6 @@ const CandidatesApplicationsClient = ({
           duration: 4000,
         });
 
-        // Update local state to remove the deleted item
         setFilteredData((prev) =>
           prev.filter((app) => app.id !== applicationId)
         );
@@ -113,19 +117,38 @@ const CandidatesApplicationsClient = ({
     }
   };
 
-  // Filter data based on search and status
+  // Enhanced filter logic
   React.useEffect(() => {
-    let filtered = candidates;
+    let filtered = [...candidates];
 
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (candidate) =>
-          candidate.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          candidate.phone.includes(searchTerm)
-      );
+    // Filter by general search (name, email, phone)
+    if (searchTerm.trim()) {
+      const lowerSearchTerm = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter((candidate) => {
+        const fullName = candidate.fullName?.toLowerCase() || "";
+        const email = candidate.email?.toLowerCase() || "";
+        const phone = candidate.phone?.toLowerCase() || "";
+        
+        return (
+          fullName.includes(lowerSearchTerm) ||
+          email.includes(lowerSearchTerm) ||
+          phone.includes(lowerSearchTerm)
+        );
+      });
     }
 
+    // Filter by skills
+    if (skillSearchTerm.trim()) {
+      const lowerSkillSearch = skillSearchTerm.toLowerCase().trim();
+      filtered = filtered.filter((candidate) => {
+        const skills = candidate.resumeAnalysis?.skills || [];
+        return skills.some((skill) =>
+          skill.toLowerCase().includes(lowerSkillSearch)
+        );
+      });
+    }
+
+    // Filter by status
     if (statusFilter !== "all") {
       filtered = filtered.filter(
         (candidate) => candidate.applicationStatus === statusFilter
@@ -133,7 +156,7 @@ const CandidatesApplicationsClient = ({
     }
 
     setFilteredData(filtered);
-  }, [searchTerm, statusFilter, candidates]);
+  }, [searchTerm, skillSearchTerm, statusFilter, candidates]);
 
   const columns = [
     {
@@ -163,14 +186,12 @@ const CandidatesApplicationsClient = ({
       header: "Applied",
       accessor: "createdAt",
       cell: (row: Application) => {
-        // Convert Firebase timestamp to JavaScript Date
         const convertFirebaseTimestamp = (timestamp: any) => {
           if (timestamp && timestamp.seconds) {
             return new Date(
               timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000
             );
           }
-          // Fallback for regular date strings
           return new Date(timestamp);
         };
 
@@ -211,7 +232,6 @@ const CandidatesApplicationsClient = ({
               View Details
             </Button>
           </Link>
-          {/* ✅ UPDATED: Delete button with proper handler */}
           {row.applicationStatus === "Rejected" && (
             <Button
               variant="destructive"
@@ -231,19 +251,31 @@ const CandidatesApplicationsClient = ({
   const stats = {
     total: candidates.length,
     pending: candidates.filter((c) => c.applicationStatus === "Pending").length,
-    accepted: candidates.filter((c) => c.applicationStatus === "Accepted")
-      .length,
-    rejected: candidates.filter((c) => c.applicationStatus === "Rejected")
-      .length,
+    accepted: candidates.filter((c) => c.applicationStatus === "Accepted").length,
+    rejected: candidates.filter((c) => c.applicationStatus === "Rejected").length,
+  };
+
+  const statusOptions = [
+    { key: "all", label: "All Applications", count: stats.total },
+    { key: "Pending", label: "Pending", count: stats.pending },
+    { key: "Accepted", label: "Accepted", count: stats.accepted },
+    { key: "Rejected", label: "Rejected", count: stats.rejected },
+  ];
+
+  const getStatusDisplay = () => {
+    const selected = statusOptions.find((opt) => opt.key === statusFilter);
+    return selected ? `${selected.label} (${selected.count})` : "All Applications";
   };
 
   return (
     <div className="space-y-3">
       {/* Filters Section */}
-      <Card className="border-0 py-4  shadow-sm  backdrop-blur-sm">
+      <Card className="border-0 py-4 shadow-sm backdrop-blur-sm">
         <CardContent className="px-3">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col gap-4">
+            {/* Search Bars Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* General Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -253,63 +285,98 @@ const CandidatesApplicationsClient = ({
                   className="pl-10 bg-white/80"
                 />
               </div>
+
+              {/* Skills Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by skills (e.g., Python, React, SQL)..."
+                  value={skillSearchTerm}
+                  onChange={(e) => setSkillSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/80"
+                />
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {[
-                {
-                  key: "all",
-                  label: "All",
-                  count: stats.total,
-                  color: "bg-gray-100 text-gray-700",
-                },
-                {
-                  key: "Pending",
-                  label: "Pending",
-                  count: stats.pending,
-                  color: "bg-yellow-100 text-yellow-800",
-                },
-                {
-                  key: "Accepted",
-                  label: "Accepted",
-                  count: stats.accepted,
-                  color: "bg-green-100 text-green-800",
-                },
-                {
-                  key: "Rejected",
-                  label: "Rejected",
-                  count: stats.rejected,
-                  color: "bg-red-100 text-red-800",
-                },
-              ].map((statusObj) => (
-                <Button
-                  key={statusObj.key}
-                  variant={
-                    statusFilter === statusObj.key ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() =>
-                    setStatusFilter(statusObj.key as ApplicationStatus | "all")
-                  }
-                  className={cn(
-                    "capitalize flex items-center gap-2",
-                    statusFilter === statusObj.key &&
-                      "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-                  )}
-                >
-                  <span>{statusObj.label}</span>
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "text-xs px-1 py-0.5 rounded-full",
-                      statusObj.color,
-                      statusFilter === statusObj.key && "bg-white/20 text-white"
-                    )}
+
+            {/* Status Filter Dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Status:</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 min-w-[200px] justify-between"
                   >
-                    {statusObj.count}
-                  </Badge>
+                    <span>{getStatusDisplay()}</span>
+                    <ChevronDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[200px]">
+                  {statusOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.key}
+                      onClick={() => setStatusFilter(option.key as ApplicationStatus | "all")}
+                      className={cn(
+                        "flex items-center justify-between cursor-pointer",
+                        statusFilter === option.key && "bg-blue-50 font-medium"
+                      )}
+                    >
+                      <span>{option.label}</span>
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "ml-2",
+                          option.key === "Pending" && "bg-yellow-100 text-yellow-800",
+                          option.key === "Accepted" && "bg-green-100 text-green-800",
+                          option.key === "Rejected" && "bg-red-100 text-red-800",
+                          option.key === "all" && "bg-gray-100 text-gray-700"
+                        )}
+                      >
+                        {option.count}
+                      </Badge>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Clear Filters Button */}
+              {(searchTerm || skillSearchTerm || statusFilter !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSkillSearchTerm("");
+                    setStatusFilter("all");
+                  }}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  Clear Filters
                 </Button>
-              ))}
+              )}
             </div>
+
+            {/* Active Filters Display */}
+            {(searchTerm || skillSearchTerm || statusFilter !== "all") && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm text-muted-foreground">Active filters:</span>
+                {searchTerm && (
+                  <Badge variant="secondary" className="gap-1">
+                    Name/Email/Phone: {searchTerm}
+                  </Badge>
+                )}
+                {skillSearchTerm && (
+                  <Badge variant="secondary" className="gap-1">
+                    Skills: {skillSearchTerm}
+                  </Badge>
+                )}
+                {statusFilter !== "all" && (
+                  <Badge variant="secondary" className="gap-1">
+                    Status: {statusFilter}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
