@@ -43,6 +43,8 @@ import {
   updateApplicationStatusAction,
 } from "@/app/actions/admin-actions";
 import axios from "axios";
+import { useRouter } from 'next/navigation'
+
 
 const StatusBadge = ({ status }: { status: ApplicationStatus }) => {
   const statusConfig = {
@@ -86,6 +88,7 @@ export default function ApplicationDetailPageClient({
   applicationDetails,
   error,
 }: ApplicationDetailClientProps) {
+  const router = useRouter()
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasAnalyzed, setHasAnalyzed] = useState(
     applicationDetails?.aiAnalysisStatus === "analyzed"
@@ -114,9 +117,7 @@ export default function ApplicationDetailPageClient({
               Error Loading Application
             </h2>
             <p className="text-gray-600 mb-4">{error}</p>
-            <Link href="/admin/candidate-application">
-              <Button variant="outline">Back to Applications</Button>
-            </Link>
+              <Button variant="outline" onClick={()=> router.back()}>Back to Applications</Button>
           </CardContent>
         </Card>
       </div>
@@ -700,12 +701,10 @@ export default function ApplicationDetailPageClient({
 
       {/* Back Button */}
       <div className="mb-4">
-        <Link href="/admin/candidate-application">
-          <Button variant="ghost" size="sm" className="gap-2 hover:bg-white/60">
+        <Button variant="ghost" size="sm" onClick={()=> router.back()} className="gap-2 hover:bg-white/60">
             <ArrowLeft className="h-4 w-4" />
             Back to Applications
           </Button>
-        </Link>
       </div>
 
       <div id="report-capture-section" className="space-y-6">

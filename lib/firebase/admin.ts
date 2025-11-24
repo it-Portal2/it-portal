@@ -24,6 +24,31 @@ import {
 } from "../types";
 import { adminAuth } from "@/firebaseAdmin";
 
+const convertTimestamp = (data: any): any => {
+  if (!data) return data;
+  
+  // Handle Firestore Timestamp
+  if (data && typeof data === 'object' && 'seconds' in data && 'nanoseconds' in data) {
+    return new Date(data.seconds * 1000).toISOString();
+  }
+  
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => convertTimestamp(item));
+  }
+  
+  // Handle objects
+  if (typeof data === 'object') {
+    const newData: any = {};
+    for (const key in data) {
+      newData[key] = convertTimestamp(data[key]);
+    }
+    return newData;
+  }
+  
+  return data;
+};
+
 export async function acceptProject(
   projectId: string,
   deadline: string,
@@ -513,15 +538,16 @@ export async function updatePaymentStatus(
 export async function getAllApplications() {
   try {
     const applicationsRef = collection(db, "applications");
+    const q = query(applicationsRef, orderBy("createdAt", "desc"));
 
-    const querySnapshot = await getDocs(applicationsRef);
+    const querySnapshot = await getDocs(q);
     const applications: Application[] = [];
 
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       applications.push({
         id: doc.id,
-        ...data,
+        ...convertTimestamp(data),
       } as Application);
     });
 
@@ -551,7 +577,7 @@ export async function getApplicationById(applicationId: string) {
       const data = applicationSnap.data();
       return {
         id: applicationSnap.id,
-        ...data,
+        ...convertTimestamp(data),
       } as Application;
     } else {
       throw new Error("Application not found");
@@ -572,7 +598,11 @@ export async function getApplicationsByStatus(
 ): Promise<Application[]> {
   try {
     const applicationsRef = collection(db, "applications");
-    const q = query(applicationsRef, where("applicationStatus", "==", status));
+    const q = query(
+      applicationsRef,
+      where("applicationStatus", "==", status),
+      orderBy("createdAt", "desc")
+    );
 
     const querySnapshot = await getDocs(q);
     const applications: Application[] = [];
@@ -581,7 +611,7 @@ export async function getApplicationsByStatus(
       const data = doc.data();
       applications.push({
         id: doc.id,
-        ...data,
+        ...convertTimestamp(data),
       } as Application);
     });
 

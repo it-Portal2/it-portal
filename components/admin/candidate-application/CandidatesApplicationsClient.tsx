@@ -9,6 +9,7 @@ import { Search, Eye, Trash2, Clock, CheckCircle, XCircle, ChevronDown } from "l
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import ProjectTable from "@/components/ui-custom/ProjectTable";
 import { Application } from "@/lib/types";
 import { deleteApplicationAction } from "@/app/actions/admin-actions";
@@ -88,6 +89,22 @@ const CandidatesApplicationsClient = ({
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">("all");
   const candidates = candidatesData ?? [];
   const [filteredData, setFilteredData] = useState<Application[]>(candidates);
+
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const { replace } = useRouter();
+
+  const currentPage = Number(searchParams.get("page")) || 1;
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    if (page) {
+      params.set("page", page.toString());
+    } else {
+      params.delete("page");
+    }
+    replace(`${pathname}?${params.toString()}`);
+  };
 
   const handleDelete = async (applicationId: string, applicantName: string) => {
     try {
@@ -387,6 +404,8 @@ const CandidatesApplicationsClient = ({
           columns={columns}
           emptyMessage="No applications found matching your criteria"
           itemsPerPage={5}
+          currentPage={currentPage}
+          onPageChange={handlePageChange}
         />
       </div>
     </div>

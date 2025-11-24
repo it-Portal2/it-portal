@@ -51,6 +51,8 @@ type ProjectTableProps = {
   emptyMessage?: string;
   itemsPerPage?: number;
   loading?: boolean;
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
 };
 
 const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
@@ -139,9 +141,13 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
   emptyMessage = "No data available",
   itemsPerPage = 5,
   loading = false,
+  currentPage: externalCurrentPage,
+  onPageChange,
 }) => {
   const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [internalCurrentPage, setInternalCurrentPage] = useState(1);
+
+  const currentPage = externalCurrentPage || internalCurrentPage;
 
   // Calculate pagination
   const totalPages = Math.ceil(data.length / itemsPerPage);
@@ -163,7 +169,11 @@ const ProjectTable: React.FC<ProjectTableProps> = ({
   };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    if (onPageChange) {
+      onPageChange(page);
+    } else {
+      setInternalCurrentPage(page);
+    }
   };
 
   return (
