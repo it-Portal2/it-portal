@@ -55,7 +55,7 @@ export type Project = {
   // Legacy single document fields (keep for backward compatibility)
   cloudinaryQuotationUrl?: string;
   cloudinaryDocumentationUrl?: string;
-  
+
   // New document arrays
   quotationDocuments?: ProjectDocument[];
   developerDocuments?: ProjectDocument[];
@@ -264,13 +264,97 @@ export interface AttemptResult {
 
 // Configuration Constants
 export const GEMINI_CONFIG = {
-  MODEL_NAME: "gemini-2.0-flash",
+  MODEL_NAME: "gemini-2.0-flash", // Experimental version with higher output capacity
   MAX_EXECUTION_TIME: 55000,
   BASE_TIMEOUT: 25000,
   MAX_TIMEOUT: 40000,
   TIMEOUT_BUFFER: 3000,
   GENERATION_CONFIG: {
     temperature: 0.1,
-    maxOutputTokens: 5120,
-  },
-} as const;
+    maxOutputTokens: 8192,
+    responseMimeType: "application/json",
+    responseSchema: {
+      type: "OBJECT",
+      properties: {
+        questionAnalyses: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              questionId: { type: "STRING" },
+              question: { type: "STRING" },
+              answer: { type: "STRING" },
+              questionType: {
+                type: "STRING",
+                enum: ["technical", "behavioral", "scenario", "leadership"],
+              },
+              originalityScore: {
+                type: "INTEGER",
+                minimum: 0,
+                maximum: 100,
+              },
+              originalityReasoning: { type: "STRING" },
+              correctnessScore: {
+                type: "NUMBER",
+                minimum: 0,
+                maximum: 10,
+              },
+              correctnessReasoning: { type: "STRING" },
+              classification: {
+                type: "STRING",
+                enum: [
+                  "human-written",
+                  "potentially-copied",
+                  "likely-ai-generated",
+                ],
+              },
+            },
+            required: [
+              "questionId",
+              "question",
+              "answer",
+              "questionType",
+              "originalityScore",
+              "originalityReasoning",
+              "correctnessScore",
+              "correctnessReasoning",
+              "classification",
+            ],
+          },
+        },
+        holisticAssessment: {
+          type: "OBJECT",
+          properties: {
+            overallScore: {
+              type: "NUMBER",
+              minimum: 0,
+              maximum: 10,
+            },
+            verdict: {
+              type: "STRING",
+              enum: [
+                "Highly Recommended",
+                "Recommended",
+                "Requires Review",
+                "Not Recommended",
+              ],
+            },
+            resumeAlignmentScore: {
+              type: "INTEGER",
+              minimum: 0,
+              maximum: 10,
+            },
+            rationale: { type: "STRING" },
+          },
+          required: [
+            "overallScore",
+            "verdict",
+            "resumeAlignmentScore",
+            "rationale",
+          ],
+        },
+      },
+      required: ["questionAnalyses", "holisticAssessment"],
+    },
+  } as any, // Type assertion needed for complex nested schema
+};

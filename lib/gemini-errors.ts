@@ -12,12 +12,12 @@ export class GeminiAPIError extends Error {
   constructor(
     type: AIErrorType,
     message: string,
-    keyId: string = 'unknown',
+    keyId: string = "unknown",
     shouldRetry: boolean = false,
     originalError?: Error
   ) {
     super(message);
-    this.name = 'GeminiAPIError';
+    this.name = "GeminiAPIError";
     this.type = type;
     this.keyId = keyId;
     this.shouldRetry = shouldRetry;
@@ -34,7 +34,7 @@ export class GeminiAPIError extends Error {
 export class GeminiConfigurationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'GeminiConfigurationError';
+    this.name = "GeminiConfigurationError";
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -42,7 +42,7 @@ export class GeminiConfigurationError extends Error {
 export class GeminiValidationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'GeminiValidationError';
+    this.name = "GeminiValidationError";
     Error.captureStackTrace(this, this.constructor);
   }
 }
@@ -59,98 +59,106 @@ export function classifyAndLogError(
   duration: number,
   timeout: number
 ): ClassifiedError {
-  const errorMsg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
-  const originalError = error instanceof Error ? error : new Error(String(error));
+  const errorMsg =
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : String(error).toLowerCase();
+  const originalError =
+    error instanceof Error ? error : new Error(String(error));
 
-  let errorType: AIErrorType = 'unknown';
+  let errorType: AIErrorType = "unknown";
   let shouldRetryImmediately = false;
-  let userMessage = '';
-  let technicalMessage = '';
+  let userMessage = "";
+  let technicalMessage = "";
 
   // Timeout errors - retry immediately
-  if (errorMsg.includes('timed out') || errorMsg.includes('timeout')) {
-    errorType = 'timeout';
+  if (errorMsg.includes("timed out") || errorMsg.includes("timeout")) {
+    errorType = "timeout";
     shouldRetryImmediately = true;
     userMessage = `Timeout after ${timeout}ms`;
     technicalMessage = `Key "${keyInfo.aiId}" (Priority ${keyInfo.priority}) timed out during rotation ${rotation}`;
   }
   // Authentication errors
   else if (
-    errorMsg.includes('auth') ||
-    errorMsg.includes('unauthorized') ||
-    errorMsg.includes('invalid token') ||
-    errorMsg.includes('api key') ||
-    errorMsg.includes('403') ||
-    errorMsg.includes('401')
+    errorMsg.includes("auth") ||
+    errorMsg.includes("unauthorized") ||
+    errorMsg.includes("invalid token") ||
+    errorMsg.includes("api key") ||
+    errorMsg.includes("403") ||
+    errorMsg.includes("401")
   ) {
-    errorType = 'auth';
+    errorType = "auth";
     shouldRetryImmediately = false;
-    userMessage = 'API key invalid';
+    userMessage = "API key invalid";
     technicalMessage = `Authentication failed for key "${keyInfo.aiId}". Verify the API key is valid and properly configured.`;
   }
   // Quota/Rate limit errors
   else if (
-    errorMsg.includes('quota') ||
-    errorMsg.includes('rate limit') ||
-    errorMsg.includes('too many requests') ||
-    errorMsg.includes('429')
+    errorMsg.includes("quota") ||
+    errorMsg.includes("rate limit") ||
+    errorMsg.includes("too many requests") ||
+    errorMsg.includes("429")
   ) {
-    errorType = 'quota';
+    errorType = "quota";
     shouldRetryImmediately = false;
-    userMessage = 'Rate limit exceeded';
+    userMessage = "Rate limit exceeded";
     technicalMessage = `Key "${keyInfo.aiId}" has reached its quota or rate limit. Consider rotating keys or increasing capacity.`;
   }
   // Network errors
   else if (
-    errorMsg.includes('network') ||
-    errorMsg.includes('connection') ||
-    errorMsg.includes('fetch') ||
-    errorMsg.includes('enotfound') ||
-    errorMsg.includes('econnrefused') ||
-    errorMsg.includes('econnreset')
+    errorMsg.includes("network") ||
+    errorMsg.includes("connection") ||
+    errorMsg.includes("fetch") ||
+    errorMsg.includes("enotfound") ||
+    errorMsg.includes("econnrefused") ||
+    errorMsg.includes("econnreset")
   ) {
-    errorType = 'network';
+    errorType = "network";
     shouldRetryImmediately = false;
-    userMessage = 'Network error';
+    userMessage = "Network error";
     technicalMessage = `Network error occurred while using key "${keyInfo.aiId}". Check connectivity and endpoint availability.`;
   }
   // JSON parsing errors
   else if (
-    errorMsg.includes('json') ||
-    errorMsg.includes('parse') ||
-    errorMsg.includes('unexpected token') ||
-    errorMsg.includes('syntax')
+    errorMsg.includes("json") ||
+    errorMsg.includes("parse") ||
+    errorMsg.includes("unexpected token") ||
+    errorMsg.includes("syntax")
   ) {
-    errorType = 'parsing';
+    errorType = "parsing";
     shouldRetryImmediately = false;
-    userMessage = 'Response parsing failed';
+    userMessage = "Response parsing failed";
     technicalMessage = `Failed to parse JSON response from key "${keyInfo.aiId}". The service may have returned an invalid or malformed response.`;
   }
   // Validation errors
   else if (
-    errorMsg.includes('validation') ||
-    errorMsg.includes('invalid format') ||
-    errorMsg.includes('missing required') ||
-    errorMsg.includes('bad request')
+    errorMsg.includes("validation") ||
+    errorMsg.includes("invalid format") ||
+    errorMsg.includes("missing required") ||
+    errorMsg.includes("bad request")
   ) {
-    errorType = 'validation';
+    errorType = "validation";
     shouldRetryImmediately = false;
-    userMessage = 'Invalid request format';
+    userMessage = "Invalid request format";
     technicalMessage = `Request validation failed for key "${keyInfo.aiId}". Ensure the input format meets API requirements.`;
   }
   // Unknown errors
   else {
-    errorType = 'unknown';
+    errorType = "unknown";
     shouldRetryImmediately = false;
-    userMessage = 'Unexpected error occurred';
-    technicalMessage = `Unknown error encountered with key "${keyInfo.aiId}": ${errorMsg.substring(0, 100)}`;
+    userMessage = "Unexpected error occurred";
+    technicalMessage = `Unknown error encountered with key "${
+      keyInfo.aiId
+    }": ${errorMsg.substring(0, 100)}`;
   }
 
   // Log with appropriate severity level
-  const logLevel = errorType === 'timeout' ? 'warn' : 'error';
-  const logMessage = `[Attempt ${attemptIndex + 1}] ${technicalMessage} | Duration: ${duration}ms/${timeout}ms | Type: ${errorType.toUpperCase()}`;
+  const logLevel = errorType === "timeout" ? "warn" : "error";
+  const logMessage = `[Attempt ${
+    attemptIndex + 1
+  }] ${technicalMessage} | Duration: ${duration}ms/${timeout}ms | Type: ${errorType.toUpperCase()}`;
 
-  if (logLevel === 'warn') {
+  if (logLevel === "warn") {
     console.warn(logMessage);
   } else {
     console.error(logMessage);
@@ -177,7 +185,7 @@ export function generateUserFriendlyErrorMessage(
   totalTime: number
 ): string {
   if (attemptResults.length === 0) {
-    return 'No API attempts made. Check system configuration.';
+    return "No API attempts made. Check system configuration.";
   }
 
   const errorSummary = attemptResults.reduce((acc, result) => {
@@ -186,32 +194,33 @@ export function generateUserFriendlyErrorMessage(
   }, {} as Record<AIErrorType, number>);
 
   const totalAttempts = attemptResults.length;
-  const [dominantErrorType] = Object.entries(errorSummary)
-    .sort(([, a], [, b]) => b - a)[0];
+  const [dominantErrorType] = Object.entries(errorSummary).sort(
+    ([, a], [, b]) => b - a
+  )[0];
 
   switch (dominantErrorType as AIErrorType) {
-    case 'auth':
+    case "auth":
       return `All ${totalKeys} API keys failed authentication. Check keys in Admin Panel.`;
 
-    case 'quota':
+    case "quota":
       return `All ${totalKeys} API keys hit rate limits. Wait 5-10 minutes or add more keys.`;
 
-    case 'timeout':
+    case "timeout":
       return `All attempts timed out (${totalTime}ms). AI service overloaded. Try again in 1 minute.`;
 
-    case 'network':
-      return 'Network connection failed. Check internet connectivity and retry.';
+    case "network":
+      return "Network connection failed. Check internet connectivity and retry.";
 
-    case 'parsing':
-      return 'AI response parsing failed. This is usually temporary - retry now.';
+    case "parsing":
+      return "AI response parsing failed. This is usually temporary - retry now.";
 
-    case 'validation':
-      return 'Request validation failed. Check input data format.';
+    case "validation":
+      return "Request validation failed. Check input data format.";
 
     default:
       const errorList = Object.entries(errorSummary)
         .map(([type, count]) => `${type}(${count})`)
-        .join(', ');
+        .join(", ");
 
       return `${totalAttempts} attempts failed: ${errorList}. Check API configuration.`;
   }
@@ -223,16 +232,19 @@ export function generateUserFriendlyErrorMessage(
 export function getDatabaseErrorMessage(error: Error): string {
   const errorMsg = error.message.toLowerCase();
 
-  if (errorMsg.includes('no ai keys found') || errorMsg.includes('database_error')) {
-    return 'No AI keys configured. Add Google API keys in Admin Panel → Settings → Manage AI Keys.';
+  if (
+    errorMsg.includes("no ai keys found") ||
+    errorMsg.includes("database_error")
+  ) {
+    return "No AI keys configured. Add Google API keys in Admin Panel → Settings → Manage AI Keys.";
   }
 
-  if (errorMsg.includes('no active') || errorMsg.includes('config_error')) {
-    return 'No active AI keys found. Activate keys in Admin Panel → Settings → Manage AI Keys.';
+  if (errorMsg.includes("no active") || errorMsg.includes("config_error")) {
+    return "No active AI keys found. Activate keys in Admin Panel → Settings → Manage AI Keys.";
   }
 
-  if (errorMsg.includes('strategy_error')) {
-    return 'Retry strategy failed due to time constraints. Check service configuration.';
+  if (errorMsg.includes("strategy_error")) {
+    return "Retry strategy failed due to time constraints. Check service configuration.";
   }
 
   return `System error: ${error.message}. Contact support if this persists.`;

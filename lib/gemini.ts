@@ -306,6 +306,20 @@ export async function analyzeCompleteApplicationOptimized(
     }, {} as Record<string, number>);
 
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
+      // Helper function to sanitize answers and prevent JSON issues
+      const sanitizeAnswer = (answer: string): string => {
+        if (!answer) return "No answer provided";
+
+        return answer
+          .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
+          .replace(/\\/g, "\\\\") // Escape backslashes
+          .replace(/"/g, '\\"') // Escape quotes
+          .replace(/\n{3,}/g, "\n\n") // Normalize excessive newlines
+          .replace(/\t/g, " ") // Replace tabs with spaces
+          .trim()
+          .substring(0, 5000); // Limit answer length to prevent overflow
+      };
+
       // Parse questions with type detection from ID
       const questionAnswerPairs =
         candidateData.aiQuestions
@@ -313,93 +327,49 @@ export async function analyzeCompleteApplicationOptimized(
             const questionType = extractQuestionTypeFromId(
               qa.id || `q${index + 1}`
             );
-            return `${qa.id} [${questionType.toUpperCase()}]: ${
-              qa.question
-            }\nANSWER: ${qa.answer}`;
+            const sanitizedAnswer = sanitizeAnswer(qa.answer || "");
+            const sanitizedQuestion = sanitizeAnswer(qa.question || "");
+
+            return `${
+              qa.id
+            } [${questionType.toUpperCase()}]: ${sanitizedQuestion}\nANSWER: ${sanitizedAnswer}`;
           })
           .join("\n\n") || "No questions answered";
 
-      // Construct analysis prompt
-      const PROMPT = `Evaluate this cybersecurity candidate. Return ONLY valid JSON.
+      // Simplified prompt to prevent truncation - ALL quality standards maintained
+      const PROMPT = `Candidate Analysis - Return ONLY valid JSON.
 
-CANDIDATE PROFILE:
-Education: ${candidateData.resumeAnalysis?.education || "N/A"}
-Experience: ${candidateData.resumeAnalysis?.experience || "N/A"}  
-Skills: ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
+PROFILE: ${candidateData.resumeAnalysis?.education || "N/A"} | ${
+        candidateData.resumeAnalysis?.experience || "N/A"
+      } | ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
 
-QUESTION BREAKDOWN: ${JSON.stringify(questionCounts)}
-
-QUESTIONS & ANSWERS:
+QUESTIONS (${questionCounts.technical || 0} tech, ${
+        questionCounts.behavioral || 0
+      } behav, ${questionCounts.scenario || 0} scen, ${
+        questionCounts.leadership || 0
+      } lead):
 ${questionAnswerPairs}
 
-EVALUATION FRAMEWORK:
+SCORING (per question):
+• Originality (0-100): 90-100=unique/personal, 70-89=mostly original, 50-69=mixed, 30-49=templated, 0-29=copied/AI
+• Correctness (0-10): Tech=accuracy+depth, Behav=authenticity+examples, Scen=logic+feasibility, Lead=guidance+ethics  
+• Class: human-written (≥70), potentially-copied (30-69), likely-ai-generated (<30)
 
-TECHNICAL (${questionCounts.technical || 0} questions):
-- Correctness: Accuracy of concepts, depth of knowledge, clarity, and ability to apply subject matter expertise
-- Focus: Demonstrating relevant problem-solving using appropriate methods, tools, or frameworks for the given domain
+VERDICT: "Highly Recommended"=excellence, "Recommended"=solid, "Requires Review"=concerns, "Not Recommended"=red flags
 
-BEHAVIORAL (${questionCounts.behavioral || 0} questions):  
-- Correctness: Authenticity, relevance of experiences, ability to reflect, and structured communication
-- Focus: Showcasing adaptability, collaboration, personal growth, and professional work habits
+Reasoning: 40-50 words each. Rationale: 80-90 words.
 
-SCENARIO (${questionCounts.scenario || 0} questions):
-- Correctness: Logical reasoning, practicality of solutions, clarity in steps, and alignment with real-world feasibility
-- Focus: Applying structured problem-solving, analyzing constraints, and delivering actionable recommendations
-
-LEADERSHIP (${questionCounts.leadership || 0} questions):
-- Correctness: Demonstrated ability in guiding others, maintaining standards, and fostering growth
-- Focus: Decision-making, accountability, continuous learning, ethical practices, and motivating teams
-
-SCORING RULES:
-Originality (0-100):
-- 90-100: Highly personal, specific examples, unique insights
-- 70-89: Mostly original with some common elements  
-- 50-69: Mix of personal and generic content
-- 30-49: Mostly templated/common responses
-- 0-29: Copied/AI-generated/inappropriate
-
-Correctness (0.0-10.0) - Type-specific:
-- Technical: Accuracy of technical concepts and tools
-- Behavioral: Quality of examples and self-reflection
-- Scenario: Effectiveness of proposed solutions  
-- Leadership: Strength of management and learning approaches
-
-Classification:
-- human-written: ≥70 originality, personal voice
-- potentially-copied: 30-69 originality, templated feel
-- likely-ai-generated: <30 originality, generic/AI patterns
-
-VERDICT CRITERIA (Choose ONE):
-"Highly Recommended": Tech excellence + behavioral strength + ethical integrity + leadership potential
-"Recommended": Solid tech foundation + positive behaviors + ethical standards + role readiness  
-"Requires Review": Shows potential BUT has concerns (ethics/originality/competency gaps)
-"Not Recommended": Poor tech skills OR ethical red flags OR dishonest responses OR malpractice signs
-
-RESPONSE REQUIREMENTS:
-- originalityReasoning: (50–60 words), focus on specific indicators
-- correctnessReasoning: (50–60 words), detailed type-specific assessment
-- rationale: (90–100 words), detailed overall evaluation explaining your verdict choice
-
-JSON OUTPUT:
+JSON:
 {
-  "questionAnalyses": [
-    {
-      "questionId": "question_id",
-      "question": "question_text",
-      "answer": "answer_text",
-      "questionType": "technical/behavioral/scenario/leadership",
-      "originalityScore": 0-100,
-      "originalityReasoning": "brief specific analysis (max 60 words)",
-      "correctnessScore": 0.0-10.0,
-      "correctnessReasoning": "detailed type-specific assessment (exactly 60 words)",
-      "classification": "human-written/potentially-copied/likely-ai-generated"
-    }
-  ],
-  "holisticAssessment": {
-    "overallScore": 0.0-10.0,
-    "verdict": "Highly Recommended/Recommended/Requires Review/Not Recommended",
-    "resumeAlignmentScore": 0-10,
-    "rationale": "concise assessment explaining your verdict choice and focusing on technical competency and overall fit (max 100 words)"
+  "questionAnalyses":[{
+    "questionId":"id","question":"text","answer":"text","questionType":"technical/behavioral/scenario/leadership",
+    "originalityScore":0-100,"originalityReasoning":"40-50 words",
+    "correctnessScore":0-10,"correctnessReasoning":"40-50 words",
+    "classification":"human-written/potentially-copied/likely-ai-generated"
+  }],
+  "holisticAssessment":{
+    "overallScore":0-10,"verdict":"Highly Recommended/Recommended/Requires Review/Not Recommended",
+    "resumeAlignmentScore":0-10,"rationale":"80-90 words"
   }
 }`;
 
@@ -408,6 +378,7 @@ JSON OUTPUT:
 
       // Enhanced JSON parsing with better error recovery
       const cleanedResponse = cleanJsonResponse(response);
+
       let analysisResult: any;
 
       try {
@@ -567,10 +538,20 @@ function cleanJsonResponse(response: string): string {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1);
   }
 
-  // Remove trailing commas and fix common JSON issues
   cleaned = cleaned
     .replace(/,(\s*[}\]])/g, "$1")
     .replace(/([{,]\s*)(\w+):/g, '$1"$2":');
+
+  cleaned = cleaned.replace(
+    /("answer"\s*:\s*")([\s\S]*?)("\s*,\s*"questionType")/g,
+    (match, prefix, content, suffix) => {
+      const escapedContent = content
+        .replace(/\\"/g, "###ESCAPED_QUOTE###") // Protect existing escapes
+        .replace(/"/g, '\\"') // Escape unescaped quotes
+        .replace(/###ESCAPED_QUOTE###/g, '\\"'); // Restore protected
+      return `${prefix}${escapedContent}${suffix}`;
+    }
+  );
 
   return cleaned;
 }
