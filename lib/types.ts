@@ -263,6 +263,7 @@ export interface AttemptResult {
 }
 
 // Configuration Constants
+// Configuration Constants
 export const GEMINI_CONFIG = {
   MODEL_NAME: "gemini-2.0-flash", // Experimental version with higher output capacity
   MAX_EXECUTION_TIME: 55000,
@@ -272,89 +273,89 @@ export const GEMINI_CONFIG = {
   GENERATION_CONFIG: {
     temperature: 0.1,
     maxOutputTokens: 8192,
-    responseMimeType: "application/json",
-    responseSchema: {
-      type: "OBJECT",
-      properties: {
-        questionAnalyses: {
-          type: "ARRAY",
-          items: {
-            type: "OBJECT",
-            properties: {
-              questionId: { type: "STRING" },
-              question: { type: "STRING" },
-              answer: { type: "STRING" },
-              questionType: {
-                type: "STRING",
-                enum: ["technical", "behavioral", "scenario", "leadership"],
-              },
-              originalityScore: {
-                type: "INTEGER",
-                minimum: 0,
-                maximum: 100,
-              },
-              originalityReasoning: { type: "STRING" },
-              correctnessScore: {
-                type: "NUMBER",
-                minimum: 0,
-                maximum: 10,
-              },
-              correctnessReasoning: { type: "STRING" },
-              classification: {
-                type: "STRING",
-                enum: [
-                  "human-written",
-                  "potentially-copied",
-                  "likely-ai-generated",
-                ],
-              },
-            },
-            required: [
-              "questionId",
-              "question",
-              "answer",
-              "questionType",
-              "originalityScore",
-              "originalityReasoning",
-              "correctnessScore",
-              "correctnessReasoning",
-              "classification",
+  } as any,
+};
+
+export const CANDIDATE_ANALYSIS_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    questionAnalyses: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          questionId: { type: "STRING" },
+          question: { type: "STRING" },
+          answer: { type: "STRING" },
+          questionType: {
+            type: "STRING",
+            enum: ["technical", "behavioral", "scenario", "leadership"],
+          },
+          originalityScore: {
+            type: "INTEGER",
+            minimum: 0,
+            maximum: 100,
+          },
+          originalityReasoning: { type: "STRING" },
+          correctnessScore: {
+            type: "NUMBER",
+            minimum: 0,
+            maximum: 10,
+          },
+          correctnessReasoning: { type: "STRING" },
+          classification: {
+            type: "STRING",
+            enum: [
+              "human-written",
+              "potentially-copied",
+              "likely-ai-generated",
             ],
           },
         },
-        holisticAssessment: {
-          type: "OBJECT",
-          properties: {
-            overallScore: {
-              type: "NUMBER",
-              minimum: 0,
-              maximum: 10,
-            },
-            verdict: {
-              type: "STRING",
-              enum: [
-                "Highly Recommended",
-                "Recommended",
-                "Requires Review",
-                "Not Recommended",
-              ],
-            },
-            resumeAlignmentScore: {
-              type: "INTEGER",
-              minimum: 0,
-              maximum: 10,
-            },
-            rationale: { type: "STRING" },
-          },
-          required: [
-            "overallScore",
-            "verdict",
-            "resumeAlignmentScore",
-            "rationale",
+        required: [
+          "questionId",
+          "question",
+          "answer",
+          "questionType",
+          "originalityScore",
+          "originalityReasoning",
+          "correctnessScore",
+          "correctnessReasoning",
+          "classification",
+        ],
+      },
+    },
+    holisticAssessment: {
+      type: "OBJECT",
+      properties: {
+        overallScore: {
+          type: "NUMBER",
+          minimum: 0,
+          maximum: 10,
+        },
+        verdict: {
+          type: "STRING",
+          enum: [
+            "Highly Recommended",
+            "Recommended",
+            "Requires Review",
+            "Not Recommended",
           ],
         },
+        resumeAlignmentScore: {
+          type: "INTEGER",
+          minimum: 0,
+          maximum: 10,
+        },
+        rationale: { type: "STRING" },
       },
-      required: ["questionAnalyses", "holisticAssessment"],
+      required: [
+        "overallScore",
+        "verdict",
+        "resumeAlignmentScore",
+        "rationale",
+      ],
     },
-  } as any, // Type assertion needed for complex nested schema
+  },
+  required: ["questionAnalyses", "holisticAssessment"],
 };

@@ -15,7 +15,12 @@ import {
   validateQuestionStructure,
 } from "./analysis-utils";
 import { getActiveGoogleAIKeys } from "@/lib/firebase/admin";
-import { AIKeyFromDB, AttemptResult, GEMINI_CONFIG } from "@/lib/types";
+import {
+  AIKeyFromDB,
+  AttemptResult,
+  GEMINI_CONFIG,
+  CANDIDATE_ANALYSIS_SCHEMA,
+} from "@/lib/types";
 import {
   classifyAndLogError,
   generateUserFriendlyErrorMessage,
@@ -42,7 +47,8 @@ async function tryWithDatabaseKeysOptimized<T>(
     genAI: GoogleGenerativeAI,
     model: any,
     keyInfo: AIKeyFromDB
-  ) => Promise<T>
+  ) => Promise<T>,
+  configOverride?: any
 ): Promise<T> {
   const startTime = Date.now();
   const operationId = `operation_${Date.now()}_${Math.random()
@@ -112,7 +118,10 @@ async function tryWithDatabaseKeysOptimized<T>(
         const genAI = new GoogleGenerativeAI(key.apiKey);
         const model = genAI.getGenerativeModel({
           model: GEMINI_CONFIG.MODEL_NAME,
-          generationConfig: GEMINI_CONFIG.GENERATION_CONFIG,
+          generationConfig: {
+            ...GEMINI_CONFIG.GENERATION_CONFIG,
+            ...configOverride,
+          },
         });
 
         const result = await withTimeout(
@@ -305,49 +314,50 @@ export async function analyzeCompleteApplicationOptimized(
       return acc;
     }, {} as Record<string, number>);
 
-    return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
-      // Helper function to sanitize answers and prevent JSON issues
-      const sanitizeAnswer = (answer: string): string => {
-        if (!answer) return "No answer provided";
+    return await tryWithDatabaseKeysOptimized(
+      async (genAI, model, keyInfo) => {
+        // Helper function to sanitize answers and prevent JSON issues
+        const sanitizeAnswer = (answer: string): string => {
+          if (!answer) return "No answer provided";
 
-        return answer
-          .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
-          .replace(/\\/g, "\\\\") // Escape backslashes
-          .replace(/"/g, '\\"') // Escape quotes
-          .replace(/\n{3,}/g, "\n\n") // Normalize excessive newlines
-          .replace(/\t/g, " ") // Replace tabs with spaces
-          .trim()
-          .substring(0, 5000); // Limit answer length to prevent overflow
-      };
+          return answer
+            .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
+            .replace(/\\/g, "\\\\") // Escape backslashes
+            .replace(/"/g, '\\"') // Escape quotes
+            .replace(/\n{3,}/g, "\n\n") // Normalize excessive newlines
+            .replace(/\t/g, " ") // Replace tabs with spaces
+            .trim()
+            .substring(0, 5000); // Limit answer length to prevent overflow
+        };
 
-      // Parse questions with type detection from ID
-      const questionAnswerPairs =
-        candidateData.aiQuestions
-          ?.map((qa, index) => {
-            const questionType = extractQuestionTypeFromId(
-              qa.id || `q${index + 1}`
-            );
-            const sanitizedAnswer = sanitizeAnswer(qa.answer || "");
-            const sanitizedQuestion = sanitizeAnswer(qa.question || "");
+        // Parse questions with type detection from ID
+        const questionAnswerPairs =
+          candidateData.aiQuestions
+            ?.map((qa, index) => {
+              const questionType = extractQuestionTypeFromId(
+                qa.id || `q${index + 1}`
+              );
+              const sanitizedAnswer = sanitizeAnswer(qa.answer || "");
+              const sanitizedQuestion = sanitizeAnswer(qa.question || "");
 
-            return `${
-              qa.id
-            } [${questionType.toUpperCase()}]: ${sanitizedQuestion}\nANSWER: ${sanitizedAnswer}`;
-          })
-          .join("\n\n") || "No questions answered";
+              return `${
+                qa.id
+              } [${questionType.toUpperCase()}]: ${sanitizedQuestion}\nANSWER: ${sanitizedAnswer}`;
+            })
+            .join("\n\n") || "No questions answered";
 
-      // Simplified prompt to prevent truncation - ALL quality standards maintained
-      const PROMPT = `Candidate Analysis - Return ONLY valid JSON.
+        // Simplified prompt to prevent truncation - ALL quality standards maintained
+        const PROMPT = `Candidate Analysis - Return ONLY valid JSON.
 
 PROFILE: ${candidateData.resumeAnalysis?.education || "N/A"} | ${
-        candidateData.resumeAnalysis?.experience || "N/A"
-      } | ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
+          candidateData.resumeAnalysis?.experience || "N/A"
+        } | ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
 
 QUESTIONS (${questionCounts.technical || 0} tech, ${
-        questionCounts.behavioral || 0
-      } behav, ${questionCounts.scenario || 0} scen, ${
-        questionCounts.leadership || 0
-      } lead):
+          questionCounts.behavioral || 0
+        } behav, ${questionCounts.scenario || 0} scen, ${
+          questionCounts.leadership || 0
+        } lead):
 ${questionAnswerPairs}
 
 SCORING (per question):
@@ -373,135 +383,149 @@ JSON:
   }
 }`;
 
-      const result = await model.generateContent(PROMPT);
-      const response = await result.response.text();
+        const result = await model.generateContent(PROMPT);
+        const response = await result.response.text();
 
-      // Enhanced JSON parsing with better error recovery
-      const cleanedResponse = cleanJsonResponse(response);
+        // Enhanced JSON parsing with better error recovery
+        const cleanedResponse = cleanCandidateAnalysisResponse(response);
 
-      let analysisResult: any;
+        let analysisResult: any;
 
-      try {
-        analysisResult = JSON.parse(cleanedResponse);
+        try {
+          analysisResult = JSON.parse(cleanedResponse);
 
-        if (
-          !analysisResult.questionAnalyses ||
-          !analysisResult.holisticAssessment
-        ) {
+          if (
+            !analysisResult.questionAnalyses ||
+            !analysisResult.holisticAssessment
+          ) {
+            console.error(
+              ` Response validation failed - missing required sections`,
+              {
+                keyId: keyInfo.aiId,
+                hasQuestionAnalyses: !!analysisResult.questionAnalyses,
+                hasHolisticAssessment: !!analysisResult.holisticAssessment,
+                phase: "response_validation_error",
+              }
+            );
+            throw new Error("Missing required analysis sections");
+          }
+        } catch (parseError) {
           console.error(
-            ` Response validation failed - missing required sections`,
+            `[GEMINI_ANALYSIS] JSON parsing failed, attempting recovery`,
             {
               keyId: keyInfo.aiId,
-              hasQuestionAnalyses: !!analysisResult.questionAnalyses,
-              hasHolisticAssessment: !!analysisResult.holisticAssessment,
-              phase: "response_validation_error",
+              parseError:
+                parseError instanceof Error
+                  ? parseError.message
+                  : "Unknown parse error",
+              responsePreview: cleanedResponse.substring(0, 500),
+              phase: "json_parse_error",
             }
           );
-          throw new Error("Missing required analysis sections");
-        }
-      } catch (parseError) {
-        console.error(
-          `[GEMINI_ANALYSIS] JSON parsing failed, attempting recovery`,
-          {
-            keyId: keyInfo.aiId,
-            parseError:
-              parseError instanceof Error
-                ? parseError.message
-                : "Unknown parse error",
-            responsePreview: cleanedResponse.substring(0, 500),
-            phase: "json_parse_error",
+
+          const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              // Try fixing common JSON issues
+              let fixedJson = jsonMatch[0]
+                .replace(/,(\s*[}\]])/g, "$1")
+                .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+                .replace(
+                  /:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g,
+                  ': "$1"$2'
+                );
+
+              analysisResult = JSON.parse(fixedJson);
+            } catch (recoveryError) {
+              console.error(`[GEMINI_ANALYSIS] JSON parsing recovery failed`, {
+                keyId: keyInfo.aiId,
+                recoveryError:
+                  recoveryError instanceof Error
+                    ? recoveryError.message
+                    : "Unknown recovery error",
+                phase: "json_parse_recovery_failed",
+              });
+              throw new Error(
+                `JSON parsing failed even after recovery attempts: ${recoveryError}`
+              );
+            }
+          } else {
+            console.error(
+              `[GEMINI_ANALYSIS] No valid JSON structure found in response`,
+              {
+                keyId: keyInfo.aiId,
+                phase: "json_structure_not_found",
+              }
+            );
+            throw new Error("No valid JSON structure found in AI response");
           }
+        }
+
+        // Map scores efficiently with validation
+        const originalityScores: OriginalityScore[] =
+          analysisResult.questionAnalyses.map(
+            (analysis: any, index: number) => ({
+              question: index + 1,
+              score: Math.max(0, Math.min(100, analysis.originalityScore || 0)),
+              reasoning:
+                analysis.originalityReasoning || "Analysis not available",
+            })
+          );
+
+        const correctnessScores: CorrectnessScore[] =
+          analysisResult.questionAnalyses.map(
+            (analysis: any, index: number) => ({
+              question: index + 1,
+              score: Math.max(0, Math.min(10, analysis.correctnessScore || 0)),
+              reasoning:
+                analysis.correctnessReasoning || "Analysis not available",
+            })
+          );
+
+        // Use AI-determined verdict directly from the response
+        const score = Math.max(
+          0,
+          Math.min(10, analysisResult.holisticAssessment.overallScore || 0)
         );
 
-        const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            // Try fixing common JSON issues
-            let fixedJson = jsonMatch[0]
-              .replace(/,(\s*[}\]])/g, "$1")
-              .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
-              .replace(/:\s*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*([,}])/g, ': "$1"$2');
+        // Get verdict directly from AI response
+        const aiVerdict =
+          analysisResult.holisticAssessment.verdict || "Requires Review";
 
-            analysisResult = JSON.parse(fixedJson);
-          } catch (recoveryError) {
-            console.error(`[GEMINI_ANALYSIS] JSON parsing recovery failed`, {
-              keyId: keyInfo.aiId,
-              recoveryError:
-                recoveryError instanceof Error
-                  ? recoveryError.message
-                  : "Unknown recovery error",
-              phase: "json_parse_recovery_failed",
-            });
-            throw new Error(
-              `JSON parsing failed even after recovery attempts: ${recoveryError}`
-            );
-          }
-        } else {
-          console.error(
-            `[GEMINI_ANALYSIS] No valid JSON structure found in response`,
-            {
-              keyId: keyInfo.aiId,
-              phase: "json_structure_not_found",
-            }
-          );
-          throw new Error("No valid JSON structure found in AI response");
+        // Map AI verdict to your AIVerdict type
+        let overallVerdict: AIVerdict;
+        switch (aiVerdict) {
+          case "Highly Recommended":
+            overallVerdict = "Highly Recommended";
+            break;
+          case "Recommended":
+            overallVerdict = "Recommended";
+            break;
+          case "Not Recommended":
+            overallVerdict = "Not Recommended";
+            break;
+          case "Requires Review":
+          default:
+            overallVerdict = "Requires Review";
+            break;
         }
+
+        const aiAnalysis: AIAnalysis = {
+          originalityScores,
+          correctnessScores,
+          overallVerdict,
+          aiRecommendation:
+            analysisResult.holisticAssessment.rationale ||
+            "Analysis completed successfully",
+        };
+
+        return { aiAnalysis, overallScore: score };
+      },
+      {
+        responseMimeType: "application/json",
+        responseSchema: CANDIDATE_ANALYSIS_SCHEMA,
       }
-
-      // Map scores efficiently with validation
-      const originalityScores: OriginalityScore[] =
-        analysisResult.questionAnalyses.map((analysis: any, index: number) => ({
-          question: index + 1,
-          score: Math.max(0, Math.min(100, analysis.originalityScore || 0)),
-          reasoning: analysis.originalityReasoning || "Analysis not available",
-        }));
-
-      const correctnessScores: CorrectnessScore[] =
-        analysisResult.questionAnalyses.map((analysis: any, index: number) => ({
-          question: index + 1,
-          score: Math.max(0, Math.min(10, analysis.correctnessScore || 0)),
-          reasoning: analysis.correctnessReasoning || "Analysis not available",
-        }));
-
-      // Use AI-determined verdict directly from the response
-      const score = Math.max(
-        0,
-        Math.min(10, analysisResult.holisticAssessment.overallScore || 0)
-      );
-
-      // Get verdict directly from AI response
-      const aiVerdict =
-        analysisResult.holisticAssessment.verdict || "Requires Review";
-
-      // Map AI verdict to your AIVerdict type
-      let overallVerdict: AIVerdict;
-      switch (aiVerdict) {
-        case "Highly Recommended":
-          overallVerdict = "Highly Recommended";
-          break;
-        case "Recommended":
-          overallVerdict = "Recommended";
-          break;
-        case "Not Recommended":
-          overallVerdict = "Not Recommended";
-          break;
-        case "Requires Review":
-        default:
-          overallVerdict = "Requires Review";
-          break;
-      }
-
-      const aiAnalysis: AIAnalysis = {
-        originalityScores,
-        correctnessScores,
-        overallVerdict,
-        aiRecommendation:
-          analysisResult.holisticAssessment.rationale ||
-          "Analysis completed successfully",
-      };
-
-      return { aiAnalysis, overallScore: score };
-    });
+    );
   } catch (error) {
     // Re-throw custom errors as-is (they already have user-friendly messages)
     if (
@@ -521,7 +545,44 @@ JSON:
   }
 }
 
-// Helper function for JSON cleaning
+// Helper function for JSON cleaning - Specialized for Candidate Analysis
+function cleanCandidateAnalysisResponse(response: string): string {
+  // Remove markdown and code blocks
+  let cleaned = response
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .replace(/`+/g, "")
+    .trim();
+
+  // Extract JSON object quickly
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  // Fix common JSON issues
+  cleaned = cleaned
+    .replace(/,(\s*[}\]])/g, "$1")
+    .replace(/([{,]\s*)(\w+):/g, '$1"$2":');
+
+  // Context-aware quote escaping specifically for candidate answers
+  cleaned = cleaned.replace(
+    /("answer"\s*:\s*")([\s\S]*?)("\s*,\s*"questionType")/g,
+    (match, prefix, content, suffix) => {
+      const escapedContent = content
+        .replace(/\\"/g, "###ESCAPED_QUOTE###") // Protect existing escapes
+        .replace(/"/g, '\\"') // Escape unescaped quotes
+        .replace(/###ESCAPED_QUOTE###/g, '\\"'); // Restore protected
+      return `${prefix}${escapedContent}${suffix}`;
+    }
+  );
+
+  return cleaned;
+}
+
+// Helper function for JSON cleaning - General Purpose (Restored)
 function cleanJsonResponse(response: string): string {
   // Remove markdown and code blocks
   let cleaned = response
@@ -538,20 +599,10 @@ function cleanJsonResponse(response: string): string {
     cleaned = cleaned.substring(firstBrace, lastBrace + 1);
   }
 
+  // Fix common JSON issues
   cleaned = cleaned
     .replace(/,(\s*[}\]])/g, "$1")
     .replace(/([{,]\s*)(\w+):/g, '$1"$2":');
-
-  cleaned = cleaned.replace(
-    /("answer"\s*:\s*")([\s\S]*?)("\s*,\s*"questionType")/g,
-    (match, prefix, content, suffix) => {
-      const escapedContent = content
-        .replace(/\\"/g, "###ESCAPED_QUOTE###") // Protect existing escapes
-        .replace(/"/g, '\\"') // Escape unescaped quotes
-        .replace(/###ESCAPED_QUOTE###/g, '\\"'); // Restore protected
-      return `${prefix}${escapedContent}${suffix}`;
-    }
-  );
 
   return cleaned;
 }
@@ -1182,6 +1233,14 @@ export async function generateCareerPathRecommendations(
 ): Promise<string[]> {
   try {
     return await tryWithDatabaseKeysOptimized(async (genAI, model, keyInfo) => {
+      // Sanitize AI recommendation to prevent prompt injection/hallucination
+      const rawRecommendation =
+        candidateData?.aiAnalysis?.aiRecommendation ||
+        "No specific insights available";
+      const sanitizedRecommendation = rawRecommendation
+        .replace(/[{}[\]"]/g, "") // Remove JSON-like characters
+        .substring(0, 500); // Limit length
+
       // Construct career analysis prompt
       const PROMPT = `You are a highly experienced global career advisor. 
 Analyze the following candidate profile and suggest exactly 3 modern, market-relevant job roles they are most likely to excel in.
@@ -1198,10 +1257,7 @@ Skills: ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
 Summary: ${candidateData.resumeAnalysis?.summary || "N/A"}
 
 AI ANALYSIS INSIGHTS:
-${
-  candidateData?.aiAnalysis?.aiRecommendation ||
-  "No specific insights available"
-}
+${sanitizedRecommendation}
 
 TECHNICAL COMPETENCY:
 Average Correctness Score: ${
@@ -1224,6 +1280,7 @@ INSTRUCTIONS:
    - Realistic for this candidate based on skills, education, and experience
    - Offering progressive career growth and relevance in 2025
 3. Do not explain, justify, or add extra text.
+4. CRITICAL: Do NOT output JSON. Do NOT repeat the analysis. Return ONLY the list.
 
 RESPONSE FORMAT:
 Return exactly 3 job role titles, one per line, no additional text:
