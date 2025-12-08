@@ -5,11 +5,11 @@ import {
   GeminiValidationError,
 } from "@/lib/gemini-errors";
 
-// Set maximum duration to 120 seconds for Gemini 2.5 Flash
-export const maxDuration = 120;
+// Set maximum duration to 60 seconds (Vercel Hobby plan limit)
+export const maxDuration = 60;
 
 // Request timeout with buffer for response processing
-const GLOBAL_TIMEOUT = 115000; // Matches GEMINI_CONFIG.MAX_EXECUTION_TIME minus buffer
+const GLOBAL_TIMEOUT = 55000; // 55 seconds, leaving 5s buffer
 
 export async function POST(request: NextRequest) {
   try {

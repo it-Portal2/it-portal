@@ -346,40 +346,43 @@ export async function analyzeCompleteApplicationOptimized(
             })
             .join("\n\n") || "No questions answered";
 
-        // Simplified prompt to prevent truncation - ALL quality standards maintained
-        const PROMPT = `Candidate Analysis - Return ONLY valid JSON.
+        // Simplified prompt - DO NOT ask for question/answer text in output (already available)
+        const PROMPT = `Analyze candidate interview responses. Return ONLY valid JSON.
 
-PROFILE: ${candidateData.resumeAnalysis?.education || "N/A"} | ${
+CANDIDATE: ${candidateData.resumeAnalysis?.education || "N/A"} | ${
           candidateData.resumeAnalysis?.experience || "N/A"
-        } | ${candidateData.resumeAnalysis?.skills?.join(", ") || "N/A"}
+        } | ${
+          candidateData.resumeAnalysis?.skills?.slice(0, 5).join(", ") || "N/A"
+        }
 
-QUESTIONS (${questionCounts.technical || 0} tech, ${
-          questionCounts.behavioral || 0
-        } behav, ${questionCounts.scenario || 0} scen, ${
-          questionCounts.leadership || 0
-        } lead):
+QUESTIONS TO ANALYZE:
 ${questionAnswerPairs}
 
-SCORING (per question):
-• Originality (0-100): 90-100=unique/personal, 70-89=mostly original, 50-69=mixed, 30-49=templated, 0-29=copied/AI
-• Correctness (0-10): Tech=accuracy+depth, Behav=authenticity+examples, Scen=logic+feasibility, Lead=guidance+ethics  
-• Class: human-written (≥70), potentially-copied (30-69), likely-ai-generated (<30)
+SCORING CRITERIA:
+• Originality (0-100): 90-100=unique insight, 70-89=mostly original, 50-69=mixed, 30-49=templated, 0-29=copied/AI
+• Correctness (0-10): accuracy, depth, practical application
+• Classification: "human-written"(≥70), "potentially-copied"(30-69), "likely-ai-generated"(<30)
 
-VERDICT: "Highly Recommended"=excellence, "Recommended"=solid, "Requires Review"=concerns, "Not Recommended"=red flags
+VERDICT OPTIONS: "Highly Recommended", "Recommended", "Requires Review", "Not Recommended"
 
-Reasoning: 40-50 words each. Rationale: 80-90 words.
-
-JSON:
+IMPORTANT: Keep reasoning brief (25-35 words max). Return only the JSON below:
 {
-  "questionAnalyses":[{
-    "questionId":"id","question":"text","answer":"text","questionType":"technical/behavioral/scenario/leadership",
-    "originalityScore":0-100,"originalityReasoning":"40-50 words",
-    "correctnessScore":0-10,"correctnessReasoning":"40-50 words",
-    "classification":"human-written/potentially-copied/likely-ai-generated"
-  }],
-  "holisticAssessment":{
-    "overallScore":0-10,"verdict":"Highly Recommended/Recommended/Requires Review/Not Recommended",
-    "resumeAlignmentScore":0-10,"rationale":"80-90 words"
+  "questionAnalyses": [
+    {
+      "questionId": "exact_id_from_input",
+      "questionType": "technical|behavioral|scenario|leadership",
+      "originalityScore": 0-100,
+      "originalityReasoning": "25-35 words",
+      "correctnessScore": 0-10,
+      "correctnessReasoning": "25-35 words",
+      "classification": "human-written|potentially-copied|likely-ai-generated"
+    }
+  ],
+  "holisticAssessment": {
+    "overallScore": 0-10,
+    "verdict": "Highly Recommended|Recommended|Requires Review|Not Recommended",
+    "resumeAlignmentScore": 0-10,
+    "rationale": "50-60 words max"
   }
 }`;
 

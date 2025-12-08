@@ -264,11 +264,11 @@ export interface AttemptResult {
 
 // Configuration Constants
 export const GEMINI_CONFIG = {
-  MODEL_NAME: "gemini-2.5-flash", 
-  MAX_EXECUTION_TIME: 120000,
-  BASE_TIMEOUT: 45000,
-  MAX_TIMEOUT: 60000, 
-  TIMEOUT_BUFFER: 5000, 
+  MODEL_NAME: "gemini-2.5-flash",
+  MAX_EXECUTION_TIME: 60000, // 55 seconds (Vercel Hobby plan limit is 60s)
+  BASE_TIMEOUT: 50000, // 25 seconds per attempt
+  MAX_TIMEOUT: 60000, // 30 seconds maximum timeout
+  TIMEOUT_BUFFER: 6000, // 3 second buffer
   GENERATION_CONFIG: {
     temperature: 0.1,
     maxOutputTokens: 8192,
@@ -284,8 +284,6 @@ export const CANDIDATE_ANALYSIS_SCHEMA = {
         type: "OBJECT",
         properties: {
           questionId: { type: "STRING" },
-          question: { type: "STRING" },
-          answer: { type: "STRING" },
           questionType: {
             type: "STRING",
             enum: ["technical", "behavioral", "scenario", "leadership"],
@@ -313,8 +311,6 @@ export const CANDIDATE_ANALYSIS_SCHEMA = {
         },
         required: [
           "questionId",
-          "question",
-          "answer",
           "questionType",
           "originalityScore",
           "originalityReasoning",
