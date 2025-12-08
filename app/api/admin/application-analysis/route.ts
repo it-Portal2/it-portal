@@ -5,11 +5,11 @@ import {
   GeminiValidationError,
 } from "@/lib/gemini-errors";
 
-// Set maximum duration to 60 seconds (Vercel limit)
-export const maxDuration = 60;
+// Set maximum duration to 120 seconds for Gemini 2.5 Flash
+export const maxDuration = 120;
 
 // Request timeout with buffer for response processing
-const GLOBAL_TIMEOUT = 55000; 
+const GLOBAL_TIMEOUT = 115000; // Matches GEMINI_CONFIG.MAX_EXECUTION_TIME minus buffer
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,11 +19,16 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       applicationDetails = body.applicationDetails;
     } catch (parseError) {
-      console.error(`[API_ANALYSIS_ROUTE] Request body parsing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      console.error(
+        `[API_ANALYSIS_ROUTE] Request body parsing failed: ${
+          parseError instanceof Error ? parseError.message : "Unknown error"
+        }`
+      );
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid request format. Expected JSON with applicationDetails field.",
+          message:
+            "Invalid request format. Expected JSON with applicationDetails field.",
         },
         { status: 400 }
       );
@@ -49,7 +54,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "No technical interview questions found. Please ensure the candidate has completed the interview process.",
+          message:
+            "No technical interview questions found. Please ensure the candidate has completed the interview process.",
         },
         { status: 400 }
       );
@@ -75,7 +81,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid question format detected. Each question must have valid id, question text, and answer content.",
+          message:
+            "Invalid question format detected. Each question must have valid id, question text, and answer content.",
         },
         { status: 400 }
       );
@@ -84,16 +91,26 @@ export async function POST(request: NextRequest) {
     // Create timeout promise
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => {
-        console.error(`[API_ANALYSIS_ROUTE] Global request timeout exceeded after ${GLOBAL_TIMEOUT}ms`);
-        reject(new Error("REQUEST_TIMEOUT: Analysis request exceeded maximum processing time"));
+        console.error(
+          `[API_ANALYSIS_ROUTE] Global request timeout exceeded after ${GLOBAL_TIMEOUT}ms`
+        );
+        reject(
+          new Error(
+            "REQUEST_TIMEOUT: Analysis request exceeded maximum processing time"
+          )
+        );
       }, GLOBAL_TIMEOUT)
     );
 
     // Execute analysis with timeout protection
-    const analysisPromise = analyzeCompleteApplicationOptimized(applicationDetails);
+    const analysisPromise =
+      analyzeCompleteApplicationOptimized(applicationDetails);
 
     // Race analysis against timeout
-    const analysisResult = await Promise.race([analysisPromise, timeoutPromise]);
+    const analysisResult = await Promise.race([
+      analysisPromise,
+      timeoutPromise,
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -101,9 +118,12 @@ export async function POST(request: NextRequest) {
       overallScore: analysisResult.overallScore,
       message: "Analysis completed successfully",
     });
-
   } catch (error) {
-    console.error(`[API_ANALYSIS_ROUTE] Analysis request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error(
+      `[API_ANALYSIS_ROUTE] Analysis request failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
 
     // Handle specific error types
     if (error instanceof GeminiValidationError) {
@@ -128,11 +148,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (error instanceof Error && (error.message.includes("timeout") || error.message.includes("REQUEST_TIMEOUT"))) {
+    if (
+      error instanceof Error &&
+      (error.message.includes("timeout") ||
+        error.message.includes("REQUEST_TIMEOUT"))
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Analysis request timed out. The AI service is experiencing high load. Please wait a moment and try again.",
+          message:
+            "Analysis request timed out. The AI service is experiencing high load. Please wait a moment and try again.",
           errorType: "timeout",
         },
         { status: 408 }
@@ -154,7 +179,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "AI response processing failed. This is usually temporary - please retry the analysis.",
+          message:
+            "AI response processing failed. This is usually temporary - please retry the analysis.",
           errorType: "parsing",
         },
         { status: 422 }
@@ -162,7 +188,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Fallback for unexpected errors
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred during analysis";
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "An unexpected error occurred during analysis";
 
     return NextResponse.json(
       {

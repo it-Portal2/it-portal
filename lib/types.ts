@@ -265,11 +265,11 @@ export interface AttemptResult {
 // Configuration Constants
 // Configuration Constants
 export const GEMINI_CONFIG = {
-  MODEL_NAME: "gemini-2.0-flash", // Experimental version with higher output capacity
-  MAX_EXECUTION_TIME: 55000,
-  BASE_TIMEOUT: 25000,
-  MAX_TIMEOUT: 40000,
-  TIMEOUT_BUFFER: 3000,
+  MODEL_NAME: "gemini-2.5-flash", // Gemini 2.5 Flash - stable preview version
+  MAX_EXECUTION_TIME: 120000, // Increased to 120 seconds for complex analysis
+  BASE_TIMEOUT: 45000, // Increased from 25s to 45s per attempt
+  MAX_TIMEOUT: 60000, // Increased from 40s to 60s maximum timeout
+  TIMEOUT_BUFFER: 5000, // Increased buffer for safety
   GENERATION_CONFIG: {
     temperature: 0.1,
     maxOutputTokens: 8192,
