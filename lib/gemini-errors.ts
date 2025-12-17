@@ -104,14 +104,25 @@ export function classifyAndLogError(
     userMessage = "Rate limit exceeded";
     technicalMessage = `Key "${keyInfo.aiId}" has reached its quota or rate limit. Consider rotating keys or increasing capacity.`;
   }
-  // Network errors
+  // Server overload errors (503) - should retry with different key
   else if (
-    errorMsg.includes("network") ||
-    errorMsg.includes("connection") ||
-    errorMsg.includes("fetch") ||
+    errorMsg.includes("503") ||
+    errorMsg.includes("overload") ||
+    errorMsg.includes("service unavailable") ||
+    errorMsg.includes("model is overloaded")
+  ) {
+    errorType = "quota"; // Treat as quota to trigger key rotation
+    shouldRetryImmediately = true; // Retry immediately with different key
+    userMessage = "AI model is temporarily overloaded";
+    technicalMessage = `Key "${keyInfo.aiId}" received 503 - model overloaded. Retrying with different key.`;
+  }
+  // Network errors (check after 503 to avoid false matches from "fetching")
+  else if (
     errorMsg.includes("enotfound") ||
     errorMsg.includes("econnrefused") ||
-    errorMsg.includes("econnreset")
+    errorMsg.includes("econnreset") ||
+    (errorMsg.includes("network") && !errorMsg.includes("generativeai")) ||
+    (errorMsg.includes("connection") && !errorMsg.includes("503"))
   ) {
     errorType = "network";
     shouldRetryImmediately = false;

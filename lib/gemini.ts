@@ -133,6 +133,18 @@ async function tryWithDatabaseKeysOptimized<T>(
         return result;
       } catch (error) {
         const attemptDuration = Date.now() - attemptStartTime;
+
+        // DEBUG: Log raw error to see what's actually happening
+        console.error(`[GEMINI_SERVICE] RAW ERROR DEBUG:`, {
+          errorName: error instanceof Error ? error.name : "Unknown",
+          errorMessage: error instanceof Error ? error.message : String(error),
+          errorCause: error instanceof Error ? (error as any).cause : undefined,
+          errorStack:
+            error instanceof Error
+              ? error.stack?.split("\n").slice(0, 5)
+              : undefined,
+        });
+
         const errorInfo = classifyAndLogError(
           error,
           key,

@@ -6,6 +6,7 @@ import {
 } from "@/lib/gemini-errors";
 
 export const maxDuration = 60;
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,11 +15,16 @@ export async function POST(request: NextRequest) {
     try {
       requestBody = await request.json();
     } catch (parseError) {
-      console.error(`[API_PROJECT_DOCUMENTATION] Request body parsing failed: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      console.error(
+        `[API_PROJECT_DOCUMENTATION] Request body parsing failed: ${
+          parseError instanceof Error ? parseError.message : "Unknown error"
+        }`
+      );
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid request format. Expected JSON with projectName, projectOverview, and developmentAreas.",
+          message:
+            "Invalid request format. Expected JSON with projectName, projectOverview, and developmentAreas.",
         },
         { status: 400 }
       );
@@ -27,7 +33,11 @@ export async function POST(request: NextRequest) {
     const { projectName, projectOverview, developmentAreas } = requestBody;
 
     // Validate required fields
-    if (!projectName || typeof projectName !== 'string' || projectName.trim().length === 0) {
+    if (
+      !projectName ||
+      typeof projectName !== "string" ||
+      projectName.trim().length === 0
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -37,21 +47,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!projectOverview || typeof projectOverview !== 'string' || projectOverview.trim().length === 0) {
+    if (
+      !projectOverview ||
+      typeof projectOverview !== "string" ||
+      projectOverview.trim().length === 0
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Project overview is required and must be a non-empty string.",
+          message:
+            "Project overview is required and must be a non-empty string.",
         },
         { status: 400 }
       );
     }
 
-    if (!developmentAreas || !Array.isArray(developmentAreas) || developmentAreas.length === 0) {
+    if (
+      !developmentAreas ||
+      !Array.isArray(developmentAreas) ||
+      developmentAreas.length === 0
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Development areas are required and must be a non-empty array of strings.",
+          message:
+            "Development areas are required and must be a non-empty array of strings.",
         },
         { status: 400 }
       );
@@ -59,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     // Validate each development area
     const hasValidAreas = developmentAreas.every(
-      (area) => typeof area === 'string' && area.trim().length > 0
+      (area) => typeof area === "string" && area.trim().length > 0
     );
 
     if (!hasValidAreas) {
@@ -84,9 +104,12 @@ export async function POST(request: NextRequest) {
       documentation,
       message: "Documentation generated successfully",
     });
-
   } catch (error) {
-    console.error(`[API_PROJECT_DOCUMENTATION] Documentation generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error(
+      `[API_PROJECT_DOCUMENTATION] Documentation generation failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
 
     // Handle specific error types
     if (error instanceof GeminiValidationError) {
@@ -94,7 +117,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message: error.message.replace("VALIDATION_ERROR: ", ""),
-          errorType: 'validation',
+          errorType: "validation",
         },
         { status: 400 }
       );
@@ -105,7 +128,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message: error.message.replace("CONFIG_ERROR: ", ""),
-          errorType: 'configuration',
+          errorType: "configuration",
         },
         { status: 503 }
       );
@@ -116,8 +139,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Documentation generation timed out. The AI service may be experiencing high load. Please try again.",
-          errorType: 'timeout',
+          message:
+            "Documentation generation timed out. The AI service may be experiencing high load. Please try again.",
+          errorType: "timeout",
         },
         { status: 408 }
       );
@@ -129,21 +153,22 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message: error.message,
-          errorType: 'service',
+          errorType: "service",
         },
         { status: 503 }
       );
     }
 
     // Fallback for all other errors
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+    const errorMessage =
+      error instanceof Error ? error.message : "An unexpected error occurred";
 
     return NextResponse.json(
       {
         success: false,
         message: `Documentation generation failed: ${errorMessage}. If this issue persists, please contact technical support.`,
-        errorType: 'internal',
-        ...(process.env.NODE_ENV === 'development' && {
+        errorType: "internal",
+        ...(process.env.NODE_ENV === "development" && {
           debug: {
             error: errorMessage,
             stack: error instanceof Error ? error.stack : undefined,

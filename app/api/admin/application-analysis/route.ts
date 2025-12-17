@@ -8,6 +8,9 @@ import {
 // Set maximum duration to 60 seconds (Vercel Hobby plan limit)
 export const maxDuration = 60;
 
+// Force Node.js runtime for proper fetch functionality
+export const runtime = "nodejs";
+
 // Request timeout with buffer for response processing
 const GLOBAL_TIMEOUT = 55000; // 55 seconds, leaving 5s buffer
 
