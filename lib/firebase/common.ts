@@ -1,23 +1,12 @@
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  query,
-  where,
-  orderBy,
-  updateDoc,
-  limit,
-} from "firebase/firestore";
+import { adminDb } from "@/firebaseAdmin";
 import { Project, ProjectStatus } from "../types";
-import { db } from "@/firebase";
 import { PaymentDetails } from "./admin";
 
 // Get all the projects request for admin to see
 export const getAllProjects = async () => {
   try {
-    const projectsRef = collection(db, "Projects");
-    const querySnapshot = await getDocs(projectsRef);
+    const projectsRef = adminDb.collection("Projects");
+    const querySnapshot = await projectsRef.get();
     const projects: Project[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -40,10 +29,10 @@ export const getAllProjects = async () => {
 // Get a single project by ID
 export async function getProjectById(projectId: string) {
   try {
-    const projectRef = doc(db, "Projects", projectId);
-    const projectSnap = await getDoc(projectRef);
+    const projectRef = adminDb.collection("Projects").doc(projectId);
+    const projectSnap = await projectRef.get();
 
-    if (projectSnap.exists()) {
+    if (projectSnap.exists) {
       const data = projectSnap.data();
       return {
         id: projectSnap.id,
@@ -69,9 +58,9 @@ export async function updateUserProfile(
   profileData: ProfileUpdateData
 ): Promise<void> {
   try {
-    const userRef = doc(db, "users", uid);
+    const userRef = adminDb.collection("users").doc(uid);
 
-    await updateDoc(userRef, {
+    await userRef.update({
       ...profileData,
       updatedAt: new Date().toLocaleString(),
     });
@@ -88,9 +77,9 @@ export async function updateUserAvatar(
   avatarUrl: string
 ): Promise<void> {
   try {
-    const userRef = doc(db, "users", uid);
+    const userRef = adminDb.collection("users").doc(uid);
 
-    await updateDoc(userRef, {
+    await userRef.update({
       avatar: avatarUrl,
       updatedAt: new Date().toLocaleString(),
     });
@@ -107,8 +96,8 @@ export async function getAllPaymentDetails(): Promise<{
   error?: string;
 }> {
   try {
-    const paymentCollection = collection(db, "PaymentDetails");
-    const querySnapshot = await getDocs(paymentCollection);
+    const paymentCollection = adminDb.collection("PaymentDetails");
+    const querySnapshot = await paymentCollection.get();
 
     const paymentDetails: PaymentDetails[] = [];
     querySnapshot.forEach((doc) => {

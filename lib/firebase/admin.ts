@@ -1,19 +1,4 @@
-import {
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  where,
-  query,
-  addDoc,
-  orderBy,
-  arrayUnion,
-  arrayRemove,
-} from "firebase/firestore";
-import { db } from "@/firebase";
+import { FieldValue } from "firebase-admin/firestore";
 import { PaymentRecord } from "./client";
 import {
   AIKeyFromDB,
@@ -22,30 +7,35 @@ import {
   OriginalityScore,
   ProjectDocument,
 } from "../types";
-import { adminAuth } from "@/firebaseAdmin";
+import { adminAuth, adminDb } from "@/firebaseAdmin";
 
 const convertTimestamp = (data: any): any => {
   if (!data) return data;
-  
+
   // Handle Firestore Timestamp
-  if (data && typeof data === 'object' && 'seconds' in data && 'nanoseconds' in data) {
+  if (
+    data &&
+    typeof data === "object" &&
+    "seconds" in data &&
+    "nanoseconds" in data
+  ) {
     return new Date(data.seconds * 1000).toISOString();
   }
-  
+
   // Handle arrays
   if (Array.isArray(data)) {
-    return data.map(item => convertTimestamp(item));
+    return data.map((item) => convertTimestamp(item));
   }
-  
+
   // Handle objects
-  if (typeof data === 'object') {
+  if (typeof data === "object") {
     const newData: any = {};
     for (const key in data) {
       newData[key] = convertTimestamp(data[key]);
     }
     return newData;
   }
-  
+
   return data;
 };
 
@@ -62,8 +52,8 @@ export async function acceptProject(
       };
     }
 
-    const projectRef = doc(db, "Projects", projectId);
-    await updateDoc(projectRef, {
+    const projectRef = adminDb.collection("Projects").doc(projectId);
+    await projectRef.update({
       status: "in-progress",
       deadline: deadline,
       finalCost: finalCost,
@@ -97,10 +87,10 @@ export async function addProjectDocuments(
       `Adding ${documents.length} ${documentType} documents to project: ${projectId}`
     );
 
-    const projectRef = doc(db, "Projects", projectId);
-    const projectDoc = await getDoc(projectRef);
+    const projectRef = adminDb.collection("Projects").doc(projectId);
+    const projectDoc = await projectRef.get();
 
-    if (!projectDoc.exists()) {
+    if (!projectDoc.exists) {
       return {
         success: false,
         error: "Project not found",
@@ -112,7 +102,7 @@ export async function addProjectDocuments(
       documentType === "quotation"
         ? "quotationDocuments"
         : "developerDocuments";
-    const existingDocuments = projectData[fieldName] || [];
+    const existingDocuments = projectData?.[fieldName] || [];
 
     // Generate unique IDs and version numbers for new documents
     const newDocuments: ProjectDocument[] = documents.map((doc, index) => {
@@ -125,8 +115,8 @@ export async function addProjectDocuments(
     });
 
     // Update the project with new documents
-    await updateDoc(projectRef, {
-      [fieldName]: arrayUnion(...newDocuments),
+    await projectRef.update({
+      [fieldName]: FieldValue.arrayUnion(...newDocuments),
     });
 
     console.log(
@@ -163,10 +153,10 @@ export async function removeProjectDocument(
       `Removing ${documentType} document ${documentId} from project: ${projectId}`
     );
 
-    const projectRef = doc(db, "Projects", projectId);
-    const projectDoc = await getDoc(projectRef);
+    const projectRef = adminDb.collection("Projects").doc(projectId);
+    const projectDoc = await projectRef.get();
 
-    if (!projectDoc.exists()) {
+    if (!projectDoc.exists) {
       return {
         success: false,
         error: "Project not found",
@@ -178,7 +168,7 @@ export async function removeProjectDocument(
       documentType === "quotation"
         ? "quotationDocuments"
         : "developerDocuments";
-    const existingDocuments = projectData[fieldName] || [];
+    const existingDocuments = projectData?.[fieldName] || [];
 
     // Find the document to remove
     const documentToRemove = existingDocuments.find(
@@ -193,8 +183,8 @@ export async function removeProjectDocument(
     }
 
     // Remove the document
-    await updateDoc(projectRef, {
-      [fieldName]: arrayRemove(documentToRemove),
+    await projectRef.update({
+      [fieldName]: FieldValue.arrayRemove(documentToRemove),
     });
 
     console.log(
@@ -220,8 +210,8 @@ export async function rejectProject(
       };
     }
 
-    const projectRef = doc(db, "Projects", projectId);
-    await updateDoc(projectRef, {
+    const projectRef = adminDb.collection("Projects").doc(projectId);
+    await projectRef.update({
       status: "rejected",
       rejectionReason: rejectionReason,
       rejectedDate: new Date().toISOString(),
@@ -245,8 +235,8 @@ export async function completeProject(
       };
     }
 
-    const projectRef = doc(db, "Projects", projectId);
-    await updateDoc(projectRef, {
+    const projectRef = adminDb.collection("Projects").doc(projectId);
+    await projectRef.update({
       status: "completed",
       progress: 100,
       endDate: new Date().toISOString(),
@@ -270,8 +260,8 @@ export async function restoreProject(
       };
     }
 
-    const projectRef = doc(db, "Projects", projectId);
-    await updateDoc(projectRef, {
+    const projectRef = adminDb.collection("Projects").doc(projectId);
+    await projectRef.update({
       status: "pending",
       rejectionReason: null, // Clear the rejection reason
       rejectedDate: null, // Clear the rejected date
@@ -295,7 +285,7 @@ export async function deleteProject(
       };
     }
 
-    await deleteDoc(doc(db, "Projects", projectId));
+    await adminDb.collection("Projects").doc(projectId).delete();
 
     return { success: true };
   } catch (error) {
@@ -344,13 +334,13 @@ export async function savePaymentDetails(
       };
     }
 
-    const paymentRef = doc(db, "PaymentDetails", uid);
-    const paymentDoc = await getDoc(paymentRef);
+    const paymentRef = adminDb.collection("PaymentDetails").doc(uid);
+    const paymentDoc = await paymentRef.get();
 
     const currentTime = new Date().toISOString();
 
-    if (paymentDoc.exists()) {
-      await updateDoc(paymentRef, {
+    if (paymentDoc.exists) {
+      await paymentRef.update({
         [paymentType]: paymentData,
         updatedAt: currentTime,
       });
@@ -377,7 +367,7 @@ export async function savePaymentDetails(
 
       newPaymentDetails[paymentType] = paymentData;
 
-      await setDoc(paymentRef, newPaymentDetails);
+      await paymentRef.set(newPaymentDetails);
     }
 
     return { success: true };
@@ -399,8 +389,8 @@ export async function updatePaymentDetails(
       };
     }
 
-    const paymentRef = doc(db, "PaymentDetails", uid);
-    await updateDoc(paymentRef, {
+    const paymentRef = adminDb.collection("PaymentDetails").doc(uid);
+    await paymentRef.update({
       ...updates,
       updatedAt: new Date().toISOString(),
     });
@@ -423,7 +413,7 @@ export async function deletePaymentDetails(
       };
     }
 
-    await deleteDoc(doc(db, "PaymentDetails", uid));
+    await adminDb.collection("PaymentDetails").doc(uid).delete();
 
     return { success: true };
   } catch (error) {
@@ -444,7 +434,7 @@ export async function deletePaymentMethod(
       };
     }
 
-    const paymentRef = doc(db, "PaymentDetails", uid);
+    const paymentRef = adminDb.collection("PaymentDetails").doc(uid);
 
     let resetData: any = {};
 
@@ -485,7 +475,7 @@ export async function deletePaymentMethod(
         break;
     }
 
-    await updateDoc(paymentRef, resetData);
+    await paymentRef.update(resetData);
 
     return { success: true };
   } catch (error) {
@@ -496,8 +486,8 @@ export async function deletePaymentMethod(
 
 export async function getAllPaymentRecords(): Promise<PaymentRecord[]> {
   try {
-    const paymentRef = collection(db, "ClientPaymentDetails");
-    const querySnapshot = await getDocs(paymentRef);
+    const paymentRef = adminDb.collection("ClientPaymentDetails");
+    const querySnapshot = await paymentRef.get();
     const paymentRecords: PaymentRecord[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -520,8 +510,10 @@ export async function updatePaymentStatus(
   status: "pending" | "verified" | "rejected"
 ) {
   try {
-    const paymentRef = doc(db, "ClientPaymentDetails", paymentId);
-    await updateDoc(paymentRef, {
+    const paymentRef = adminDb
+      .collection("ClientPaymentDetails")
+      .doc(paymentId);
+    await paymentRef.update({
       status: status,
     });
 
@@ -537,10 +529,10 @@ export async function updatePaymentStatus(
  */
 export async function getAllApplications() {
   try {
-    const applicationsRef = collection(db, "applications");
-    const q = query(applicationsRef, orderBy("createdAt", "desc"));
-
-    const querySnapshot = await getDocs(q);
+    const applicationsRef = adminDb.collection("applications");
+    const querySnapshot = await applicationsRef
+      .orderBy("createdAt", "desc")
+      .get();
     const applications: Application[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -570,10 +562,12 @@ export async function getApplicationById(applicationId: string) {
       };
     }
 
-    const applicationRef = doc(db, "applications", applicationId);
-    const applicationSnap = await getDoc(applicationRef);
+    const applicationRef = adminDb
+      .collection("applications")
+      .doc(applicationId);
+    const applicationSnap = await applicationRef.get();
 
-    if (applicationSnap.exists()) {
+    if (applicationSnap.exists) {
       const data = applicationSnap.data();
       return {
         id: applicationSnap.id,
@@ -597,14 +591,12 @@ export async function getApplicationsByStatus(
   status: "Pending" | "Accepted" | "Rejected"
 ): Promise<Application[]> {
   try {
-    const applicationsRef = collection(db, "applications");
-    const q = query(
-      applicationsRef,
-      where("applicationStatus", "==", status),
-      orderBy("createdAt", "desc")
-    );
+    const applicationsRef = adminDb.collection("applications");
+    const querySnapshot = await applicationsRef
+      .where("applicationStatus", "==", status)
+      .orderBy("createdAt", "desc")
+      .get();
 
-    const querySnapshot = await getDocs(q);
     const applications: Application[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -638,7 +630,7 @@ export async function deleteApplication(
       };
     }
 
-    await deleteDoc(doc(db, "applications", applicationId));
+    await adminDb.collection("applications").doc(applicationId).delete();
 
     return { success: true };
   } catch (error) {
@@ -664,8 +656,10 @@ export async function updateApplicationStatus(
       };
     }
 
-    const applicationRef = doc(db, "applications", applicationId);
-    await updateDoc(applicationRef, {
+    const applicationRef = adminDb
+      .collection("applications")
+      .doc(applicationId);
+    await applicationRef.update({
       applicationStatus: status,
     });
 
@@ -696,8 +690,10 @@ export async function updateApplicationOriginality(
       };
     }
 
-    const applicationRef = doc(db, "applications", applicationId);
-    await updateDoc(applicationRef, {
+    const applicationRef = adminDb
+      .collection("applications")
+      .doc(applicationId);
+    await applicationRef.update({
       "aiAnalysis.originalityScores": originalityScores,
       aiAnalysisStatus: "originality-complete",
     });
@@ -721,8 +717,10 @@ export async function updateApplicationCorrectness(
       };
     }
 
-    const applicationRef = doc(db, "applications", applicationId);
-    await updateDoc(applicationRef, {
+    const applicationRef = adminDb
+      .collection("applications")
+      .doc(applicationId);
+    await applicationRef.update({
       "aiAnalysis.correctnessScores": correctnessScores,
       aiAnalysisStatus: "correctness-complete",
     });
@@ -733,35 +731,6 @@ export async function updateApplicationCorrectness(
     return { success: false, error: "Failed to update correctness scores" };
   }
 }
-
-// export async function updateApplicationAIAnalysis(
-//   applicationId: string,
-//   overallVerdict: AIVerdict,
-//   aiRecommendation: string,
-//   overallScore: number
-// ): Promise<{ success: boolean; error?: string }> {
-//   try {
-//     if (!applicationId || !overallVerdict || !aiRecommendation || overallScore === undefined) {
-//       return {
-//         success: false,
-//         error: "Application ID, verdict, recommendation, and overall score are required",
-//       };
-//     }
-
-//     const applicationRef = doc(db, "applications", applicationId);
-//     await updateDoc(applicationRef, {
-//       "aiAnalysis.overallVerdict": overallVerdict,
-//       "aiAnalysis.aiRecommendation": aiRecommendation,
-//       overallScore: overallScore,
-//       aiAnalysisStatus: "analyzed",
-//     });
-
-//     return { success: true };
-//   } catch (error) {
-//     console.error("Error updating AI analysis:", error);
-//     return { success: false, error: "Failed to update AI analysis" };
-//   }
-// }
 
 /**
  * Update AI analysis for application
@@ -783,8 +752,10 @@ export async function updateApplicationAIAnalysis(
       };
     }
 
-    const applicationRef = doc(db, "applications", applicationId);
-    await updateDoc(applicationRef, {
+    const applicationRef = adminDb
+      .collection("applications")
+      .doc(applicationId);
+    await applicationRef.update({
       aiAnalysis: aiAnalysis,
       overallScore: overallScore,
       aiAnalysisStatus: "analyzed",
@@ -813,14 +784,13 @@ export async function updateApplicationCareerRecommendations(
       };
     }
 
-    // console.log(`Updating career recommendations for application: ${applicationId}`);
-
-    const applicationRef = doc(db, "applications", applicationId);
-    await updateDoc(applicationRef, {
+    const applicationRef = adminDb
+      .collection("applications")
+      .doc(applicationId);
+    await applicationRef.update({
       careerRecommendations,
     });
 
-    //  console.log(`Career recommendations updated successfully for application: ${applicationId}`);
     return { success: true };
   } catch (error: unknown) {
     console.error("Error updating career recommendations:", error);
@@ -864,8 +834,6 @@ export async function createSubadmin(
       };
     }
 
-    //  console.log(`Creating subadmin: ${email}`);
-
     // Create user in Firebase Auth
     const userRecord = await adminAuth.createUser({
       email,
@@ -874,15 +842,11 @@ export async function createSubadmin(
       disabled: false,
     });
 
-    //  console.log(`User created in Firebase Auth: ${userRecord.uid}`);
-
     // Set custom claims - subadmin role
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: "subadmin" });
-    //  console.log(`Custom claims set for: ${userRecord.uid}`);
 
     // Revoke refresh tokens to force immediate token refresh
     await adminAuth.revokeRefreshTokens(userRecord.uid);
-    // console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
 
     // Create user profile in Firestore
     const subadminProfile: SubadminProfile = {
@@ -898,8 +862,7 @@ export async function createSubadmin(
       createdBy,
     };
 
-    await setDoc(doc(db, "users", userRecord.uid), subadminProfile);
-    //  console.log(`Subadmin profile created in Firestore: ${userRecord.uid}`);
+    await adminDb.collection("users").doc(userRecord.uid).set(subadminProfile);
 
     return { success: true, uid: userRecord.uid };
   } catch (error: any) {
@@ -925,10 +888,8 @@ export async function createSubadmin(
  */
 export async function getAllSubadmins(): Promise<SubadminProfile[]> {
   try {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("role", "==", "subadmin"));
-
-    const querySnapshot = await getDocs(q);
+    const usersRef = adminDb.collection("users");
+    const querySnapshot = await usersRef.where("role", "==", "subadmin").get();
     const subadmins: SubadminProfile[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -939,7 +900,6 @@ export async function getAllSubadmins(): Promise<SubadminProfile[]> {
       } as SubadminProfile);
     });
 
-    // console.log(`Retrieved ${subadmins.length} subadmins`);
     return subadmins;
   } catch (error) {
     console.error("Error fetching subadmins:", error);
@@ -967,8 +927,6 @@ export async function updateSubadmin(
       };
     }
 
-    // console.log(`Updating subadmin: ${uid}`);
-
     const updateData: any = {
       ...updates,
       lastLogin: new Date().toISOString(),
@@ -982,17 +940,14 @@ export async function updateSubadmin(
 
     if (Object.keys(authUpdates).length > 0) {
       await adminAuth.updateUser(uid, authUpdates);
-      //   console.log(`Firebase Auth updated for: ${uid}`);
     }
 
     // Revoke refresh tokens to apply changes immediately
     await adminAuth.revokeRefreshTokens(uid);
-    //  console.log(`Refresh tokens revoked for updated subadmin: ${uid}`);
 
     // Update Firestore document
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, updateData);
-    //  console.log(`Firestore updated for: ${uid}`);
+    const userRef = adminDb.collection("users").doc(uid);
+    await userRef.update(updateData);
 
     return { success: true };
   } catch (error: any) {
@@ -1024,8 +979,6 @@ export async function toggleSubadminStatus(
       };
     }
 
-    // console.log(`Toggling status for subadmin: ${uid} to ${isActive}`);
-
     // Update Firebase Auth disabled status (opposite of isActive)
     await adminAuth.updateUser(uid, { disabled: !isActive });
 
@@ -1033,10 +986,9 @@ export async function toggleSubadminStatus(
     await adminAuth.revokeRefreshTokens(uid);
 
     // Update Firestore document
-    const userRef = doc(db, "users", uid);
-    await updateDoc(userRef, { isActive });
+    const userRef = adminDb.collection("users").doc(uid);
+    await userRef.update({ isActive });
 
-    // console.log(`Status toggled for subadmin: ${uid}`);
     return { success: true };
   } catch (error) {
     console.error("Error toggling subadmin status:", error);
@@ -1064,9 +1016,8 @@ export async function deleteSubadmin(
     await adminAuth.deleteUser(uid);
 
     // Delete from Firestore
-    await deleteDoc(doc(db, "users", uid));
+    await adminDb.collection("users").doc(uid).delete();
 
-    // console.log(`Subadmin deleted: ${uid}`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting subadmin:", error);
@@ -1091,9 +1042,8 @@ export interface AIKey {
  */
 export async function checkAIIDExists(aiID: string): Promise<boolean> {
   try {
-    const aiKeysRef = collection(db, "aiKeys");
-    const q = query(aiKeysRef, where("aiID", "==", aiID));
-    const querySnapshot = await getDocs(q);
+    const aiKeysRef = adminDb.collection("aiKeys");
+    const querySnapshot = await aiKeysRef.where("aiID", "==", aiID).get();
     return !querySnapshot.empty;
   } catch (error) {
     console.error("Error checking aiID existence:", error);
@@ -1106,10 +1056,8 @@ export async function checkAIIDExists(aiID: string): Promise<boolean> {
  */
 export async function getAllAIKeys(): Promise<AIKey[]> {
   try {
-    const aiKeysRef = collection(db, "aiKeys");
-    const q = query(aiKeysRef, orderBy("priority", "asc"));
-
-    const querySnapshot = await getDocs(q);
+    const aiKeysRef = adminDb.collection("aiKeys");
+    const querySnapshot = await aiKeysRef.orderBy("priority", "asc").get();
     const aiKeys: AIKey[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -1120,7 +1068,6 @@ export async function getAllAIKeys(): Promise<AIKey[]> {
       } as AIKey);
     });
 
-    // console.log(`Retrieved ${aiKeys.length} AI keys`);
     return aiKeys;
   } catch (error) {
     console.error("Error fetching AI keys:", error);
@@ -1159,12 +1106,10 @@ export async function createAIKey(
     }
 
     // Check if priority already exists
-    const existingKeysRef = collection(db, "aiKeys");
-    const priorityQuery = query(
-      existingKeysRef,
-      where("priority", "==", priority)
-    );
-    const prioritySnapshot = await getDocs(priorityQuery);
+    const existingKeysRef = adminDb.collection("aiKeys");
+    const prioritySnapshot = await existingKeysRef
+      .where("priority", "==", priority)
+      .get();
 
     if (!prioritySnapshot.empty) {
       return {
@@ -1183,7 +1128,7 @@ export async function createAIKey(
       createdAt: new Date().toISOString(),
     };
 
-    const docRef = await addDoc(collection(db, "aiKeys"), aiKeyData);
+    const docRef = await adminDb.collection("aiKeys").add(aiKeyData);
     console.log(`AI key created with docId: ${docRef.id}, aiID: ${aiID}`);
 
     return { success: true, docId: docRef.id };
@@ -1219,12 +1164,10 @@ export async function updateAIKey(
 
     // Check if new aiID conflicts with existing keys (if aiID is being updated)
     if (updates.aiID) {
-      const existingKeysRef = collection(db, "aiKeys");
-      const aiIDQuery = query(
-        existingKeysRef,
-        where("aiID", "==", updates.aiID)
-      );
-      const aiIDSnapshot = await getDocs(aiIDQuery);
+      const existingKeysRef = adminDb.collection("aiKeys");
+      const aiIDSnapshot = await existingKeysRef
+        .where("aiID", "==", updates.aiID)
+        .get();
 
       // Check if any existing key (other than current one) has this aiID
       const conflictingKey = aiIDSnapshot.docs.find((doc) => doc.id !== docId);
@@ -1238,12 +1181,10 @@ export async function updateAIKey(
 
     // Check if new priority conflicts with existing keys (if priority is being updated)
     if (updates.priority) {
-      const existingKeysRef = collection(db, "aiKeys");
-      const priorityQuery = query(
-        existingKeysRef,
-        where("priority", "==", updates.priority)
-      );
-      const prioritySnapshot = await getDocs(priorityQuery);
+      const existingKeysRef = adminDb.collection("aiKeys");
+      const prioritySnapshot = await existingKeysRef
+        .where("priority", "==", updates.priority)
+        .get();
 
       // Check if any existing key (other than current one) has this priority
       const conflictingKey = prioritySnapshot.docs.find(
@@ -1257,8 +1198,8 @@ export async function updateAIKey(
       }
     }
 
-    const aiKeyRef = doc(db, "aiKeys", docId);
-    await updateDoc(aiKeyRef, updates);
+    const aiKeyRef = adminDb.collection("aiKeys").doc(docId);
+    await aiKeyRef.update(updates);
     console.log(`AI key updated with docId: ${docId}`);
 
     return { success: true };
@@ -1288,8 +1229,8 @@ export async function toggleAIKeyStatus(
       `Toggling status for AI key with docId: ${docId} to ${newStatus}`
     );
 
-    const aiKeyRef = doc(db, "aiKeys", docId);
-    await updateDoc(aiKeyRef, { status: newStatus });
+    const aiKeyRef = adminDb.collection("aiKeys").doc(docId);
+    await aiKeyRef.update({ status: newStatus });
 
     console.log(`Status toggled for AI key with docId: ${docId}`);
     return { success: true };
@@ -1314,7 +1255,7 @@ export async function deleteAIKey(
     }
 
     console.log(`Deleting AI key with docId: ${docId}`);
-    await deleteDoc(doc(db, "aiKeys", docId));
+    await adminDb.collection("aiKeys").doc(docId).delete();
     console.log(`AI key deleted with docId: ${docId}`);
 
     return { success: true };
@@ -1330,15 +1271,13 @@ export async function deleteAIKey(
  */
 export async function getActiveGoogleAIKeys(): Promise<AIKeyFromDB[]> {
   try {
-    const aiKeysRef = collection(db, "aiKeys");
-    const q = query(
-      aiKeysRef,
-      where("status", "==", "active"),
-      where("provider", "==", "Google"),
-      orderBy("priority", "asc")
-    );
+    const aiKeysRef = adminDb.collection("aiKeys");
+    const querySnapshot = await aiKeysRef
+      .where("status", "==", "active")
+      .where("provider", "==", "Google")
+      .orderBy("priority", "asc")
+      .get();
 
-    const querySnapshot = await getDocs(q);
     const aiKeys: AIKeyFromDB[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -1394,8 +1333,6 @@ export async function createClient(
       };
     }
 
-    //  console.log(`Creating client: ${email}`);
-
     // Create user in Firebase Auth
     const userRecord = await adminAuth.createUser({
       email,
@@ -1404,15 +1341,11 @@ export async function createClient(
       disabled: false,
     });
 
-    //  console.log(`User created in Firebase Auth: ${userRecord.uid}`);
-
     // Set custom claims - client role
     await adminAuth.setCustomUserClaims(userRecord.uid, { role: "client" });
-    //  console.log(`Custom claims set for: ${userRecord.uid}`);
 
     // Revoke refresh tokens to force immediate token refresh
     await adminAuth.revokeRefreshTokens(userRecord.uid);
-    //    console.log(`Refresh tokens revoked for: ${userRecord.uid}`);
 
     // Create user profile in Firestore - using "users" collection
     const clientProfile: ClientRecord = {
@@ -1427,7 +1360,7 @@ export async function createClient(
       lastLogin: null,
     };
 
-    await setDoc(doc(db, "users", userRecord.uid), clientProfile);
+    await adminDb.collection("users").doc(userRecord.uid).set(clientProfile);
     console.log(
       `Client profile created in Firestore users collection: ${userRecord.uid}`
     );
@@ -1455,10 +1388,8 @@ export async function createClient(
  */
 export async function getAllClients(): Promise<ClientRecord[]> {
   try {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("role", "==", "client"));
-
-    const querySnapshot = await getDocs(q);
+    const usersRef = adminDb.collection("users");
+    const querySnapshot = await usersRef.where("role", "==", "client").get();
     const clients: ClientRecord[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -1469,7 +1400,6 @@ export async function getAllClients(): Promise<ClientRecord[]> {
       } as ClientRecord);
     });
 
-    //    console.log(`Retrieved ${clients.length} clients from users collection`);
     return clients;
   } catch (error) {
     console.error("Error fetching clients:", error);
@@ -1499,8 +1429,6 @@ export async function updateClient(
       };
     }
 
-    // console.log(`Updating client: ${uid}`);
-
     const updateData: any = { ...updates };
 
     // Update Firebase Auth if email, name, or password is being changed
@@ -1511,17 +1439,14 @@ export async function updateClient(
 
     if (Object.keys(authUpdates).length > 0) {
       await adminAuth.updateUser(uid, authUpdates);
-      //   console.log(`Firebase Auth updated for: ${uid}`);
     }
 
     // Revoke refresh tokens to apply changes immediately
     await adminAuth.revokeRefreshTokens(uid);
-    //  console.log(`Refresh tokens revoked for updated client: ${uid}`);
 
     // Update Firestore document in users collection
-    const clientRef = doc(db, "users", uid);
-    await updateDoc(clientRef, updateData);
-    // console.log(`Firestore users collection updated for: ${uid}`);
+    const clientRef = adminDb.collection("users").doc(uid);
+    await clientRef.update(updateData);
 
     return { success: true };
   } catch (error: any) {
@@ -1552,15 +1477,12 @@ export async function deleteClient(
       };
     }
 
-    // console.log(`Deleting client: ${uid}`);
-
     // Delete from Firebase Auth
     await adminAuth.deleteUser(uid);
 
     // Delete from Firestore users collection
-    await deleteDoc(doc(db, "users", uid));
+    await adminDb.collection("users").doc(uid).delete();
 
-    // console.log(`Client deleted from users collection: ${uid}`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting client:", error);
@@ -1630,7 +1552,7 @@ export async function createDeveloper(
       lastLogin: null,
     };
 
-    await setDoc(doc(db, "users", userRecord.uid), developerProfile);
+    await adminDb.collection("users").doc(userRecord.uid).set(developerProfile);
     console.log(
       `Developer profile created in Firestore users collection: ${userRecord.uid}`
     );
@@ -1658,10 +1580,8 @@ export async function createDeveloper(
  */
 export async function getAllDevelopers(): Promise<DeveloperRecord[]> {
   try {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("role", "==", "developer"));
-
-    const querySnapshot = await getDocs(q);
+    const usersRef = adminDb.collection("users");
+    const querySnapshot = await usersRef.where("role", "==", "developer").get();
     const developers: DeveloperRecord[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -1724,8 +1644,8 @@ export async function updateDeveloper(
     console.log(`Refresh tokens revoked for updated developer: ${uid}`);
 
     // Update Firestore document in users collection
-    const developerRef = doc(db, "users", uid);
-    await updateDoc(developerRef, updateData);
+    const developerRef = adminDb.collection("users").doc(uid);
+    await developerRef.update(updateData);
     console.log(`Firestore users collection updated for: ${uid}`);
 
     return { success: true };
@@ -1763,7 +1683,7 @@ export async function deleteDeveloper(
     await adminAuth.deleteUser(uid);
 
     // Delete from Firestore users collection
-    await deleteDoc(doc(db, "users", uid));
+    await adminDb.collection("users").doc(uid).delete();
 
     console.log(`Developer deleted from users collection: ${uid}`);
     return { success: true };

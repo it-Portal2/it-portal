@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig = {
+const nextConfig: NextConfig = {
   //output: "export",
   devIndicators: false,
   eslint: {
@@ -8,9 +8,6 @@ const nextConfig = {
   },
   images: { unoptimized: true },
   trailingSlash: true,
-  experimental: {
-    nodeMiddleware: true,
-  },
-} as NextConfig;
+};
 
 export default nextConfig;

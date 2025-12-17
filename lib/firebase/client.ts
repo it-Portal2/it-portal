@@ -1,25 +1,13 @@
-import {
-  collection,
-  getDocs,
-  doc,
-  query,
-  where,
-  orderBy,
-  updateDoc,
-  limit,
-  setDoc,
-  addDoc
-} from "firebase/firestore";
+import { adminDb } from "@/firebaseAdmin";
 import { Project, ProjectStatus, Task } from "../types";
-import { db } from "@/firebase";
 
 // Get all projects for a specific client
 export async function getClientProjects(clientEmail: string) {
   try {
-    const projectsRef = collection(db, "Projects");
-    const q = query(projectsRef, where("clientEmail", "==", clientEmail));
-
-    const querySnapshot = await getDocs(q);
+    const projectsRef = adminDb.collection("Projects");
+    const querySnapshot = await projectsRef
+      .where("clientEmail", "==", clientEmail)
+      .get();
     const projects: Project[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -43,15 +31,13 @@ export async function getProjectsByStatus(
   status: ProjectStatus
 ) {
   try {
-    const projectsRef = collection(db, "Projects");
-    const q = query(
-      projectsRef,
-      where("clientEmail", "==", clientEmail),
-      where("status", "==", status),
-      orderBy("submittedAt", "desc")
-    );
+    const projectsRef = adminDb.collection("Projects");
+    const querySnapshot = await projectsRef
+      .where("clientEmail", "==", clientEmail)
+      .where("status", "==", status)
+      .orderBy("submittedAt", "desc")
+      .get();
 
-    const querySnapshot = await getDocs(q);
     const projects: Project[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -75,15 +61,13 @@ export async function getProjectsByStatus(
 // Get recent projects (limited number)
 export async function getRecentProjects(clientEmail: string, limitCount = 5) {
   try {
-    const projectsRef = collection(db, "Projects");
-    const q = query(
-      projectsRef,
-      where("clientEmail", "==", clientEmail),
-      orderBy("submittedAt", "desc"),
-      limit(limitCount)
-    );
+    const projectsRef = adminDb.collection("Projects");
+    const querySnapshot = await projectsRef
+      .where("clientEmail", "==", clientEmail)
+      .orderBy("submittedAt", "desc")
+      .limit(limitCount)
+      .get();
 
-    const querySnapshot = await getDocs(q);
     const projects: Project[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -105,54 +89,56 @@ export async function getRecentProjects(clientEmail: string, limitCount = 5) {
 }
 // Types for payment records
 export type PaymentRecord = {
-  id: string
-  clientName: string
-  clientEmail: string
-  projectName: string
-  modeOfPayment: string
-  paidAmount: number
-  currency: string
-  receiptUrl: string
-  status: "pending" | "verified" | "rejected"
-  createdAt: string
-  paymentType: "full" | "installment"
-  installmentPercentage?: number
-  totalProjectAmount?: number
-}
+  id: string;
+  clientName: string;
+  clientEmail: string;
+  projectName: string;
+  modeOfPayment: string;
+  paidAmount: number;
+  currency: string;
+  receiptUrl: string;
+  status: "pending" | "verified" | "rejected";
+  createdAt: string;
+  paymentType: "full" | "installment";
+  installmentPercentage?: number;
+  totalProjectAmount?: number;
+};
 
 export interface PaymentFormData {
-  id?: string
-  clientName: string
-  projectName: string
-  clientEmail: string
-  modeOfPayment: string
-  paidAmount: number
-  currency: string
-  receiptUrl: string
-  status: "pending" | "verified" | "rejected"
-  createdAt: string
-  paymentType: "full" | "installment"
-  installmentPercentage?: number
-  totalProjectAmount?: number
+  id?: string;
+  clientName: string;
+  projectName: string;
+  clientEmail: string;
+  modeOfPayment: string;
+  paidAmount: number;
+  currency: string;
+  receiptUrl: string;
+  status: "pending" | "verified" | "rejected";
+  createdAt: string;
+  paymentType: "full" | "installment";
+  installmentPercentage?: number;
+  totalProjectAmount?: number;
 }
 
 // Submit payment record
 export async function submitPaymentRecord(paymentData: PaymentFormData) {
   try {
-    const paymentRecord: Omit<PaymentRecord, 'id'> = {
+    const paymentRecord: Omit<PaymentRecord, "id"> = {
       ...paymentData,
       status: "pending",
     };
 
-    const docRef = await addDoc(collection(db, "ClientPaymentDetails"), paymentRecord);
-    
+    const docRef = await adminDb
+      .collection("ClientPaymentDetails")
+      .add(paymentRecord);
+
     return {
       success: true,
       id: docRef.id,
       data: {
         id: docRef.id,
         ...paymentRecord,
-      } as PaymentRecord
+      } as PaymentRecord,
     };
   } catch (error) {
     console.error("Error submitting payment record:", error);
@@ -163,13 +149,11 @@ export async function submitPaymentRecord(paymentData: PaymentFormData) {
 // Get all payment records for a specific client
 export async function getClientPaymentRecords(clientEmail: string) {
   try {
-    const paymentRef = collection(db, "ClientPaymentDetails");
-    const q = query(
-      paymentRef,
-      where("clientEmail", "==", clientEmail),
-    );
+    const paymentRef = adminDb.collection("ClientPaymentDetails");
+    const querySnapshot = await paymentRef
+      .where("clientEmail", "==", clientEmail)
+      .get();
 
-    const querySnapshot = await getDocs(q);
     const paymentRecords: PaymentRecord[] = [];
 
     querySnapshot.forEach((doc) => {
@@ -186,6 +170,3 @@ export async function getClientPaymentRecords(clientEmail: string) {
     throw error;
   }
 }
-
-
-
