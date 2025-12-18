@@ -107,7 +107,11 @@ export async function removeProjectDocumentAction(
   documentId: string,
   redirectPath: string = "/admin/ongoing"
 ) {
-  const result = await removeProjectDocument(projectId, documentType, documentId);
+  const result = await removeProjectDocument(
+    projectId,
+    documentType,
+    documentId
+  );
 
   if (result.success) {
     revalidatePath("/admin/ongoing");
@@ -236,7 +240,12 @@ export async function savePaypalDetailsAction(
   paypalData: { email: string; accountName: string },
   redirectPath: string = "/admin/settings"
 ) {
-  return await savePaymentDetailsAction(uid, "paypal", paypalData, redirectPath);
+  return await savePaymentDetailsAction(
+    uid,
+    "paypal",
+    paypalData,
+    redirectPath
+  );
 }
 
 export async function saveBankDetailsAction(
@@ -250,7 +259,12 @@ export async function saveBankDetailsAction(
   },
   redirectPath: string = "/admin/settings"
 ) {
-  return await savePaymentDetailsAction(uid, "bankDetails", bankData, redirectPath);
+  return await savePaymentDetailsAction(
+    uid,
+    "bankDetails",
+    bankData,
+    redirectPath
+  );
 }
 
 export async function saveCryptoDetailsAction(
@@ -279,7 +293,10 @@ export async function updatePaymentStatusAction(
     return { success: true };
   } catch (error: any) {
     console.error("Error updating payment status:", error);
-    return { success: false, error: error.message || "Failed to update payment status" };
+    return {
+      success: false,
+      error: error.message || "Failed to update payment status",
+    };
   }
 }
 
@@ -293,13 +310,16 @@ export async function fetchAllPaymentRecordsAction(path?: "/admin/payments") {
     return { success: true, data: paymentRecords || [] }; // Ensure data is always an array
   } catch (error: any) {
     console.error("Error fetching all payment records:", error);
-    return { success: false, error: error.message || "Failed to fetch payment records" };
+    return {
+      success: false,
+      error: error.message || "Failed to fetch payment records",
+    };
   }
 }
 
 // Fetch all applications (with optional revalidation)
 export async function fetchAllApplicationsAction(
-  path?:  "/admin/intern-application"
+  path?: "/admin/candidate-application"
 ) {
   try {
     const applications = await getAllApplications();
@@ -328,7 +348,7 @@ export async function fetchApplicationById(id: string) {
 // Fetch applications by status
 export async function fetchApplicationsByStatusAction(
   status: "Pending" | "Accepted" | "Rejected",
-  path: string = "/admin/intern-application"
+  path: string = "/admin/candidate-application"
 ) {
   try {
     const applications = await getApplicationsByStatus(status);
@@ -338,7 +358,10 @@ export async function fetchApplicationsByStatusAction(
     return { success: true, data: applications };
   } catch (error: any) {
     console.error("Error fetching applications by status:", error);
-    return { success: false, error: error.message || "Failed to fetch applications" };
+    return {
+      success: false,
+      error: error.message || "Failed to fetch applications",
+    };
   }
 }
 
@@ -347,13 +370,13 @@ export async function fetchApplicationsByStatusAction(
 export async function updateApplicationStatusAction(
   applicationId: string,
   status: "Accepted" | "Rejected",
-  redirectPath: string = "/admin/intern-application"
+  redirectPath: string = "/admin/candidate-application"
 ) {
   const result = await updateApplicationStatus(applicationId, status);
 
   if (result.success) {
-    revalidatePath("/admin/intern-application"); 
-    revalidatePath(`/admin/intern-application/${applicationId}`); 
+    revalidatePath("/admin/candidate-application");
+    revalidatePath(`/admin/candidate-application/${applicationId}`);
     revalidatePath(redirectPath);
   }
 
@@ -363,12 +386,12 @@ export async function updateApplicationStatusAction(
 // Delete application
 export async function deleteApplicationAction(
   applicationId: string,
-  redirectPath: string = "/admin/intern-application"
+  redirectPath: string = "/admin/candidate-application"
 ) {
   const result = await deleteApplication(applicationId);
 
   if (result.success) {
-    revalidatePath("/admin/intern-application");
+    revalidatePath("/admin/candidate-application");
     revalidatePath(redirectPath);
   }
 
@@ -379,13 +402,16 @@ export async function deleteApplicationAction(
 export async function updateApplicationOriginalityAction(
   applicationId: string,
   originalityScores: any,
-  redirectPath: string = "/admin/intern-application"
+  redirectPath: string = "/admin/candidate-application"
 ) {
-  const result = await updateApplicationOriginality(applicationId, originalityScores);
+  const result = await updateApplicationOriginality(
+    applicationId,
+    originalityScores
+  );
 
   if (result.success) {
-    revalidatePath("/admin/intern-application");
-    revalidatePath(`/admin/intern-application/${applicationId}`);
+    revalidatePath("/admin/candidate-application");
+    revalidatePath(`/admin/candidate-application/${applicationId}`);
     revalidatePath(redirectPath);
   }
 
@@ -396,13 +422,16 @@ export async function updateApplicationOriginalityAction(
 export async function updateApplicationCorrectnessAction(
   applicationId: string,
   correctnessScores: any,
-  redirectPath: string = "/admin/intern-application"
+  redirectPath: string = "/admin/candidate-application"
 ) {
-  const result = await updateApplicationCorrectness(applicationId, correctnessScores);
+  const result = await updateApplicationCorrectness(
+    applicationId,
+    correctnessScores
+  );
 
   if (result.success) {
-    revalidatePath("/admin/intern-application");
-    revalidatePath(`/admin/intern-application/${applicationId}`);
+    revalidatePath("/admin/candidate-application");
+    revalidatePath(`/admin/candidate-application/${applicationId}`);
     revalidatePath(redirectPath);
   }
 
@@ -415,7 +444,7 @@ export async function updateApplicationCorrectnessAction(
 //   overallVerdict: any, // AIVerdict type
 //   aiRecommendation: string,
 //   overallScore: number,
-//   redirectPath: string = "/admin/intern-application"
+//   redirectPath: string = "/admin/candidate-application"
 // ) {
 //   const result = await updateApplicationAIAnalysis(
 //     applicationId,
@@ -425,8 +454,8 @@ export async function updateApplicationCorrectnessAction(
 //   );
 
 //   if (result.success) {
-//     revalidatePath("/admin/intern-application");
-//     revalidatePath(`/admin/intern-application/${applicationId}`);
+//     revalidatePath("/admin/candidate-application");
+//     revalidatePath(`/admin/candidate-application/${applicationId}`);
 //     revalidatePath(redirectPath);
 //   }
 
@@ -437,7 +466,7 @@ export async function updateApplicationAIAnalysisAction(
   applicationId: string,
   aiAnalysis: any,
   overallScore: number,
-  redirectPath: string = "/admin/intern-application"
+  redirectPath: string = "/admin/candidate-application"
 ) {
   const result = await updateApplicationAIAnalysis(
     applicationId,
@@ -446,8 +475,8 @@ export async function updateApplicationAIAnalysisAction(
   );
 
   if (result.success) {
-    revalidatePath("/admin/intern-application");
-    revalidatePath(`/admin/intern-application/${applicationId}`);
+    revalidatePath("/admin/candidate-application");
+    revalidatePath(`/admin/candidate-application/${applicationId}`);
     revalidatePath(redirectPath);
   }
 
@@ -474,11 +503,11 @@ export async function updateCareerRecommendationsOnly(
 
     return updateResult;
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     return { success: false, error: errorMessage };
   }
 }
-
 
 // Updated Subadmin Management Actions - Only for subadmins
 
@@ -499,8 +528,9 @@ export async function createSubadminAction(
   return result;
 }
 
-
-export async function fetchAllSubadminsAction(path: string = "/admin/settings") {
+export async function fetchAllSubadminsAction(
+  path: string = "/admin/settings"
+) {
   try {
     const subadmins = await getAllSubadmins();
 
@@ -509,7 +539,10 @@ export async function fetchAllSubadminsAction(path: string = "/admin/settings") 
     return { success: true, data: subadmins };
   } catch (error: any) {
     console.error("Error fetching subadmins:", error);
-    return { success: false, error: error.message || "Failed to fetch subadmins" };
+    return {
+      success: false,
+      error: error.message || "Failed to fetch subadmins",
+    };
   }
 }
 
@@ -573,7 +606,14 @@ export async function createAIKeyAction(
   status: "active" | "inactive" = "active",
   redirectPath: string = "/admin/settings"
 ) {
-  const result = await createAIKey(aiID, keyName, apiKey, provider, priority, status);
+  const result = await createAIKey(
+    aiID,
+    keyName,
+    apiKey,
+    provider,
+    priority,
+    status
+  );
 
   if (result.success) {
     revalidatePath("/admin/settings");
@@ -642,10 +682,12 @@ export async function fetchAllAIKeysAction(path: string = "/admin/settings") {
     return { success: true, data: aiKeys };
   } catch (error: any) {
     console.error("Error fetching AI keys:", error);
-    return { success: false, error: error.message || "Failed to fetch AI keys" };
+    return {
+      success: false,
+      error: error.message || "Failed to fetch AI keys",
+    };
   }
 }
-
 
 // Client Management Actions
 export async function createClientAction(
@@ -671,7 +713,10 @@ export async function fetchAllClientsAction(path: string = "/admin/clients") {
     return { success: true, data: clients };
   } catch (error: any) {
     console.error("Error fetching clients:", error);
-    return { success: false, error: error.message || "Failed to fetch clients" };
+    return {
+      success: false,
+      error: error.message || "Failed to fetch clients",
+    };
   }
 }
 
@@ -688,12 +733,12 @@ export async function updateClientAction(
   redirectPath: string = "/admin/clients"
 ) {
   const result = await updateClient(uid, updates);
-  
+
   if (result.success) {
     revalidatePath("/admin/clients");
     revalidatePath(redirectPath);
   }
-  
+
   return result;
 }
 
@@ -728,14 +773,19 @@ export async function createDeveloperAction(
   return result;
 }
 
-export async function fetchAllDevelopersAction(path: string = "/admin/developers") {
+export async function fetchAllDevelopersAction(
+  path: string = "/admin/developers"
+) {
   try {
     const developers = await getAllDevelopers();
     revalidatePath(path);
     return { success: true, data: developers };
   } catch (error: any) {
     console.error("Error fetching developers:", error);
-    return { success: false, error: error.message || "Failed to fetch developers" };
+    return {
+      success: false,
+      error: error.message || "Failed to fetch developers",
+    };
   }
 }
 
@@ -752,12 +802,12 @@ export async function updateDeveloperAction(
   redirectPath: string = "/admin/developers"
 ) {
   const result = await updateDeveloper(uid, updates);
-  
+
   if (result.success) {
     revalidatePath("/admin/developers");
     revalidatePath(redirectPath);
   }
-  
+
   return result;
 }
 
@@ -774,5 +824,3 @@ export async function deleteDeveloperAction(
 
   return result;
 }
-
-

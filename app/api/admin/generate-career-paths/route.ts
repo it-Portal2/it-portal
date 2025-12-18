@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateCareerPathRecommendations } from "@/lib/gemini";
 import { updateApplicationCareerRecommendations } from "@/lib/firebase/admin";
+import { revalidatePath } from "next/cache";
 import {
   GeminiConfigurationError,
   GeminiValidationError,
@@ -58,6 +59,11 @@ export async function POST(request: NextRequest) {
       applicationData.id,
       careerRecommendations
     );
+
+    if (updateResult.success) {
+      revalidatePath("/admin/candidate-application");
+      revalidatePath(`/admin/candidate-application/${applicationData.id}`);
+    }
 
     if (!updateResult.success) {
       throw new Error(
