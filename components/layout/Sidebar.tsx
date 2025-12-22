@@ -14,6 +14,7 @@ import {
   LogOut,
   Briefcase,
   CreditCard,
+  Compass,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -51,7 +52,7 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
 
   // Use profile role if available, fallback to prop
   const userRole = profile?.role || role;
-  
+
   // Don't render if no role
   if (!userRole) {
     console.log("Sidebar not rendering - no role available");
@@ -116,6 +117,11 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       icon: <CreditCard size={20} />,
       title: "Payment",
     },
+    {
+      href: "/client/services",
+      icon: <Compass size={20} />,
+      title: "Explore Services",
+    },
   ];
 
   // Both admin and subadmin use admin links
@@ -140,13 +146,13 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (isMobileMenuOpen && !target.closest('[data-sidebar]')) {
+      if (isMobileMenuOpen && !target.closest("[data-sidebar]")) {
         setIsMobileMenuOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMobileMenuOpen]);
 
   return (
@@ -173,7 +179,9 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
           // Desktop: always visible
           "lg:static lg:translate-x-0 lg:shadow-none",
           // Mobile: slide in/out
-          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          isMobileMenuOpen
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
         )}
       >
         {/* Header */}

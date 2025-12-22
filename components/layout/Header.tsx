@@ -104,13 +104,18 @@ const pageMetadata: PageMetadataDict = {
     title: "Settings",
     description: "Manage your account preferences",
   },
+  "/client/services/": {
+    title: "Explore Our Services",
+    description:
+      "Discover additional Cehpoint services to help grow your business",
+  },
 };
 
 const Header = ({ title, description }: DashboardHeaderProps) => {
   const pathname = usePathname();
 
   const dynamicMetadata = pathname ? pageMetadata[pathname] : null;
-  
+
   // Use provided props or fall back to dynamic metadata or defaults
   const currentTitle = title || dynamicMetadata?.title || "Dashboard";
   const currentDescription = description || dynamicMetadata?.description;
@@ -124,7 +129,9 @@ const Header = ({ title, description }: DashboardHeaderProps) => {
     >
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{currentTitle}</h1>
-        {currentDescription && <p className="text-muted-foreground">{currentDescription}</p>}
+        {currentDescription && (
+          <p className="text-muted-foreground">{currentDescription}</p>
+        )}
       </div>
     </motion.div>
   );
