@@ -183,6 +183,7 @@ export interface Application {
   aiQuestions?: QuestionAndAnswer[];
   aiAnalysis?: AIAnalysis | null;
   careerRecommendations?: string[];
+  recordingUrl?: string; // Optional Cloudinary video URL for interview recording
 }
 
 // Props interface for the client component

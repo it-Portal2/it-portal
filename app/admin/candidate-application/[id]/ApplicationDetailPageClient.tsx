@@ -31,6 +31,7 @@ import {
   RefreshCw,
   FileDown,
   BrainCircuit,
+  Video,
 } from "lucide-react";
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
@@ -43,8 +44,7 @@ import {
   updateApplicationStatusAction,
 } from "@/app/actions/admin-actions";
 import axios from "axios";
-import { useRouter } from 'next/navigation'
-
+import { useRouter } from "next/navigation";
 
 const StatusBadge = ({ status }: { status: ApplicationStatus }) => {
   const statusConfig = {
@@ -88,10 +88,10 @@ export default function ApplicationDetailPageClient({
   applicationDetails,
   error,
 }: ApplicationDetailClientProps) {
-  const router = useRouter()
+  const router = useRouter();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [hasAnalyzed, setHasAnalyzed] = useState(
-    applicationDetails?.aiAnalysisStatus === "analyzed"
+    applicationDetails?.aiAnalysisStatus === "analyzed",
   );
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [currentAttempt, setCurrentAttempt] = useState(1);
@@ -103,7 +103,7 @@ export default function ApplicationDetailPageClient({
   const [careerAnalysisPhase, setCareerAnalysisPhase] = useState("");
   const [showCareerDialog, setShowCareerDialog] = useState(false);
   const [careerRecommendations, setCareerRecommendations] = useState<string[]>(
-    applicationDetails?.careerRecommendations || []
+    applicationDetails?.careerRecommendations || [],
   );
 
   // Error state handling
@@ -117,7 +117,9 @@ export default function ApplicationDetailPageClient({
               Error Loading Application
             </h2>
             <p className="text-gray-600 mb-4">{error}</p>
-              <Button variant="outline" onClick={()=> router.back()}>Back to Applications</Button>
+            <Button variant="outline" onClick={() => router.back()}>
+              Back to Applications
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -125,19 +127,19 @@ export default function ApplicationDetailPageClient({
   }
 
   const handleApplicationStatusChange = async (
-    status: "Accepted" | "Rejected"
+    status: "Accepted" | "Rejected",
   ) => {
     try {
       const response = await updateApplicationStatusAction(
         applicationDetails?.id,
-        status
+        status,
       );
 
       if (response.success) {
         toast.success(
           status === "Accepted"
             ? "Application accepted successfully!"
-            : "Application rejected successfully!"
+            : "Application rejected successfully!",
         );
       } else {
         toast.error(`Error: ${response.error}`);
@@ -147,7 +149,7 @@ export default function ApplicationDetailPageClient({
       toast.error(
         status === "Accepted"
           ? "Failed to accept application"
-          : "Failed to reject application"
+          : "Failed to reject application",
       );
     }
   };
@@ -185,14 +187,14 @@ export default function ApplicationDetailPageClient({
       const response = await axios.post(
         "/api/admin/generate-career-paths",
         {
-          applicationData: applicationDetails, 
+          applicationData: applicationDetails,
         },
         {
-          timeout: 40000, 
+          timeout: 40000,
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       clearInterval(progressInterval);
@@ -300,7 +302,7 @@ export default function ApplicationDetailPageClient({
             headers: {
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         const response = await analysisPromise;
@@ -314,7 +316,7 @@ export default function ApplicationDetailPageClient({
           const updateResponse = await updateApplicationAIAnalysisAction(
             applicationDetails.id,
             response.data.aiAnalysis,
-            response.data.overallScore
+            response.data.overallScore,
           );
 
           if (updateResponse.success) {
@@ -332,7 +334,7 @@ export default function ApplicationDetailPageClient({
             // Auto-scroll to results section
             setTimeout(() => {
               const aiResultsSection = document.getElementById(
-                "ai-analysis-results"
+                "ai-analysis-results",
               );
               if (aiResultsSection) {
                 aiResultsSection.scrollIntoView({
@@ -344,7 +346,7 @@ export default function ApplicationDetailPageClient({
             }, 500);
           } else {
             throw new Error(
-              updateResponse.error || "Failed to save analysis results"
+              updateResponse.error || "Failed to save analysis results",
             );
           }
         } else {
@@ -445,7 +447,7 @@ export default function ApplicationDetailPageClient({
             {
               description: userFriendlyMessage,
               duration: 3000,
-            }
+            },
           );
 
           setCurrentAttempt((prev) => prev + 1);
@@ -501,7 +503,7 @@ export default function ApplicationDetailPageClient({
         setIsAnalyzing(false);
       }
     },
-    [applicationDetails, currentAttempt, maxAttempts]
+    [applicationDetails, currentAttempt, maxAttempts],
   );
 
   const generatePdf = useCallback(async () => {
@@ -523,7 +525,7 @@ export default function ApplicationDetailPageClient({
       // Device-optimized settings
       const isMobile =
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
+          navigator.userAgent,
         );
 
       // Generate high-quality canvas using html2canvas-pro (supports oklch)
@@ -609,7 +611,7 @@ export default function ApplicationDetailPageClient({
   const convertFirebaseTimestamp = (timestamp: any) => {
     if (timestamp && timestamp.seconds) {
       return new Date(
-        timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000
+        timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000,
       );
     }
     return new Date(timestamp);
@@ -621,8 +623,8 @@ export default function ApplicationDetailPageClient({
     return Math.round(
       applicationDetails.aiAnalysis.originalityScores.reduce(
         (acc, curr) => acc + curr.score,
-        0
-      ) / applicationDetails.aiAnalysis.originalityScores.length
+        0,
+      ) / applicationDetails.aiAnalysis.originalityScores.length,
     );
   };
 
@@ -632,7 +634,7 @@ export default function ApplicationDetailPageClient({
     return (
       applicationDetails.aiAnalysis.correctnessScores.reduce(
         (acc, curr) => acc + curr.score,
-        0
+        0,
       ) / applicationDetails.aiAnalysis.correctnessScores.length
     ).toFixed(1);
   };
@@ -701,10 +703,15 @@ export default function ApplicationDetailPageClient({
 
       {/* Back Button */}
       <div className="mb-4">
-        <Button variant="ghost" size="sm" onClick={()=> router.back()} className="gap-2 hover:bg-white/60">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Applications
-          </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => router.back()}
+          className="gap-2 hover:bg-white/60"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Applications
+        </Button>
       </div>
 
       <div id="report-capture-section" className="space-y-6">
@@ -961,7 +968,7 @@ export default function ApplicationDetailPageClient({
                     <p className="text-sm font-semibold text-gray-900 mt-1">
                       {applicationDetails?.createdAt
                         ? convertFirebaseTimestamp(
-                            applicationDetails.createdAt
+                            applicationDetails.createdAt,
                           ).toLocaleDateString()
                         : "N/A"}
                     </p>
@@ -972,7 +979,7 @@ export default function ApplicationDetailPageClient({
                     </span>
                     <p className="text-sm font-semibold text-gray-900 mt-1 capitalize">
                       {safeDisplay(
-                        applicationDetails?.startDate?.replace("-", " ")
+                        applicationDetails?.startDate?.replace("-", " "),
                       )}
                     </p>
                   </div>
@@ -1016,68 +1023,97 @@ export default function ApplicationDetailPageClient({
               </CardContent>
             </Card>
 
+            {/* Interview Recording Section */}
+            {applicationDetails?.recordingUrl && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3 text-lg">
+                    <div className="p-2 bg-rose-100 rounded-lg">
+                      <Video className="h-5 w-5 text-rose-600" />
+                    </div>
+                    Interview Recording
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg overflow-hidden border border-gray-200 bg-black">
+                    <video
+                      controls
+                      className="w-full aspect-video"
+                      src={applicationDetails.recordingUrl}
+                      preload="metadata"
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Interview session recording
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Career Path Analysis Section */}
             {applicationDetails?.aiAnalysisStatus === "analyzed" && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3 text-lg">
-                      <div className="p-2 bg-amber-100 rounded-lg">
-                        <Target className="h-5 w-5 text-amber-600" />
-                      </div>
-                      Career Path Analysis
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {careerRecommendations.length === 0 ? (
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600 mb-4">
-                          Generate AI-powered career recommendations for this
-                          highly qualified candidate.
-                        </p>
-                        <Button
-                          onClick={handleCareerAnalysis}
-                          disabled={isCareerAnalyzing}
-                          className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-                        >
-                          {isCareerAnalyzing ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                              Analyzing Career Paths...
-                            </>
-                          ) : (
-                            <>
-                              <BrainCircuit className="h-4 w-4" />
-                              Generate Career Recommendations
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="space-y-2">
-                          {careerRecommendations.map(
-                            (role: string, index: number) => (
-                              <div
-                                key={index}
-                                className="p-3 bg-amber-50 rounded-lg border border-amber-200"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <span className="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-xs font-bold">
-                                    {index + 1}
-                                  </span>
-                                  <span className="text-sm font-medium text-amber-900">
-                                    {role}
-                                  </span>
-                                </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-lg">
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <Target className="h-5 w-5 text-amber-600" />
+                    </div>
+                    Career Path Analysis
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {careerRecommendations.length === 0 ? (
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600 mb-4">
+                        Generate AI-powered career recommendations for this
+                        highly qualified candidate.
+                      </p>
+                      <Button
+                        onClick={handleCareerAnalysis}
+                        disabled={isCareerAnalyzing}
+                        className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                      >
+                        {isCareerAnalyzing ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            Analyzing Career Paths...
+                          </>
+                        ) : (
+                          <>
+                            <BrainCircuit className="h-4 w-4" />
+                            Generate Career Recommendations
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        {careerRecommendations.map(
+                          (role: string, index: number) => (
+                            <div
+                              key={index}
+                              className="p-3 bg-amber-50 rounded-lg border border-amber-200"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="flex-shrink-0 w-6 h-6 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center text-xs font-bold">
+                                  {index + 1}
+                                </span>
+                                <span className="text-sm font-medium text-amber-900">
+                                  {role}
+                                </span>
                               </div>
-                            )
-                          )}
-                        </div>
+                            </div>
+                          ),
+                        )}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right Column - Technical Assessment */}
@@ -1100,7 +1136,7 @@ export default function ApplicationDetailPageClient({
                     </h4>
                     <p className="text-sm text-gray-700">
                       {safeDisplay(
-                        applicationDetails?.resumeAnalysis?.education
+                        applicationDetails?.resumeAnalysis?.education,
                       )}
                     </p>
                   </div>
@@ -1111,7 +1147,7 @@ export default function ApplicationDetailPageClient({
                     </h4>
                     <p className="text-sm text-gray-700">
                       {safeDisplay(
-                        applicationDetails?.resumeAnalysis?.experience
+                        applicationDetails?.resumeAnalysis?.experience,
                       )}
                     </p>
                   </div>
@@ -1132,7 +1168,7 @@ export default function ApplicationDetailPageClient({
                           >
                             {skill}
                           </Badge>
-                        )
+                        ),
                       )
                     ) : (
                       <span className="text-sm text-gray-500">N/A</span>
@@ -1241,7 +1277,7 @@ export default function ApplicationDetailPageClient({
                               {safeDisplay(score.reasoning)}
                             </p>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   </div>
@@ -1284,7 +1320,7 @@ export default function ApplicationDetailPageClient({
                               {safeDisplay(score.reasoning)}
                             </p>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   </div>
@@ -1316,7 +1352,7 @@ export default function ApplicationDetailPageClient({
                         <div>
                           <h5 className="text-2xl font-bold text-gray-900 mb-1">
                             {safeDisplay(
-                              applicationDetails?.aiAnalysis?.overallVerdict
+                              applicationDetails?.aiAnalysis?.overallVerdict,
                             )}
                           </h5>
                           <p className="text-sm text-violet-600 font-medium">
@@ -1327,7 +1363,7 @@ export default function ApplicationDetailPageClient({
                       <div className="p-6 bg-white/80 rounded-xl border border-white/50">
                         <p className="text-sm text-gray-700 leading-relaxed">
                           {safeDisplay(
-                            applicationDetails?.aiAnalysis?.aiRecommendation
+                            applicationDetails?.aiAnalysis?.aiRecommendation,
                           )}
                         </p>
                       </div>

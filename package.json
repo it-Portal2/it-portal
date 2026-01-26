@@ -50,6 +50,7 @@
     "firebase": "^11.4.0",
     "firebase-admin": "^12.7.0",
     "framer-motion": "^12.4.10",
+    "google-auth-library": "^10.5.0",
     "html-to-image": "^1.11.13",
     "html-to-pdfmake": "^2.5.23",
     "html2canvas-pro": "^1.5.11",
