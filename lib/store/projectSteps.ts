@@ -27,6 +27,10 @@ export interface ProjectFormData {
   cloudinaryQuotationUrl: string | null;
   currency: "INR" | "USD";
   projectBudget: number;
+  selectedBundle: {
+    name: string;
+    price: number;
+  } | null;
 }
 
 // Validation schemas remain the same
@@ -52,9 +56,11 @@ const developmentPreferencesSchema = z
     uiUxDesigners: z.number(),
     hasExistingDesign: z.boolean().optional(),
     designLink: z.string().nullable().optional(),
+    selectedBundle: z.any().nullable().optional(),
   })
   .refine(
     (data) =>
+      data.selectedBundle ||
       data.seniorDevelopers + data.juniorDevelopers + data.uiUxDesigners > 0,
     {
       message: "At least one team member is required",
@@ -132,6 +138,7 @@ const defaultFormData: ProjectFormData = {
   cloudinaryQuotationUrl: null,
   currency: "INR",
   projectBudget: 0,
+  selectedBundle: null,
 };
 
 export const useProjectFormStore = create<ProjectFormStore>()(
@@ -177,18 +184,25 @@ export const useProjectFormStore = create<ProjectFormStore>()(
               designer
             );
           }
-          
+
           // If user adds UI/UX designer, reset hasExistingDesign flag
           if (data.uiUxDesigners && data.uiUxDesigners > 0) {
             newFormData.hasExistingDesign = false;
             newFormData.designLink = null;
           }
-          
+
           // If user sets hasExistingDesign to false, clear design link
           if (data.hasExistingDesign === false) {
             newFormData.designLink = null;
           }
-          
+
+          // Reset individual counts if a bundle is selected
+          if (data.selectedBundle) {
+            newFormData.seniorDevelopers = 0;
+            newFormData.juniorDevelopers = 0;
+            newFormData.uiUxDesigners = 0;
+          }
+
           return { formData: newFormData };
         }),
 
@@ -248,13 +262,20 @@ export const useProjectFormStore = create<ProjectFormStore>()(
             ? 50000
             : Math.round((50000 * 1.04) / exchangeRate);
 
-        const totalCost =
-          formData.seniorDevelopers * seniorDevRate +
-          formData.juniorDevelopers * juniorDevRate +
-          formData.uiUxDesigners * uiUxRate +
-          projectManagementCost;
+        let totalCost = 0;
+
+        if (formData.selectedBundle) {
+          totalCost = formData.selectedBundle.price;
+        } else {
+          totalCost =
+            formData.seniorDevelopers * seniorDevRate +
+            formData.juniorDevelopers * juniorDevRate +
+            formData.uiUxDesigners * uiUxRate +
+            projectManagementCost;
+        }
 
         get().updateFormData({ projectBudget: totalCost });
+
         const quotationData: QuotationData = {
           clientName: formData.clientName,
           clientEmail: formData.clientEmail,
@@ -266,7 +287,9 @@ export const useProjectFormStore = create<ProjectFormStore>()(
           juniorDevelopers: formData.juniorDevelopers,
           uiUxDesigners: formData.uiUxDesigners,
           currency: formData.currency,
+          selectedBundle: formData.selectedBundle,
         };
+
         const quotationHtml = generateQuotationHtml(quotationData);
         get().updateFormData({ quotationPdf: quotationHtml });
       },
@@ -313,6 +336,7 @@ export const useProjectFormStore = create<ProjectFormStore>()(
             ...newFormData,
             quotationPdf: null,
             cloudinaryQuotationUrl: null,
+            selectedBundle: null,
           };
         }
         set({ formData: newFormData });

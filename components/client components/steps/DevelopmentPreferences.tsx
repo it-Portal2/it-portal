@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, X, Info, Star } from "lucide-react";
+import { Plus, Minus, X, Info, Star, Sparkles, ArrowRight } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
+import { useRouter } from "next/navigation";
 
 interface DeveloperTypeSelectorProps {
   title: string;
@@ -48,10 +49,10 @@ function DeveloperTypeSelector({
     currency === "INR"
       ? cost
       : cost.replace("₹", "$").replace(/\d+,\d+/g, (match) => {
-          const inrValue = Number.parseInt(match.replace(",", ""));
-          const usdValue = Math.round((inrValue + 0.04 * inrValue) / 83);
-          return usdValue.toLocaleString();
-        });
+        const inrValue = Number.parseInt(match.replace(",", ""));
+        const usdValue = Math.round((inrValue + 0.04 * inrValue) / 83);
+        return usdValue.toLocaleString();
+      });
 
   const handleLeadDesignerClick = () => {
     window.open(designerProfileLink, "_blank", "noopener,noreferrer");
@@ -102,7 +103,7 @@ function DeveloperTypeSelector({
                       d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
                     />
                   </svg>
-                 <span className="hidden sm:flex">Meet Our</span>Lead Designer
+                  <span className="hidden sm:flex">Meet Our</span>Lead Designer
                 </div>
               </div>
             </button>
@@ -138,9 +139,14 @@ export function DevelopmentPreferences() {
   const { formData, updateFormData, validationErrors } = useProjectFormStore();
   const [newArea, setNewArea] = useState("");
   const [showDesignLinkDialog, setShowDesignLinkDialog] = useState(false);
+  const isIndividualSelected =
+    formData.seniorDevelopers > 0 ||
+    formData.juniorDevelopers > 0 ||
+    formData.uiUxDesigners > 0;
   const [designLink, setDesignLink] = useState(formData.designLink || "");
   const [linkError, setLinkError] = useState("");
-  
+  const router = useRouter();
+
   const LEAD_DESIGNER_PROFILE_URL = "https://tithi-ui-ux-design.vercel.app";
 
   const addDevelopmentArea = () => {
@@ -208,9 +214,8 @@ export function DevelopmentPreferences() {
               value={newArea}
               onChange={(e) => setNewArea(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={`placeholder:text-xs ${
-                validationErrors.projectName ? "border-destructive" : ""
-              }`}
+              className={`placeholder:text-xs ${validationErrors.projectName ? "border-destructive" : ""
+                }`}
             />
             <Button type="button" onClick={addDevelopmentArea} size="sm">
               <Plus className="w-4 h-4" />
@@ -235,49 +240,123 @@ export function DevelopmentPreferences() {
               </Badge>
             ))}
           </div>
-        </div>
 
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <DeveloperTypeSelector
-              title="Senior Developer"
-              cost={
-                formData.currency === "INR" ? "(₹70,000-80,000)" : "($940-1000)"
-              }
-              tooltip="Senior developers are seasoned professionals in software development, providing technical leadership and expertise. They ensure high-quality code, troubleshoot complex issues, mentor junior developers, and contribute to project management."
-              value={formData.seniorDevelopers}
-              onChange={(value) => updateFormData({ seniorDevelopers: value })}
-              currency={formData.currency}
-            />
-
-            <DeveloperTypeSelector
-              title="Junior Developer"
-              cost={
-                formData.currency === "INR" ? "(₹20,000-40,000)" : "($376-500)"
-              }
-              tooltip="Junior developers are entry-level professionals learning and contributing to software projects. They write code, assist in testing, and benefit from mentorship to build skills. They adapt to team dynamics, participate in documentation, and focus on continuous learning."
-              value={formData.juniorDevelopers}
-              onChange={(value) => updateFormData({ juniorDevelopers: value })}
-              currency={formData.currency}
-            />
-
-            <DeveloperTypeSelector
-              title="UI/UX Designer (optional)"
-              cost={formData.currency === "INR" ? "(₹8,000)" : "($100)"}
-              tooltip="UI/UX designers craft user-friendly interfaces, creating wireframes and prototypes while prioritizing user needs. They integrate feedback, collaborate with developers, and maintain brand consistency. Proficient in design tools, they stay updated on trends."
-              value={formData.uiUxDesigners}
-              onChange={(value) => updateFormData({ uiUxDesigners: value })}
-              currency={formData.currency}
-              showLeadDesignerBadge={true}
-              designerProfileLink={LEAD_DESIGNER_PROFILE_URL}
-            />
+          {/* Advanced Plan Button or Selected Bundle Info */}
+          <div className="pt-2">
+            {!formData.selectedBundle ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <button
+                        type="button"
+                        disabled={isIndividualSelected}
+                        onClick={() => router.push("/client/plans")}
+                        className={`group relative flex items-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-lg transition-all duration-300 ${isIndividualSelected
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none border border-gray-200"
+                          : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-500/20 hover:scale-105 active:scale-95"
+                          }`}
+                      >
+                        <Sparkles className={`w-5 h-5 transition-transform ${isIndividualSelected ? "" : "animate-pulse group-hover:rotate-12"}`} />
+                        <span>Advanced Plan</span>
+                        {!isIndividualSelected && <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />}
+                        {!isIndividualSelected && <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                      </button>
+                    </span>
+                  </TooltipTrigger>
+                  {isIndividualSelected && (
+                    <TooltipContent side="top" sideOffset={10} align="start" className="max-w-[300px] p-3 bg-gray-900 border-violet-200 shadow-xl">
+                      <div className="space-y-2">
+                        <p className="font-bold text-violet-600 text-sm">Action Required</p>
+                        <p className="text-xs text-white leading-relaxed">
+                          To select an <span className="font-bold">Advanced Plan</span>, the following must be zero:
+                        </p>
+                        <ul className="text-[10px] text-white list-disc pl-4 space-y-1">
+                          <li>Senior Developer (₹70,000-80,000)</li>
+                          <li>Junior Developer (₹20,000-40,000)</li>
+                          <li>UI/UX Designer (₹8,000)</li>
+                        </ul>
+                      </div>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-violet-50 border border-violet-200 rounded-xl gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-violet-600 rounded-lg text-white">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-violet-600 uppercase tracking-wider">Selected Bundle</p>
+                    <h3 className="text-lg font-bold text-gray-900">{formData.selectedBundle.name}</h3>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push("/client/plans")}
+                    className="px-4 py-2 bg-white border border-violet-200 text-violet-600 rounded-lg text-sm font-bold hover:bg-violet-50 transition-colors shadow-sm"
+                  >
+                    Change Plan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateFormData({ selectedBundle: null })}
+                    className="p-2 bg-white border border-red-100 text-red-500 rounded-lg hover:bg-red-50 hover:border-red-200 transition-all shadow-sm"
+                    title="Cancel Plan"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          {validationErrors.teamMembers && (
-            <p className="text-sm text-destructive">
-              {validationErrors.teamMembers}
-            </p>
-          )}
         </div>
+
+        {!formData.selectedBundle && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <DeveloperTypeSelector
+                title="Senior Developer"
+                cost={
+                  formData.currency === "INR" ? "(₹70,000-80,000)" : "($940-1000)"
+                }
+                tooltip="Senior developers are seasoned professionals in software development, providing technical leadership and expertise. They ensure high-quality code, troubleshoot complex issues, mentor junior developers, and contribute to project management."
+                value={formData.seniorDevelopers}
+                onChange={(value) => updateFormData({ seniorDevelopers: value })}
+                currency={formData.currency}
+              />
+
+              <DeveloperTypeSelector
+                title="Junior Developer"
+                cost={
+                  formData.currency === "INR" ? "(₹20,000-40,000)" : "($376-500)"
+                }
+                tooltip="Junior developers are entry-level professionals learning and contributing to software projects. They write code, assist in testing, and benefit from mentorship to build skills. They adapt to team dynamics, participate in documentation, and focus on continuous learning."
+                value={formData.juniorDevelopers}
+                onChange={(value) => updateFormData({ juniorDevelopers: value })}
+                currency={formData.currency}
+              />
+
+              <DeveloperTypeSelector
+                title="UI/UX Designer (optional)"
+                cost={formData.currency === "INR" ? "(₹8,000)" : "($100)"}
+                tooltip="UI/UX designers craft user-friendly interfaces, creating wireframes and prototypes while prioritizing user needs. They integrate feedback, collaborate with developers, and maintain brand consistency. Proficient in design tools, they stay updated on trends."
+                value={formData.uiUxDesigners}
+                onChange={(value) => updateFormData({ uiUxDesigners: value })}
+                currency={formData.currency}
+                showLeadDesignerBadge={true}
+                designerProfileLink={LEAD_DESIGNER_PROFILE_URL}
+              />
+            </div>
+            {validationErrors.teamMembers && (
+              <p className="text-sm text-destructive">
+                {validationErrors.teamMembers}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Design Link Dialog */}

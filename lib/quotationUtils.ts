@@ -32,6 +32,10 @@ export interface QuotationData {
   juniorDevelopers: number;
   uiUxDesigners: number;
   currency: "INR" | "USD";
+  selectedBundle?: {
+    name: string;
+    price: number;
+  } | null;
 }
 
 // Update the generateQuotationHtml function to use the correct conversion formula
@@ -56,40 +60,45 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
     formData.currency === "INR"
       ? baseRates.seniorDevRate
       : Math.round(
-          (baseRates.seniorDevRate + 0.04 * baseRates.seniorDevRate) /
-            exchangeRate
-        );
+        (baseRates.seniorDevRate + 0.04 * baseRates.seniorDevRate) /
+        exchangeRate
+      );
 
   const juniorDevRate =
     formData.currency === "INR"
       ? baseRates.juniorDevRate
       : Math.round(
-          (baseRates.juniorDevRate + 0.04 * baseRates.juniorDevRate) /
-            exchangeRate
-        );
+        (baseRates.juniorDevRate + 0.04 * baseRates.juniorDevRate) /
+        exchangeRate
+      );
 
   const uiUxRate =
     formData.currency === "INR"
       ? baseRates.uiUxRate
       : Math.round(
-          (baseRates.uiUxRate + 0.04 * baseRates.uiUxRate) / exchangeRate
-        );
+        (baseRates.uiUxRate + 0.04 * baseRates.uiUxRate) / exchangeRate
+      );
 
   const projectManagementCost =
     formData.currency === "INR"
       ? baseRates.projectManagementCost
       : Math.round(
-          (baseRates.projectManagementCost +
-            0.04 * baseRates.projectManagementCost) /
-            exchangeRate
-        );
+        (baseRates.projectManagementCost +
+          0.04 * baseRates.projectManagementCost) /
+        exchangeRate
+      );
 
   // Calculate costs
   const seniorDevCost = formData.seniorDevelopers * seniorDevRate;
   const juniorDevCost = formData.juniorDevelopers * juniorDevRate;
   const uiUxCost = formData.uiUxDesigners * uiUxRate;
-  const totalCost =
-    seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
+
+  let totalCost = 0;
+  if (formData.selectedBundle) {
+    totalCost = formData.selectedBundle.price;
+  } else {
+    totalCost = seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
+  }
 
   // Format currency
   const formatCurrency = (amount: number) => {
@@ -338,27 +347,24 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
               <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
               <div>
                 <span class="info-label">Name</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.clientName
-                }</p>
+                <p class="info-value" style="margin: 0;">${formData.clientName
+    }</p>
               </div>
             </div>
             <div class="info-item">
               <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
               <div>
                 <span class="info-label">Email</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.clientEmail
-                }</p>
+                <p class="info-value" style="margin: 0;">${formData.clientEmail
+    }</p>
               </div>
             </div>
             <div class="info-item">
               <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
               <div>
                 <span class="info-label">Phone</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.clientPhoneNumber
-                }</p>
+                <p class="info-value" style="margin: 0;">${formData.clientPhoneNumber
+    }</p>
               </div>
             </div>
           </div>
@@ -372,19 +378,17 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
               <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
               <div>
                 <span class="info-label">Project Name</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.projectName
-                }</p>
+                <p class="info-value" style="margin: 0;">${formData.projectName
+    }</p>
               </div>
             </div>
             <div class="info-item">
               <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
               <div>
                 <span class="info-label">Overview</span>
-                <p class="info-value" style="margin: 0; font-size: 7pt;">${
-                  formData.projectOverview.split(" ").slice(0, 100).join(" ") +
-                  (formData.projectOverview.split(" ").length > 15 ? "..." : "")
-                }</p>
+                <p class="info-value" style="margin: 0; font-size: 7pt;">${formData.projectOverview.split(" ").slice(0, 100).join(" ") +
+    (formData.projectOverview.split(" ").length > 15 ? "..." : "")
+    }</p>
               </div>
             </div>
             <div class="info-item">
@@ -393,12 +397,12 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                 <span class="info-label">Development</span>
                 <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px;">
                   ${formData.developmentAreas
-                    .map(
-                      (area) => `
+      .map(
+        (area) => `
                     <span style= color: var(--quotation-dark); padding: 1px 3px; border-radius: 3px; font-size: 6pt; font-weight: 500;">${area},</span>
                   `
-                    )
-                    .join("")}
+      )
+      .join("")}
                 </div>
               </div>
             </div>
@@ -420,9 +424,28 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
               </tr>
             </thead>
             <tbody>
-              ${
-                formData.seniorDevelopers > 0
-                  ? `
+              ${formData.selectedBundle
+      ? `
+              <tr>
+                <td>
+                  <div class="service-description">
+                    <div class="service-icon">
+                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
+                    </div>
+                    <div class="service-text">
+                      <p class="service-title">${formData.selectedBundle.name}</p>
+                      <p class="service-subtitle">Comprehensive team bundle selected</p>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: right;">${formatCurrency(formData.selectedBundle.price)}</td>
+                <td style="text-align: right; font-weight: 500;">${formatCurrency(formData.selectedBundle.price)}</td>
+              </tr>
+              `
+      : `
+              ${formData.seniorDevelopers > 0
+        ? `
               <tr>
                 <td>
                   <div class="service-description">
@@ -435,23 +458,21 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                     </div>
                   </div>
                 </td>
-                <td style="text-align: center;">${
-                  formData.seniorDevelopers
-                }</td>
+                <td style="text-align: center;">${formData.seniorDevelopers
+        }</td>
                 <td style="text-align: right;">${formatCurrency(
-                  seniorDevRate
-                )}</td>
+          seniorDevRate
+        )}</td>
                 <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  seniorDevCost
-                )}</td>
+          seniorDevCost
+        )}</td>
               </tr>
               `
-                  : ""
-              }
+        : ""
+      }
               
-              ${
-                formData.juniorDevelopers > 0
-                  ? `
+              ${formData.juniorDevelopers > 0
+        ? `
               <tr>
                 <td>
                   <div class="service-description">
@@ -464,23 +485,21 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                     </div>
                   </div>
                 </td>
-                <td style="text-align: center;">${
-                  formData.juniorDevelopers
-                }</td>
+                <td style="text-align: center;">${formData.juniorDevelopers
+        }</td>
                 <td style="text-align: right;">${formatCurrency(
-                  juniorDevRate
-                )}</td>
+          juniorDevRate
+        )}</td>
                 <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  juniorDevCost
-                )}</td>
+          juniorDevCost
+        )}</td>
               </tr>
               `
-                  : ""
-              }
+        : ""
+      }
               
-              ${
-                formData.uiUxDesigners > 0
-                  ? `
+              ${formData.uiUxDesigners > 0
+        ? `
               <tr>
                 <td>
                   <div class="service-description">
@@ -496,12 +515,12 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                 <td style="text-align: center;">${formData.uiUxDesigners}</td>
                 <td style="text-align: right;">${formatCurrency(uiUxRate)}</td>
                 <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  uiUxCost
-                )}</td>
+          uiUxCost
+        )}</td>
               </tr>
               `
-                  : ""
-              }
+        : ""
+      }
               
               <tr>
                 <td>
@@ -517,12 +536,15 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                 </td>
                 <td style="text-align: center;">1</td>
                 <td style="text-align: right;">${formatCurrency(
-                  projectManagementCost
-                )}</td>
+        projectManagementCost
+      )}</td>
                 <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  projectManagementCost
-                )}</td>
+        projectManagementCost
+      )}</td>
               </tr>
+              `
+    }
+
               
               <tr class="total-row">
                 <td colspan="2">
@@ -530,8 +552,8 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                 </td>
                 <td colspan="2" style="text-align: right;">
                   <p style="font-weight: 700; font-size: 10pt; margin: 0;">${formatCurrency(
-                    totalCost
-                  )}</p>
+      totalCost
+    )}</p>
                 </td>
               </tr>
             </tbody>
