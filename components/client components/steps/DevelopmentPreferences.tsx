@@ -13,6 +13,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { plans, PlanBundle } from "@/lib/plan-data";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -143,6 +155,8 @@ export function DevelopmentPreferences() {
     formData.seniorDevelopers > 0 ||
     formData.juniorDevelopers > 0 ||
     formData.uiUxDesigners > 0;
+  const [expandedBundle, setExpandedBundle] = useState<string | null>(null);
+  const [showPlans, setShowPlans] = useState(false);
   const [designLink, setDesignLink] = useState(formData.designLink || "");
   const [linkError, setLinkError] = useState("");
   const router = useRouter();
@@ -241,73 +255,166 @@ export function DevelopmentPreferences() {
             ))}
           </div>
 
-          {/* Advanced Plan Button or Selected Bundle Info */}
+          {/* Advanced Plan Visibility Toggle */}
           <div className="pt-2">
             {!formData.selectedBundle ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
+              <div className="space-y-4">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
                       <button
                         type="button"
                         disabled={isIndividualSelected}
-                        onClick={() => router.push("/client/plans")}
-                        className={`group relative flex items-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-lg transition-all duration-300 ${isIndividualSelected
+                        onClick={() => setShowPlans(!showPlans)}
+                        className={`group relative flex w-full items-center justify-between px-6 py-4 rounded-xl font-bold shadow-lg transition-all duration-300 ${isIndividualSelected
                           ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none border border-gray-200"
-                          : "bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-violet-500/20 hover:scale-105 active:scale-95"
+                          : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-500/20 hover:scale-[1.01] active:scale-95"
                           }`}
                       >
-                        <Sparkles className={`w-5 h-5 transition-transform ${isIndividualSelected ? "" : "animate-pulse group-hover:rotate-12"}`} />
-                        <span>Advanced Plan</span>
-                        {!isIndividualSelected && <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />}
-                        {!isIndividualSelected && <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                        <div className="flex items-center gap-3">
+                          <Sparkles className={`w-5 h-5 ${isIndividualSelected ? "" : "animate-pulse"}`} />
+                          <span className="text-base uppercase tracking-wider">Advanced Plan</span>
+                        </div>
+                        {!isIndividualSelected && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium opacity-80">{showPlans ? "Hide Plans" : "View All Plans"}</span>
+                            {showPlans ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </div>
+                        )}
                       </button>
-                    </span>
-                  </TooltipTrigger>
-                  {isIndividualSelected && (
-                    <TooltipContent side="top" sideOffset={10} align="start" className="max-w-[300px] p-3 bg-gray-900 border-violet-200 shadow-xl">
-                      <div className="space-y-2">
-                        <p className="font-bold text-violet-600 text-sm">Action Required</p>
-                        <p className="text-xs text-white leading-relaxed">
-                          To select an <span className="font-bold">Advanced Plan</span>, the following must be zero:
-                        </p>
-                        <ul className="text-[10px] text-white list-disc pl-4 space-y-1">
-                          <li>Senior Developer (₹70,000-80,000)</li>
-                          <li>Junior Developer (₹20,000-40,000)</li>
-                          <li>UI/UX Designer (₹8,000)</li>
-                        </ul>
-                      </div>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
+                    </TooltipTrigger>
+                    {isIndividualSelected && (
+                      <TooltipContent side="top" sideOffset={10} align="start" className="max-w-[300px] p-3 bg-blue-900 border-blue-200 shadow-xl">
+                        <div className="space-y-2">
+                          <p className="font-bold text-blue-600 text-sm">Action Required</p>
+                          <p className="text-xs text-white leading-relaxed">
+                            To select an <span className="font-bold">Advanced Plan</span>, the following must be zero:
+                          </p>
+                          <ul className="text-[10px] text-white list-disc pl-4 space-y-1">
+                            <li>Senior Developer (₹70,000-80,000)</li>
+                            <li>Junior Developer (₹20,000-40,000)</li>
+                            <li>UI/UX Designer (₹8,000)</li>
+                          </ul>
+                        </div>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+
+                {/* Bundle Details List (Toggleable) */}
+                {showPlans && !isIndividualSelected && (
+                  <div className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                    {plans.map((plan) => {
+                      const isExpanded = expandedBundle === plan.name;
+                      return (
+                        <div
+                          key={plan.name}
+                          className={`overflow-hidden transition-all duration-300 border rounded-xl ${isExpanded ? "border-violet-200 shadow-md ring-1 ring-violet-100" : "border-gray-100 hover:border-violet-200 hover:shadow-sm"
+                            }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setExpandedBundle(isExpanded ? null : plan.name)}
+                            className={`w-full flex items-center justify-between p-4 text-left transition-colors ${isExpanded ? "bg-violet-50/50" : "bg-white hover:bg-gray-50"
+                              }`}
+                          >
+                            <div className="flex flex-col">
+                              <span className={`text-sm font-bold ${isExpanded ? plan.bgColor.replace("bg-", "text-") : "text-gray-900"}`}>
+                                {plan.name}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                {plan.price}{plan.billing}
+                              </span>
+                            </div>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-violet-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            )}
+                          </button>
+
+                          <div
+                            className={`transition-all duration-500 ease-in-out ${isExpanded ? "max-h-[500px] opacity-100 py-4 px-5" : "max-h-0 opacity-0"
+                              } ${plan.bgColor} ${plan.textColor}`}
+                          >
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-start border-b border-white/20 pb-3">
+                                <div>
+                                  <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Total Package Price</h4>
+                                  <p className="text-2xl font-black">{plan.price}<span className="text-xs font-bold opacity-75">{plan.billing}</span></p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  className="bg-white text-black hover:bg-white/90 font-black px-6 py-2 h-10 rounded-xl text-sm shadow-lg shadow-black/10 transition-transform active:scale-95"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const numericPrice = parseInt(plan.price.replace(/[^\d]/g, ""));
+                                    updateFormData({
+                                      selectedBundle: {
+                                        name: plan.name,
+                                        price: numericPrice,
+                                      }
+                                    });
+                                    setShowPlans(false);
+                                  }}
+                                >
+                                  CHOOSE THIS BUNDLE
+                                </Button>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-2">Team Includes</h4>
+                                  <ul className="text-[10px] text-white list-disc pl-4 space-y-1">
+                                    {plan.includes.map((item, idx) => (
+                                      <li key={idx} className="font-semibold text-[11px]">{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                <div>
+                                  <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Free Training</h4>
+                                  <p className="text-[11px] font-bold leading-relaxed">{plan.training}</p>
+                                  <p className="text-[9px] font-medium opacity-70 italic mt-3">*(Salaries of the Team included)</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             ) : (
-              <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-violet-50 border border-violet-200 rounded-xl gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-violet-600 rounded-lg text-white">
+                  <div className="p-2 bg-blue-600 rounded-lg text-white">
                     <Sparkles className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-violet-600 uppercase tracking-wider">Selected Bundle</p>
+                    <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Selected Bundle</p>
                     <h3 className="text-lg font-bold text-gray-900">{formData.selectedBundle.name}</h3>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
+                  <Button
                     type="button"
-                    onClick={() => router.push("/client/plans")}
-                    className="px-4 py-2 bg-white border border-violet-200 text-violet-600 rounded-lg text-sm font-bold hover:bg-violet-50 transition-colors shadow-sm"
+                    variant="outline"
+                    onClick={() => updateFormData({ selectedBundle: null })}
+                    className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50 font-bold"
                   >
                     Change Plan
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
                     onClick={() => updateFormData({ selectedBundle: null })}
-                    className="p-2 bg-white border border-red-100 text-red-500 rounded-lg hover:bg-red-50 hover:border-red-200 transition-all shadow-sm"
+                    className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 transition-all"
                     title="Cancel Plan"
                   >
                     <X className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
