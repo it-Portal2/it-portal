@@ -266,27 +266,27 @@ export function DevelopmentPreferences() {
                         type="button"
                         disabled={isIndividualSelected}
                         onClick={() => setShowPlans(!showPlans)}
-                        className={`group relative flex w-full items-center justify-between px-6 py-4 rounded-xl font-bold shadow-lg transition-all duration-300 ${isIndividualSelected
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none border border-gray-200"
-                          : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-500/20 hover:scale-[1.01] active:scale-95"
+                        className={`group relative flex w-full items-center justify-between px-3 py-4  transition-all duration-300 border rounded-sm ${isIndividualSelected
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none  border-gray-200 "
+                          : " to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white  hover:scale-[1.01] active:scale-95"
                           }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Sparkles className={`w-5 h-5 ${isIndividualSelected ? "" : "animate-pulse"}`} />
-                          <span className="text-base uppercase tracking-wider">Advanced Plan</span>
+                          {/* <Sparkles className={`w-5 h-5 ${isIndividualSelected ? "" : "animate-pulse"}`} /> */}
+                          <span className="text-[15px] text-black ">Advanced Plan</span>
                         </div>
                         {!isIndividualSelected && (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium opacity-80">{showPlans ? "Hide Plans" : "View All Plans"}</span>
-                            {showPlans ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                            {/* <span className="text-xs font-medium opacity-80">{showPlans ? "Hide Plans" : "View All Plans"}</span> */}
+                            {/* {showPlans ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />} */}
                           </div>
                         )}
                       </button>
                     </TooltipTrigger>
                     {isIndividualSelected && (
-                      <TooltipContent side="top" sideOffset={10} align="start" className="max-w-[300px] p-3 bg-blue-900 border-blue-200 shadow-xl">
+                      <TooltipContent side="top" sideOffset={10} align="start" className="max-w-[300px] p-3 bg-black border-grays-200 shadow-xl">
                         <div className="space-y-2">
-                          <p className="font-bold text-blue-600 text-sm">Action Required</p>
+                          <p className="font-bold text-white text-sm">Action Required</p>
                           <p className="text-xs text-white leading-relaxed">
                             To select an <span className="font-bold">Advanced Plan</span>, the following must be zero:
                           </p>
