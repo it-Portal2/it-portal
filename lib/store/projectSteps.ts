@@ -265,7 +265,14 @@ export const useProjectFormStore = create<ProjectFormStore>()(
         let totalCost = 0;
 
         if (formData.selectedBundle) {
-          totalCost = formData.selectedBundle.price;
+          totalCost =
+            formData.currency === "INR"
+              ? formData.selectedBundle.price
+              : Math.round(
+                (formData.selectedBundle.price +
+                  0.04 * formData.selectedBundle.price) /
+                exchangeRate
+              );
         } else {
           totalCost =
             formData.seniorDevelopers * seniorDevRate +

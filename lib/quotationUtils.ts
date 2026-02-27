@@ -94,10 +94,20 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
   const uiUxCost = formData.uiUxDesigners * uiUxRate;
 
   let totalCost = 0;
+  let bundleDisplayPrice = 0;
+
   if (formData.selectedBundle) {
-    totalCost = formData.selectedBundle.price;
+    bundleDisplayPrice =
+      formData.currency === "INR"
+        ? formData.selectedBundle.price
+        : Math.round(
+          (formData.selectedBundle.price + 0.04 * formData.selectedBundle.price) /
+          exchangeRate
+        );
+    totalCost = bundleDisplayPrice;
   } else {
-    totalCost = seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
+    totalCost =
+      seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
   }
 
   // Format currency
@@ -109,16 +119,7 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
 
   const currentDate = getFormattedDate();
 
-  // Dynamic Payment URL logic
-  const paymentBaseUrl = typeof window !== "undefined"
-    ? (process.env.NODE_ENV === "development"
-      ? process.env.NEXT_PUBLIC_VITE_DEV_URL || "http://localhost:5173"
-      : process.env.NEXT_PUBLIC_VITE_PROD_URL || "https://intern-assessment-pi.vercel.app")
-    : "";
-
-  const paymentUrl = `${paymentBaseUrl}/client/payment/`;
-
-  // Updated HTML with Premium A4-specific styling
+  // Updated HTML with A4-specific styling
   const quotationHtml = `
   <!DOCTYPE html>
 <html>
@@ -126,25 +127,24 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
   <meta charset="UTF-8">
   <title>Project Quotation - CEHPOINT</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     :root {
-      --primary: #FFD700;
-      --primary-dark: #ccac00;
-      --dark: #1A1F2C;
-      --dark-muted: #2D3343;
-      --text-gray: #64748b;
-      --bg-gray: #F8FAFC;
-      --border-gray: #E2E8F0;
+      --quotation-dark: #1A1F2C;
+      --quotation-yellow: #FFD700;
+      --quotation-gray-light: #F5F5F7;
+      --quotation-gray-medium: #E5E5E7;
+      --quotation-dark-light: #4A5568;
     }
     
     body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      line-height: 1.5;
-      color: var(--dark);
-      background-color: var(--bg-gray);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.2;
+      color: var(--quotation-dark);
+      background-color: #F9FAFB;
       margin: 0;
       padding: 0;
+      font-size: 9pt;
       width: 210mm;
       height: 297mm;
       box-sizing: border-box;
@@ -152,426 +152,521 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
     
     .quotation-container {
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
       margin: 0;
-      padding: 15mm;
-      background-color: white;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
       box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      position: relative;
+      background-color: white; /* Ensure consistent background */
     }
     
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12mm;
-      border-bottom: 2px solid var(--border-gray);
-      padding-bottom: 8mm;
-    }
-    
-    .brand {
-      display: flex;
-      flex-direction: column;
-      gap: 2mm;
-    }
-    
-    .logo-container {
-      background: var(--dark);
-      color: var(--primary);
-      width: 14mm;
-      height: 14mm;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 16pt;
-      border-radius: 3mm;
-      margin-bottom: 2mm;
-    }
-    
-    .company-name {
-      font-size: 20pt;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      margin: 0;
-      color: var(--dark);
-    }
-    
-    .company-info {
-      font-size: 8pt;
-      color: var(--text-gray);
-      line-height: 1.4;
-    }
-    
-    .document-badge {
-      background: var(--primary);
-      color: var(--dark);
-      padding: 4mm 6mm;
-      border-radius: 2mm;
-      font-weight: 700;
-      font-size: 10pt;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    .top-meta {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10mm;
-      margin-bottom: 10mm;
-    }
-    
-    .meta-card {
-      background: var(--bg-gray);
-      padding: 6mm;
-      border-radius: 4mm;
-      border: 1px solid var(--border-gray);
-    }
-    
-    .meta-title {
-      font-size: 7pt;
-      font-weight: 700;
-      color: var(--text-gray);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 3mm;
-      display: block;
-    }
-    
-    .client-name {
-      font-size: 14pt;
-      font-weight: 700;
-      color: var(--dark);
-      margin: 0 0 1mm 0;
-    }
-    
-    .client-detail {
-      font-size: 8.5pt;
-      color: var(--text-gray);
-      margin: 0;
-    }
-    
-    .quote-info-grid {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 2mm 5mm;
-    }
-    
-    .quote-label {
-      font-size: 8.5pt;
-      font-weight: 600;
-      color: var(--text-gray);
-    }
-    
-    .quote-value {
-      font-size: 8.5pt;
-      font-weight: 700;
-      color: var(--dark);
-      text-align: right;
-    }
-    
-    .section-title {
-      font-size: 11pt;
-      font-weight: 700;
-      margin-bottom: 4mm;
-      color: var(--dark);
-      display: flex;
-      align-items: center;
-      gap: 2mm;
-    }
-    
-    .section-title::before {
-      content: "";
-      width: 1mm;
-      height: 5mm;
-      background: var(--primary);
-      border-radius: 1mm;
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 8mm;
-    }
-    
-    th {
-      background: var(--dark);
+    .quotation-header {
+      background: var(--quotation-dark);
       color: white;
-      text-align: left;
-      padding: 4mm 5mm;
-      font-size: 8pt;
+      padding: 15mm 10mm; /* Increased padding for better spacing */
+      flex-shrink: 0;
+    }
+    
+    .quotation-tag {
+      display: inline-block;
+      background-color: var(--quotation-yellow);
+      color: var(--quotation-dark);
       font-weight: 600;
-      text-transform: uppercase;
-    }
-    
-    td {
-      padding: 4mm 5mm;
-      border-bottom: 1px solid var(--border-gray);
-      font-size: 9pt;
-      vertical-align: top;
-    }
-    
-    .service-name {
-      font-weight: 700;
-      color: var(--dark);
-      display: block;
-      margin-bottom: 0.5mm;
-    }
-    
-    .service-desc {
-      font-size: 7.5pt;
-      color: var(--text-gray);
-    }
-    
-    .col-qty { text-align: center; width: 20mm; }
-    .col-rate { text-align: right; width: 35mm; }
-    .col-amount { text-align: right; width: 40mm; font-weight: 700; }
-    
-    .totals-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-top: 5mm;
-    }
-    
-    .payment-notice {
-      width: 90mm;
-      background: var(--bg-gray);
-      border: 1px dashed var(--border-gray);
-      padding: 4mm;
-      border-radius: 3mm;
-    }
-    
-    .notice-title {
-      font-size: 7pt;
-      font-weight: 800;
-      text-transform: uppercase;
-      color: var(--text-gray);
-      margin-bottom: 2mm;
-      display: block;
-    }
-    
-    .notice-text {
+      padding: 2px 6px;
+      border-radius: 4px;
       font-size: 8pt;
-      color: var(--dark-muted);
-      line-height: 1.4;
+      letter-spacing: 0.5px;
     }
     
-    .totals-box {
-      width: 80mm;
+    .company-contact-details {
+      margin-top: 4px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 7pt;
+      line-height: 1.2;
+    }
+    
+    .quotation-section-title {
+      font-size: 10pt;
+      font-weight: 600;
+      color: var(--quotation-dark);
+      position: relative;
+      padding-left: 6px;
+      margin: 6px 0;
+    }
+    
+    .quotation-section-title:before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      background-color: var(--quotation-yellow);
+      border-radius: 2px;
+    }
+    
+    .info-item {
+      display: flex;
+      margin-bottom: 6px;
+    }
+    
+    .info-label {
+      color: var(--quotation-dark-light);
+      font-size: 7pt;
+      margin-bottom: 1px;
+    }
+    
+    .info-value {
+      font-weight: 500;
+      font-size: 8pt;
+    }
+    
+    .quotation-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 8pt;
+    }
+    
+    .quotation-table th {
+      background-color: var(--quotation-yellow);
+      color: var(--quotation-dark);
+      padding: 6px 8px;
+      font-weight: 600;
+      text-align: left;
+    }
+    
+    .quotation-table th:first-child {
+      border-top-left-radius: 6px;
+    }
+    
+    .quotation-table th:last-child {
+      border-top-right-radius: 6px;
+    }
+    
+    .quotation-table td {
+      padding: 5px 8px;
+      border-bottom: 1px solid var(--quotation-gray-medium);
+    }
+    
+    .quotation-table tr:last-child td {
+      border-bottom: none;
     }
     
     .total-row {
+      background-color: var(--quotation-gray-light);
+      font-weight: 600;
+    }
+    
+    .total-row td {
+      padding: 6px 8px !important;
+    }
+    
+    .service-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
       display: flex;
-      justify-content: space-between;
-      padding: 2mm 0;
-      font-size: 9pt;
+      align-items: center;
+      justify-content: center;
+      margin-right: 6px;
+      flex-shrink: 0;
     }
     
-    .total-row.grand {
-      background: var(--dark);
-      color: var(--primary);
-      padding: 4mm 5mm;
-      border-radius: 2mm;
-      margin-top: 3mm;
-      font-size: 13pt;
-      font-weight: 800;
+    .client-project-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      flex-grow: 0;
+      padding: 0 10mm;
     }
     
-    .payment-cta {
-      margin-top: 10mm;
-      text-align: center;
-      padding: 6mm;
-      background: var(--dark);
-      border-radius: 4mm;
-      color: white;
-    }
-    
-    .pay-button {
-      background: var(--primary);
-      color: var(--dark);
-      text-decoration: none;
-      padding: 3mm 10mm;
-      border-radius: 2mm;
-      font-weight: 800;
-      font-size: 11pt;
-      display: inline-block;
-      margin-bottom: 3mm;
-      transition: background 0.2s;
-      padding-bottom: 2px;
-    }
-    
-    .crypto-info {
-      font-size: 7.5pt;
-      color: rgba(255,255,255,0.7);
-    }
-    
-    .sidebar-hint {
-      font-size: 8pt;
-      color: rgba(255,255,255,0.9);
-      margin-top: 2mm;
-      font-weight: 500;
+    .info-box {
+      background-color: rgba(245, 245, 247, 0.5);
+      border-radius: 6px;
+      padding: 8px;
     }
     
     .footer {
-      margin-top: auto;
-      padding-top: 8mm;
-      border-top: 1px solid var(--border-gray);
+      padding: 8mm 10mm;
+      background-color: var(--quotation-dark);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 7pt;
+      flex-shrink: 0;
+    }
+    
+    .service-description {
       display: flex;
-      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .service-text {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .service-title {
+      font-weight: 500;
+      margin: 0;
+    }
+    
+    .service-subtitle {
+      font-size: 6pt;
+      color: var(--quotation-dark-light);
+      margin: 1px 0 0 0;
+    }
+    
+    .main-content {
+      flex-grow: 1;
+      padding: 10mm;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .payment-steps-section {
+      margin-top: 25px;
+      padding: 8px;
+      background-color: var(--quotation-gray-light);
+      border-radius: 6px;
+      border: 1px dashed var(--quotation-dark-light);
+    }
+    
+    .payment-step {
+      display: flex;
+      align-items: start;
+      margin-bottom: 4px;
       font-size: 7.5pt;
-      color: var(--text-gray);
+    }
+    
+    .step-number {
+      background: var(--quotation-dark);
+      color: white;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 6pt;
+      font-weight: 700;
+      margin-right: 6px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+    
+    .signature-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40mm;
+      margin-top: auto;
+      padding: 10mm 10mm 5mm 10mm;
+    }
+    
+    .signature-box {
+      border-top: 1px solid var(--quotation-dark);
+      padding-top: 4px;
+    }
+    
+    .signature-label {
+      font-weight: 700;
+      font-size: 9pt;
+      margin: 0;
+    }
+    
+    .signature-subtitle {
+      font-size: 7pt;
+      color: var(--quotation-dark-light);
+      text-transform: uppercase;
+      margin-top: 2px;
     }
   </style>
 </head>
 <body>
   <div class="quotation-container">
-    <div class="header">
-      <div class="brand">
-        <h1 class="company-name">CEHPOINT</h1>
-        <div class="company-info">
-          Innovation & Security Solutions<br>
-          ● services.cehpoint.co.in | ● info@cehpoint.co.in<br>
-          ● Corporate number (IVR): +91 33 6902 9331
+    <!-- Header Section -->
+    <div class="quotation-header">
+      <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+          <h1 style="font-size: 14pt; font-weight: 700; letter-spacing: -0.5px; margin: 4px 0; color: white;">CEHPOINT</h1>
+          <div class="company-contact-details" style="line-height: 1.2;">
+            <div>● services.cehpoint.co.in | ● info@cehpoint.co.in</div>
+            <div>● Corporate number (IVR): +91 33 6902 9331</div>
+          </div>
         </div>
-      </div>
-      <div class="document-badge">Quotation</div>
-    </div>
-    
-    <div class="top-meta">
-      <div class="meta-card">
-        <span class="meta-title">Prepared For</span>
-        <p class="client-name">${formData.clientName}</p>
-        <p class="client-detail">${formData.clientEmail}</p>
-        <p class="client-detail">${formData.clientPhoneNumber}</p>
-      </div>
-      <div class="meta-card">
-        <span class="meta-title">Quote Details</span>
-        <div class="quote-info-grid">
-          <span class="quote-label">Date:</span>
-          <span class="quote-value">${currentDate}</span>
-          <span class="quote-label">Quote #:</span>
-          <span class="quote-value">QTN-${Math.floor(Math.random() * 90000) + 10000}</span>
-          <span class="quote-label">Project:</span>
-          <span class="quote-value">${formData.projectName}</span>
-          <span class="quote-label">Currency:</span>
-          <span class="quote-value">${formData.currency}</span>
+        <div style="text-align: right;">
+          <p style="opacity: 0.8; margin: 0; font-size: 8pt;">Date: ${currentDate}</p>
         </div>
       </div>
     </div>
     
-    <div class="section-title">Investment Breakdown</div>
-    <table>
-      <thead>
-        <tr>
-          <th>Service Description</th>
-          <th class="col-qty">Quantity</th>
-          <th class="col-rate">Unit Rate</th>
-          <th class="col-amount">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${formData.selectedBundle
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Client & Project Info -->
+      <div class="client-project-grid">
+        <!-- Client Information Section -->
+        <div>
+          <h3 class="quotation-section-title">Client Information</h3>
+          <div class="info-box">
+            <div class="info-item">
+              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
+              <div>
+                <span class="info-label">Name</span>
+                <p class="info-value" style="margin: 0;">${formData.clientName
+    }</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
+              <div>
+                <span class="info-label">Email</span>
+                <p class="info-value" style="margin: 0;">${formData.clientEmail
+    }</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
+              <div>
+                <span class="info-label">Phone</span>
+                <p class="info-value" style="margin: 0;">${formData.clientPhoneNumber
+    }</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Project Information Section -->
+        <div>
+          <h3 class="quotation-section-title">Project Details</h3>
+          <div class="info-box">
+            <div class="info-item">
+              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
+              <div>
+                <span class="info-label">Project Name</span>
+                <p class="info-value" style="margin: 0;">${formData.projectName
+    }</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
+              <div>
+                <span class="info-label">Overview</span>
+                <p class="info-value" style="margin: 0; font-size: 7pt;">${formData.projectOverview.split(" ").slice(0, 100).join(" ") +
+    (formData.projectOverview.split(" ").length > 15 ? "..." : "")
+    }</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
+              <div>
+                <span class="info-label">Development</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px;">
+                  ${formData.developmentAreas
+      .map(
+        (area) => `
+                    <span style="color: var(--quotation-dark); padding: 1px 3px; border-radius: 3px; font-size: 6pt; font-weight: 500;">${area},</span>
+                  `
+      )
+      .join("")}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Service Details & Pricing -->
+      <div style="margin-top: 6px; display: flex; flex-direction: column;">
+        <h3 class="quotation-section-title">Service & Pricing</h3>
+        <div style="overflow: hidden; border-radius: 6px; border: 1px solid var(--quotation-gray-medium);">
+          <table class="quotation-table">
+            <thead>
+              <tr>
+                <th style="width: 50%;">Service Description</th>
+                <th style="text-align: center; width: 10%;">Qty</th>
+                <th style="text-align: right; width: 20%;">Rate</th>
+                <th style="text-align: right; width: 20%;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${formData.selectedBundle
       ? `
-        <tr>
-          <td>
-            <span class="service-name">${formData.selectedBundle.name}</span>
-            <span class="service-desc">Comprehensive project development solution bundle</span>
-          </td>
-          <td class="col-qty">1</td>
-          <td class="col-rate">${formatCurrency(formData.selectedBundle.price)}</td>
-          <td class="col-amount">${formatCurrency(formData.selectedBundle.price)}</td>
-        </tr>
-        `
+              <tr>
+                <td>
+                  <div class="service-description">
+                    <div class="service-icon">
+                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
+                    </div>
+                    <div class="service-text">
+                      <p class="service-title">${formData.selectedBundle.name}</p>
+                      <p class="service-subtitle">Advanced Development Plan</p>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: right;">${formatCurrency(
+        bundleDisplayPrice
+      )}</td>
+                <td style="text-align: right; font-weight: 500;">${formatCurrency(
+        bundleDisplayPrice
+      )}</td>
+              </tr>
+              `
       : `
-        ${formData.seniorDevelopers > 0 ? `
-        <tr>
-          <td>
-            <span class="service-name">Senior Software Architect/Developer</span>
-            <span class="service-desc">Strategic development and core systems implementation</span>
-          </td>
-          <td class="col-qty">${formData.seniorDevelopers}</td>
-          <td class="col-rate">${formatCurrency(seniorDevRate)}</td>
-          <td class="col-amount">${formatCurrency(seniorDevCost)}</td>
-        </tr>
-        ` : ""}
-        ${formData.juniorDevelopers > 0 ? `
-        <tr>
-          <td>
-            <span class="service-name">Full-Stack Developer</span>
-            <span class="service-desc">Feature development and interface implementation</span>
-          </td>
-          <td class="col-qty">${formData.juniorDevelopers}</td>
-          <td class="col-rate">${formatCurrency(juniorDevRate)}</td>
-          <td class="col-amount">${formatCurrency(juniorDevCost)}</td>
-        </tr>
-        ` : ""}
-        ${formData.uiUxDesigners > 0 ? `
-        <tr>
-          <td>
-            <span class="service-name">UI/UX Interface Designer</span>
-            <span class="service-desc">Visual design, prototyping and user journey optimization</span>
-          </td>
-          <td class="col-qty">${formData.uiUxDesigners}</td>
-          <td class="col-rate">${formatCurrency(uiUxRate)}</td>
-          <td class="col-amount">${formatCurrency(uiUxCost)}</td>
-        </tr>
-        ` : ""}
-        <tr>
-          <td>
-            <span class="service-name">Project Management & QA</span>
-            <span class="service-desc">Coordination, quality assurance, and delivery management</span>
-          </td>
-          <td class="col-qty">1</td>
-          <td class="col-rate">${formatCurrency(projectManagementCost)}</td>
-          <td class="col-amount">${formatCurrency(projectManagementCost)}</td>
-        </tr>
-        `
+              ${formData.seniorDevelopers > 0
+        ? `
+              <tr>
+                <td>
+                  <div class="service-description">
+                    <div class="service-icon">
+                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
+                    </div>
+                    <div class="service-text">
+                      <p class="service-title">Senior Developer</p>
+                      <p class="service-subtitle">Experienced developer for complex tasks</p>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align: center;">${formData.seniorDevelopers
+        }</td>
+                <td style="text-align: right;">${formatCurrency(
+          seniorDevRate
+        )}</td>
+                <td style="text-align: right; font-weight: 500;">${formatCurrency(
+          seniorDevCost
+        )}</td>
+              </tr>
+              `
+        : ""
+      }
+              
+              ${formData.juniorDevelopers > 0
+        ? `
+              <tr>
+                <td>
+                  <div class="service-description">
+                    <div class="service-icon">
+                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
+                    </div>
+                    <div class="service-text">
+                      <p class="service-title">Junior Developer</p>
+                      <p class="service-subtitle">Support implementation and coding</p>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align: center;">${formData.juniorDevelopers
+        }</td>
+                <td style="text-align: right;">${formatCurrency(
+          juniorDevRate
+        )}</td>
+                <td style="text-align: right; font-weight: 500;">${formatCurrency(
+          juniorDevCost
+        )}</td>
+              </tr>
+              `
+        : ""
+      }
+              
+              ${formData.uiUxDesigners > 0
+        ? `
+              <tr>
+                <td>
+                  <div class="service-description">
+                    <div class="service-icon">
+                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
+                    </div>
+                    <div class="service-text">
+                      <p class="service-title">UI/UX Designer</p>
+                      <p class="service-subtitle">Design interface and user experience</p>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align: center;">${formData.uiUxDesigners}</td>
+                <td style="text-align: right;">${formatCurrency(uiUxRate)}</td>
+                <td style="text-align: right; font-weight: 500;">${formatCurrency(
+          uiUxCost
+        )}</td>
+              </tr>
+              `
+        : ""
+      }
+              
+              <tr>
+                <td>
+                  <div class="service-description">
+                    <div class="service-icon">
+                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
+                    </div>
+                    <div class="service-text">
+                      <p class="service-title">Project Management</p>
+                      <p class="service-subtitle">Coordination and delivery oversight</p>
+                    </div>
+                  </div>
+                </td>
+                <td style="text-align: center;">1</td>
+                <td style="text-align: right;">${formatCurrency(
+        projectManagementCost
+      )}</td>
+                <td style="text-align: right; font-weight: 500;">${formatCurrency(
+        projectManagementCost
+      )}</td>
+              </tr>
+              `
     }
-      </tbody>
-    </table>
-    
-    <div class="totals-wrapper">
-      <div class="payment-notice">
-        <span class="notice-title">Payment Terms</span>
-        <div class="notice-text">
-          • 50% advance payment required for project kickoff.<br>
-          • 30% upon milestone 1 delivery.<br>
-          • 20% upon final delivery and handoff.<br>
-          • Validity: 15 Days from the date of issue.
+              
+              <tr class="total-row">
+                <td colspan="2">
+                  <p style="font-weight: 700; font-size: 9pt; margin: 0;">Grand Total</p>
+                </td>
+                <td colspan="2" style="text-align: right;">
+                  <p style="font-weight: 700; font-size: 9pt; margin: 0;">${formatCurrency(
+      totalCost
+    )}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-      <div class="totals-box">
-        <div class="total-row">
-          <span class="quote-label" style="text-transform: uppercase; font-size: 7pt;">Subtotal</span>
-          <span class="quote-value" style="font-size: 10pt;">${formatCurrency(totalCost)}</span>
+
+      <!-- Payment Steps -->
+      <div class="payment-steps-section">
+        <h3 style="font-size: 8pt; font-weight: 700; margin: 0 0 6px 0;">How to make payment:</h3>
+        <div class="payment-step">
+          <div class="step-number">1</div>
+          <p style="margin: 0;">Go to the <b> Dashboard</b></p>
         </div>
-        <div class="total-row">
-          <span class="quote-label" style="text-transform: uppercase; font-size: 7pt;">Tax (0%)</span>
-          <span class="quote-value" style="font-size: 10pt;">${formatCurrency(0)}</span>
+        <div class="payment-step">
+          <div class="step-number">2</div>
+          <p style="margin: 0;">Select the <b>Payment</b> option from the sidebar menu.</p>
         </div>
-        <div class="total-row grand">
-          <span>Total Investment</span>
-          <span>${formatCurrency(totalCost)}</span>
+        <div class="payment-step">
+          <div class="step-number">3</div>
+          <p style="margin: 0;">Choose your preferred payment method (UPI, Bank Transfer, PayPal, or Crypto).</p>
+        </div>
+        <div class="payment-step">
+          <div class="step-number">4</div>
+          <p style="margin: 0;">Complete the payment and upload the transaction receipt for verification.</p>
+        </div>
+      </div>
+
+      <!-- Signature Section -->
+      <div class="signature-container">
+        <div class="signature-box">
+          <p class="signature-label">Cehpoint</p>
+          <p class="signature-subtitle">Authorized Signature</p>
+        </div>
+        <div class="signature-box">
+          <p class="signature-label">Client</p>
+          <p class="signature-subtitle">Acceptance & Approval</p>
         </div>
       </div>
     </div>
     
-    <div class="payment-cta">
-      <a href="${paymentUrl}" class="pay-button">Secure Payment Now</a>
-      <div class="sidebar-hint">
-        You can make a payment by selecting the "Payment" option on the sidebar dashboard.
-      </div>
-      <div class="crypto-info">
-        We also accept payments in Cryptocurrency (USDT / BTC / ETH). Contact support for wallet addresses.
-      </div>
-    </div>
-    
+    <!-- Footer Section -->
     <div class="footer">
-      <div>CEHPOINT © 2026 | All Rights Reserved</div>
-      <div>Thank you for choosing CEHPOINT for your innovation journey.</div>
+      <p style="margin: 0;">This quotation is valid for 30 days from the issue date. All prices are subject to applicable taxes and may be adjusted based on project scope changes.</p>
     </div>
   </div>
 </body>
@@ -580,4 +675,3 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
 
   return quotationHtml;
 };
-

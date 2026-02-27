@@ -387,13 +387,13 @@ export function DevelopmentPreferences() {
                 )}
               </div>
             ) : (
-              <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-xl gap-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 border border-gray-200 rounded-xl gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-600 rounded-lg text-white">
+                  {/* <div className="p-2 bg-blue-600 rounded-lg text-white">
                     <Sparkles className="w-5 h-5" />
-                  </div>
+                  </div> */}
                   <div>
-                    <p className="text-xs font-bold text-blue-600 uppercase tracking-wider">Selected Bundle</p>
+                    {/* <p className="text-xs  text-black tracking-wider">Selected Bundle</p> */}
                     <h3 className="text-lg font-bold text-gray-900">{formData.selectedBundle.name}</h3>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ export function DevelopmentPreferences() {
                     type="button"
                     variant="outline"
                     onClick={() => updateFormData({ selectedBundle: null })}
-                    className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50 font-bold"
+                    className="bg-white border-black text-black hover:bg-blue-50 font-bold"
                   >
                     Change Plan
                   </Button>
