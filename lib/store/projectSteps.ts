@@ -30,6 +30,7 @@ export interface ProjectFormData {
   selectedBundle: {
     name: string;
     price: number;
+    includes?: string[];
   } | null;
 }
 
@@ -294,7 +295,12 @@ export const useProjectFormStore = create<ProjectFormStore>()(
           juniorDevelopers: formData.juniorDevelopers,
           uiUxDesigners: formData.uiUxDesigners,
           currency: formData.currency,
-          selectedBundle: formData.selectedBundle,
+          selectedBundle: formData.selectedBundle
+            ? {
+              ...formData.selectedBundle,
+              includes: formData.selectedBundle.includes,
+            }
+            : null,
         };
 
         const quotationHtml = generateQuotationHtml(quotationData);

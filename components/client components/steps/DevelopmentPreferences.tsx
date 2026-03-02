@@ -353,6 +353,7 @@ export function DevelopmentPreferences() {
                                       selectedBundle: {
                                         name: plan.name,
                                         price: numericPrice,
+                                        includes: plan.includes,
                                       }
                                     });
                                     setShowPlans(false);

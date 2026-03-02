@@ -35,6 +35,7 @@ export interface QuotationData {
   selectedBundle?: {
     name: string;
     price: number;
+    includes?: string[];
   } | null;
 }
 
@@ -328,9 +329,9 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
     .payment-steps-section {
       margin-top: 25px;
       padding: 8px;
-      background-color: var(--quotation-gray-light);
-      border-radius: 6px;
-      border: 1px dashed var(--quotation-dark-light);
+     
+      
+     
     }
     
     .payment-step {
@@ -501,6 +502,20 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                     <div class="service-text">
                       <p class="service-title">${formData.selectedBundle.name}</p>
                       <p class="service-subtitle">Advanced Development Plan</p>
+                      ${formData.selectedBundle.includes
+        ? `
+                      <div style="margin-top: 4px;">
+                        <p style="font-size: 7pt; font-weight: 600; margin: 0; color: var(--quotation-dark);">Team Includes:</p>
+                        <ul style="margin: 2px 0 0 0; padding-left: 12px; font-size: 6.5pt; color: var(--quotation-dark-light);">
+                          ${formData.selectedBundle.includes
+          .map((item) => `<li style="margin-bottom: 1px;">${item}</li>`)
+          .join("")}
+                        </ul>
+                      </div>
+                      `
+        : ""
+      }
+                      <p style="font-size: 6.5pt; color: var(--quotation-dark-light); margin-top: 4px; font-style: italic;">Date of Quotation: ${currentDate}</p>
                     </div>
                   </div>
                 </td>
@@ -666,7 +681,7 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
     
     <!-- Footer Section -->
     <div class="footer">
-      <p style="margin: 0;">This quotation is valid for 30 days from the issue date. All prices are subject to applicable taxes and may be adjusted based on project scope changes.</p>
+      <p style="margin: 0;">This quotation is valid for 30 days from the issue date. All prices are subject to applicable taxes and may be adjusted based on project scope changes. <b>Terms and Conditions applied.</b></p>
     </div>
   </div>
 </body>
