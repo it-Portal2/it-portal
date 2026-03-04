@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Eye, Trash2, Clock, CheckCircle, XCircle, ChevronDown } from "lucide-react";
+import {
+  Search,
+  Eye,
+  Trash2,
+  Clock,
+  CheckCircle,
+  XCircle,
+  ChevronDown,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -41,7 +49,7 @@ const StatusBadge = ({ status }: { status: ApplicationStatus }) => {
     },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] ?? statusConfig.Pending;
   const IconComponent = config.icon;
 
   return (
@@ -86,7 +94,9 @@ const CandidatesApplicationsClient = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [skillSearchTerm, setSkillSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ApplicationStatus | "all">(
+    "all",
+  );
   const candidates = candidatesData ?? [];
   const [filteredData, setFilteredData] = useState<Application[]>(candidates);
 
@@ -117,7 +127,7 @@ const CandidatesApplicationsClient = ({
         });
 
         setFilteredData((prev) =>
-          prev.filter((app) => app.id !== applicationId)
+          prev.filter((app) => app.id !== applicationId),
         );
       } else {
         toast.error("Failed to delete application", {
@@ -145,7 +155,7 @@ const CandidatesApplicationsClient = ({
         const fullName = candidate.fullName?.toLowerCase() || "";
         const email = candidate.email?.toLowerCase() || "";
         const phone = candidate.phone?.toLowerCase() || "";
-        
+
         return (
           fullName.includes(lowerSearchTerm) ||
           email.includes(lowerSearchTerm) ||
@@ -160,7 +170,7 @@ const CandidatesApplicationsClient = ({
       filtered = filtered.filter((candidate) => {
         const skills = candidate.resumeAnalysis?.skills || [];
         return skills.some((skill) =>
-          skill.toLowerCase().includes(lowerSkillSearch)
+          skill.toLowerCase().includes(lowerSkillSearch),
         );
       });
     }
@@ -168,7 +178,7 @@ const CandidatesApplicationsClient = ({
     // Filter by status
     if (statusFilter !== "all") {
       filtered = filtered.filter(
-        (candidate) => candidate.applicationStatus === statusFilter
+        (candidate) => candidate.applicationStatus === statusFilter,
       );
     }
 
@@ -206,7 +216,7 @@ const CandidatesApplicationsClient = ({
         const convertFirebaseTimestamp = (timestamp: any) => {
           if (timestamp && timestamp.seconds) {
             return new Date(
-              timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000
+              timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000,
             );
           }
           return new Date(timestamp);
@@ -268,8 +278,10 @@ const CandidatesApplicationsClient = ({
   const stats = {
     total: candidates.length,
     pending: candidates.filter((c) => c.applicationStatus === "Pending").length,
-    accepted: candidates.filter((c) => c.applicationStatus === "Accepted").length,
-    rejected: candidates.filter((c) => c.applicationStatus === "Rejected").length,
+    accepted: candidates.filter((c) => c.applicationStatus === "Accepted")
+      .length,
+    rejected: candidates.filter((c) => c.applicationStatus === "Rejected")
+      .length,
   };
 
   const statusOptions = [
@@ -281,7 +293,9 @@ const CandidatesApplicationsClient = ({
 
   const getStatusDisplay = () => {
     const selected = statusOptions.find((opt) => opt.key === statusFilter);
-    return selected ? `${selected.label} (${selected.count})` : "All Applications";
+    return selected
+      ? `${selected.label} (${selected.count})`
+      : "All Applications";
   };
 
   return (
@@ -332,10 +346,12 @@ const CandidatesApplicationsClient = ({
                   {statusOptions.map((option) => (
                     <DropdownMenuItem
                       key={option.key}
-                      onClick={() => setStatusFilter(option.key as ApplicationStatus | "all")}
+                      onClick={() =>
+                        setStatusFilter(option.key as ApplicationStatus | "all")
+                      }
                       className={cn(
                         "flex items-center justify-between cursor-pointer",
-                        statusFilter === option.key && "bg-blue-50 font-medium"
+                        statusFilter === option.key && "bg-blue-50 font-medium",
                       )}
                     >
                       <span>{option.label}</span>
@@ -343,10 +359,13 @@ const CandidatesApplicationsClient = ({
                         variant="secondary"
                         className={cn(
                           "ml-2",
-                          option.key === "Pending" && "bg-yellow-100 text-yellow-800",
-                          option.key === "Accepted" && "bg-green-100 text-green-800",
-                          option.key === "Rejected" && "bg-red-100 text-red-800",
-                          option.key === "all" && "bg-gray-100 text-gray-700"
+                          option.key === "Pending" &&
+                            "bg-yellow-100 text-yellow-800",
+                          option.key === "Accepted" &&
+                            "bg-green-100 text-green-800",
+                          option.key === "Rejected" &&
+                            "bg-red-100 text-red-800",
+                          option.key === "all" && "bg-gray-100 text-gray-700",
                         )}
                       >
                         {option.count}
@@ -376,7 +395,9 @@ const CandidatesApplicationsClient = ({
             {/* Active Filters Display */}
             {(searchTerm || skillSearchTerm || statusFilter !== "all") && (
               <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-sm text-muted-foreground">Active filters:</span>
+                <span className="text-sm text-muted-foreground">
+                  Active filters:
+                </span>
                 {searchTerm && (
                   <Badge variant="secondary" className="gap-1">
                     Name/Email/Phone: {searchTerm}
