@@ -91,6 +91,11 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       icon: <CreditCard size={20} />,
       title: "All payment details",
     },
+    {
+      href: "/admin/plans",
+      icon: <Settings size={20} />,
+      title: "Advanced Plans",
+    },
   ];
 
   const developerLinks = [
@@ -129,8 +134,8 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
     userRole === "admin" || userRole === "subadmin"
       ? adminLinks
       : userRole === "developer"
-      ? developerLinks
-      : clientLinks;
+        ? developerLinks
+        : clientLinks;
 
   const handleLogout = async () => {
     try {
@@ -191,8 +196,8 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
               userRole === "admin" || userRole === "subadmin"
                 ? "/admin"
                 : userRole === "developer"
-                ? "/developer"
-                : "/client"
+                  ? "/developer"
+                  : "/client"
             }
             className="flex items-center gap-2"
             onClick={() => setIsMobileMenuOpen(false)}
@@ -265,8 +270,8 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
                 userRole === "admin" || userRole === "subadmin"
                   ? "/admin/settings"
                   : userRole === "developer"
-                  ? "/developer/settings"
-                  : "/client/settings"
+                    ? "/developer/settings"
+                    : "/client/settings"
               }
               onClick={() => setIsMobileMenuOpen(false)}
             >

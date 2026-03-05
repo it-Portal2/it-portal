@@ -1,11 +1,11 @@
 "use client";
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, Minus, X, Info, Star, Sparkles, ArrowRight } from "lucide-react";
+import { Plus, Minus, X, Info, Star, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -161,6 +161,33 @@ export function DevelopmentPreferences() {
   const [linkError, setLinkError] = useState("");
   const router = useRouter();
 
+  const [plansList, setPlansList] = useState<PlanBundle[]>(plans);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const { collection, getDocs, query, orderBy } = await import("firebase/firestore");
+        const { db } = await import("@/firebase");
+        const q = query(collection(db, "advanced_plans"), orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const dynamicPlans: PlanBundle[] = [];
+          querySnapshot.forEach((doc) => {
+            dynamicPlans.push(doc.data() as PlanBundle);
+          });
+          setPlansList(dynamicPlans);
+        }
+      } catch (error) {
+        console.error("Error fetching plans:", error);
+      } finally {
+        setLoadingPlans(false);
+      }
+    };
+    fetchPlans();
+  }, []);
+
   const LEAD_DESIGNER_PROFILE_URL = "https://tithi-ui-ux-design.vercel.app";
 
   const addDevelopmentArea = () => {
@@ -304,86 +331,99 @@ export function DevelopmentPreferences() {
                 {/* Bundle Details List (Toggleable) */}
                 {showPlans && !isIndividualSelected && (
                   <div className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
-                    {plans.map((plan) => {
-                      const isExpanded = expandedBundle === plan.name;
-                      return (
-                        <div
-                          key={plan.name}
-                          className={`overflow-hidden transition-all duration-300 border rounded-xl ${isExpanded ? "border-violet-200 shadow-md ring-1 ring-violet-100" : "border-gray-100 hover:border-violet-200 hover:shadow-sm"
-                            }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setExpandedBundle(isExpanded ? null : plan.name)}
-                            className={`w-full flex items-center justify-between p-4 text-left transition-colors ${isExpanded ? "bg-violet-50/50" : "bg-white hover:bg-gray-50"
+                    {loadingPlans ? (
+                      <div className="flex justify-center p-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : plansList.length === 0 ? (
+                      <div className="text-center p-8 text-sm text-muted-foreground">
+                        No advanced plans available at the moment.
+                      </div>
+                    ) : (
+                      plansList.map((plan) => {
+                        const isExpanded = expandedBundle === plan.name;
+                        return (
+                          <div
+                            key={plan.name}
+                            className={`overflow-hidden transition-all duration-300 border rounded-xl ${isExpanded ? "border-black shadow-md ring-1 ring-black/5" : "border-gray-100 hover:border-gray-300 hover:shadow-sm"
                               }`}
                           >
-                            <div className="flex flex-col">
-                              <span className={`text-sm font-bold ${isExpanded ? plan.bgColor.replace("bg-", "text-") : "text-gray-900"}`}>
-                                {plan.name}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                                {plan.price}{plan.billing}
-                              </span>
-                            </div>
-                            {isExpanded ? (
-                              <ChevronUp className="w-4 h-4 text-violet-500" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4 text-gray-400" />
-                            )}
-                          </button>
-
-                          <div
-                            className={`transition-all duration-500 ease-in-out ${isExpanded ? "max-h-[500px] opacity-100 py-4 px-5" : "max-h-0 opacity-0"
-                              } ${plan.bgColor} ${plan.textColor}`}
-                          >
-                            <div className="space-y-4">
-                              <div className="flex justify-between items-start border-b border-white/20 pb-3">
-                                <div>
-                                  <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Total Package Price</h4>
-                                  <p className="text-2xl font-black">{plan.price}<span className="text-xs font-bold opacity-75">{plan.billing}</span></p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  className="bg-white text-black hover:bg-white/90 font-black px-6 py-2 h-10 rounded-xl text-sm shadow-lg shadow-black/10 transition-transform active:scale-95"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const numericPrice = parseInt(plan.price.replace(/[^\d]/g, ""));
-                                    updateFormData({
-                                      selectedBundle: {
-                                        name: plan.name,
-                                        price: numericPrice,
-                                        includes: plan.includes,
-                                      }
-                                    });
-                                    setShowPlans(false);
-                                  }}
-                                >
-                                  CHOOSE THIS BUNDLE
-                                </Button>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedBundle(isExpanded ? null : plan.name)}
+                              className={`w-full flex items-center justify-between p-4 text-left transition-colors ${isExpanded ? "bg-gray-50/50" : "bg-white hover:bg-gray-50"
+                                }`}
+                            >
+                              <div className="flex flex-col">
+                                <span className={`text-sm font-bold ${isExpanded ? "text-black" : "text-gray-900"}`}>
+                                  {plan.name}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                                  {plan.price.startsWith("₹") ? plan.price : `₹${plan.price}`}{plan.billing}
+                                </span>
                               </div>
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4 text-black" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                              )}
+                            </button>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-2">Team Includes</h4>
-                                  <ul className="text-[10px] text-white list-disc pl-4 space-y-1">
-                                    {plan.includes.map((item, idx) => (
-                                      <li key={idx} className="font-semibold text-[11px]">{item}</li>
-                                    ))}
-                                  </ul>
+                            <div
+                              className={`transition-all duration-500 ease-in-out ${isExpanded ? "max-h-[800px] opacity-100 py-4 px-5" : "max-h-0 opacity-0"
+                                } bg-white text-gray-900`}
+                            >
+                              <div className="space-y-4">
+                                <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                                  <div className="max-w-[60%]">
+                                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Total Package Price</h4>
+                                    <p className="text-2xl font-black text-gray-900">
+                                      {plan.price.startsWith("₹") ? plan.price : `₹${plan.price}`}
+                                      <span className="text-xs font-bold text-gray-400">{plan.billing}</span>
+                                    </p>
+                                    <p className="text-[11px] mt-2 leading-relaxed font-medium text-gray-600">{plan.description}</p>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    className="bg-black text-white hover:bg-black/80 font-black px-6 py-2 h-10 rounded-xl text-sm shadow-lg shadow-black/10 transition-transform active:scale-95"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const numericPrice = parseInt(plan.price.replace(/[^\d]/g, ""));
+                                      updateFormData({
+                                        selectedBundle: {
+                                          name: plan.name,
+                                          price: numericPrice,
+                                          description: plan.description,
+                                          includes: plan.includes,
+                                        }
+                                      });
+                                      setShowPlans(false);
+                                    }}
+                                  >
+                                    CHOOSE THIS BUNDLE
+                                  </Button>
                                 </div>
 
                                 <div>
-                                  <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-80 mb-1">Free Training</h4>
-                                  <p className="text-[11px] font-bold leading-relaxed">{plan.training}</p>
-                                  <p className="text-[9px] font-medium opacity-70 italic mt-3">*(Salaries of the Team included)</p>
+                                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Team Includes</h4>
+                                  <div className="flex flex-col gap-2">
+                                    {plan.includes.map((item, idx) => {
+                                      const formattedItem = item.replace(/^(\d+)\s/, "$1X ");
+                                      return (
+                                        <div key={idx} className="text-black px-4 py-2 rounded-xl font-bold text-[12px] flex items-center gap-2 bg-gray-50/50 border border-gray-100">
+                                          <div className="w-1 h-1 rounded-full bg-black opacity-30" />
+                                          {formattedItem}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 )}
               </div>

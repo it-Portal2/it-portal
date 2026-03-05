@@ -35,6 +35,7 @@ export interface QuotationData {
   selectedBundle?: {
     name: string;
     price: number;
+    description?: string;
     includes?: string[];
   } | null;
 }
@@ -502,6 +503,7 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                     <div class="service-text">
                       <p class="service-title">${formData.selectedBundle.name}</p>
                       <p class="service-subtitle">Advanced Development Plan</p>
+                      ${formData.selectedBundle.description ? `<p style="font-size: 7pt; color: var(--quotation-dark-light); margin: 4px 0;">${formData.selectedBundle.description}</p>` : ""}
                       ${formData.selectedBundle.includes
         ? `
                       <div style="margin-top: 4px;">

@@ -30,6 +30,7 @@ export interface ProjectFormData {
   selectedBundle: {
     name: string;
     price: number;
+    description?: string;
     includes?: string[];
   } | null;
 }
@@ -298,6 +299,7 @@ export const useProjectFormStore = create<ProjectFormStore>()(
           selectedBundle: formData.selectedBundle
             ? {
               ...formData.selectedBundle,
+              description: formData.selectedBundle.description,
               includes: formData.selectedBundle.includes,
             }
             : null,
