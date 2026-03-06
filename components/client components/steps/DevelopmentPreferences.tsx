@@ -435,7 +435,7 @@ export function DevelopmentPreferences() {
                   </div> */}
                   <div>
                     {/* <p className="text-xs  text-black tracking-wider">Selected Bundle</p> */}
-                    <h3 className="text-lg font-bold text-gray-900">{formData.selectedBundle.name}</h3>
+                    <h3 className="text-md font-medium text-gray-900">{formData.selectedBundle.name}</h3>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -443,7 +443,7 @@ export function DevelopmentPreferences() {
                     type="button"
                     variant="outline"
                     onClick={() => updateFormData({ selectedBundle: null })}
-                    className="bg-white border-black text-black hover:bg-blue-50 font-bold"
+                    className="bg-white border-black text-black hover:bg-blue-50 font-semibold"
                   >
                     Change Plan
                   </Button>

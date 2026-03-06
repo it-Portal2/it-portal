@@ -343,18 +343,18 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
     }
     
     .step-number {
-      background: var(--quotation-dark);
-      color: white;
+     
+      color: black;
       width: 14px;
       height: 14px;
-      border-radius: 50%;
+      
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 6pt;
       font-weight: 700;
       margin-right: 6px;
-      margin-top: 1px;
+      margin-bottom: 1px;
       flex-shrink: 0;
     }
     
@@ -497,18 +497,16 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
               <tr>
                 <td>
                   <div class="service-description">
-                    <div class="service-icon">
-                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
-                    </div>
+
                     <div class="service-text">
                       <p class="service-title">${formData.selectedBundle.name}</p>
-                      <p class="service-subtitle">Advanced Development Plan</p>
-                      ${formData.selectedBundle.description ? `<p style="font-size: 7pt; color: var(--quotation-dark-light); margin: 4px 0;">${formData.selectedBundle.description}</p>` : ""}
+                      
+                      
                       ${formData.selectedBundle.includes
         ? `
                       <div style="margin-top: 4px;">
-                        <p style="font-size: 7pt; font-weight: 600; margin: 0; color: var(--quotation-dark);">Team Includes:</p>
-                        <ul style="margin: 2px 0 0 0; padding-left: 12px; font-size: 6.5pt; color: var(--quotation-dark-light);">
+                       
+                        <ul style="margin: 2px 0 0 0; padding-left: 0; list-style-type: none; font-size: 6.5pt; color: var(--quotation-dark-light);">
                           ${formData.selectedBundle.includes
           .map((item) => `<li style="margin-bottom: 1px;">${item}</li>`)
           .join("")}
@@ -517,7 +515,7 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
                       `
         : ""
       }
-                      <p style="font-size: 6.5pt; color: var(--quotation-dark-light); margin-top: 4px; font-style: italic;">Date of Quotation: ${currentDate}</p>
+                     
                     </div>
                   </div>
                 </td>
@@ -652,19 +650,19 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
         <h3 style="font-size: 8pt; font-weight: 700; margin: 0 0 6px 0;">How to make payment:</h3>
         <div class="payment-step">
           <div class="step-number">1</div>
-          <p style="margin: 0;">Go to the <b> Dashboard</b></p>
+          <p style="margin-top: 1px;">Go to the <b> Dashboard</b></p>
         </div>
         <div class="payment-step">
           <div class="step-number">2</div>
-          <p style="margin: 0;">Select the <b>Payment</b> option from the sidebar menu.</p>
+          <p style="margin-top: 1px;">Select the <b>Payment</b> option from the sidebar menu.</p>
         </div>
         <div class="payment-step">
           <div class="step-number">3</div>
-          <p style="margin: 0;">Choose your preferred payment method (UPI, Bank Transfer, PayPal, or Crypto).</p>
+          <p style="margin-top: 1px;">Choose your preferred payment method (UPI, Bank Transfer, PayPal, or Crypto).</p>
         </div>
         <div class="payment-step">
           <div class="step-number">4</div>
-          <p style="margin: 0;">Complete the payment and upload the transaction receipt for verification.</p>
+          <p style="margin-top: 1px;">Complete the payment and upload the transaction receipt for verification.</p>
         </div>
       </div>
 
