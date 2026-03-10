@@ -1,4 +1,4 @@
-// A function to get the current date in a formatted string
+// A function to get the current date in a formatted string (DD/MM/YYYY)
 export const getFormattedDate = (): string => {
   const date = new Date();
   const day = String(date.getDate()).padStart(2, "0");
@@ -7,20 +7,28 @@ export const getFormattedDate = (): string => {
   return `${day}/${month}/${year}`;
 };
 
-// // Generate a unique quotation number
-// export const generateQuotationNumber = (): string => {
-//   const date = new Date();
-//   const year = date.getFullYear();
-//   const month = String(date.getMonth() + 1).padStart(2, "0");
-//   const day = String(date.getDate()).padStart(2, "0");
-//   const random = Math.floor(Math.random() * 1000)
-//     .toString()
-//     .padStart(3, "0");
+// Generate a formatted date string for display (YYYY-MM-DD)
+const getDisplayDate = (): string => {
+  const date = new Date();
+  return date.toISOString().split("T")[0];
+};
 
-//   return `Q-${year}${month}${day}-${random}`;
-// };
+// Generate a due date 15 days from today
+const getDueDate = (): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + 15);
+  return date.toISOString().split("T")[0];
+};
 
-// Add currency to the QuotationData interface
+// Generate a unique invoice number
+const generateInvoiceNumber = (): string => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const random = Math.floor(Math.random() * 900) + 100;
+  return `INV-${year}-${random}`;
+};
+
+// QuotationData interface
 export interface QuotationData {
   clientName: string;
   clientEmail: string;
@@ -32,15 +40,17 @@ export interface QuotationData {
   juniorDevelopers: number;
   uiUxDesigners: number;
   currency: "INR" | "USD";
+  // Optional overrides
+  invoiceNumber?: string;
+  issueDate?: string;
+  dueDate?: string;
 }
 
-// Update the generateQuotationHtml function to use the correct conversion formula
-// and make the quotation more compact
+// Main HTML generator — A4 invoice, pixel-matching index.html design
 export const generateQuotationHtml = (formData: QuotationData): string => {
-  // Define base rates in INR
-  const exchangeRate = 83; // 1 USD = ₹83
+  const exchangeRate = 83;
+  const GST_RATE = 0.18;
 
-  // Define base rates in INR
   const baseRates = {
     seniorDevRate: 75000,
     juniorDevRate: 30000,
@@ -48,506 +58,221 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
     projectManagementCost: 50000,
   };
 
-  // Apply conversion if USD is selected
   const currencySymbol = formData.currency === "USD" ? "$" : "₹";
+  const locale = formData.currency === "INR" ? "en-IN" : "en-US";
 
-  // Calculate rates with conversion
   const seniorDevRate =
     formData.currency === "INR"
       ? baseRates.seniorDevRate
-      : Math.round(
-          (baseRates.seniorDevRate + 0.04 * baseRates.seniorDevRate) /
-            exchangeRate
-        );
+      : Math.round((baseRates.seniorDevRate * 1.04) / exchangeRate);
 
   const juniorDevRate =
     formData.currency === "INR"
       ? baseRates.juniorDevRate
-      : Math.round(
-          (baseRates.juniorDevRate + 0.04 * baseRates.juniorDevRate) /
-            exchangeRate
-        );
+      : Math.round((baseRates.juniorDevRate * 1.04) / exchangeRate);
 
   const uiUxRate =
     formData.currency === "INR"
       ? baseRates.uiUxRate
-      : Math.round(
-          (baseRates.uiUxRate + 0.04 * baseRates.uiUxRate) / exchangeRate
-        );
+      : Math.round((baseRates.uiUxRate * 1.04) / exchangeRate);
 
   const projectManagementCost =
     formData.currency === "INR"
       ? baseRates.projectManagementCost
-      : Math.round(
-          (baseRates.projectManagementCost +
-            0.04 * baseRates.projectManagementCost) /
-            exchangeRate
-        );
+      : Math.round((baseRates.projectManagementCost * 1.04) / exchangeRate);
 
-  // Calculate costs
   const seniorDevCost = formData.seniorDevelopers * seniorDevRate;
   const juniorDevCost = formData.juniorDevelopers * juniorDevRate;
   const uiUxCost = formData.uiUxDesigners * uiUxRate;
-  const totalCost =
-    seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
+  const subtotal = seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
+  const gstAmount = Math.round(subtotal * GST_RATE);
+  const totalCost = subtotal + gstAmount;
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return `${currencySymbol} ${amount.toLocaleString(
-      formData.currency === "INR" ? "en-IN" : "en-US"
-    )}`;
-  };
+  const fmt = (amount: number) =>
+    `${currencySymbol}${amount.toLocaleString(locale, { minimumFractionDigits: 2 })}`;
 
-  const currentDate = getFormattedDate();
+  const invoiceNumber = formData.invoiceNumber ?? generateInvoiceNumber();
+  const issueDate = formData.issueDate ?? getDisplayDate();
+  const dueDate = formData.dueDate ?? getDueDate();
 
-  // Updated HTML with A4-specific styling
-  const quotationHtml = `
-  <!DOCTYPE html>
-<html>
+  // Build dynamic line items matching index.html table row style
+  const lineItemRows: string[] = [];
+
+  if (formData.seniorDevelopers > 0) {
+    lineItemRows.push(`
+      <tr style="border-bottom: 1px solid #f3f4f6;">
+        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Senior Developer &times; ${formData.seniorDevelopers}</td>
+        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(seniorDevCost)}</td>
+      </tr>`);
+  }
+  if (formData.juniorDevelopers > 0) {
+    lineItemRows.push(`
+      <tr style="border-bottom: 1px solid #f3f4f6;">
+        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Junior Developer &times; ${formData.juniorDevelopers}</td>
+        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(juniorDevCost)}</td>
+      </tr>`);
+  }
+  if (formData.uiUxDesigners > 0) {
+    lineItemRows.push(`
+      <tr style="border-bottom: 1px solid #f3f4f6;">
+        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">UI/UX Designer &times; ${formData.uiUxDesigners}</td>
+        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(uiUxCost)}</td>
+      </tr>`);
+  }
+  lineItemRows.push(`
+      <tr style="border-bottom: 1px solid #f3f4f6;">
+        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Project Management &amp; Delivery Oversight</td>
+        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(projectManagementCost)}</td>
+      </tr>`);
+
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Project Quotation - CEHPOINT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice - Cehpoint</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    :root {
-      --quotation-dark: #1A1F2C;
-      --quotation-yellow: #FFD700;
-      --quotation-gray-light: #F5F5F7;
-      --quotation-gray-medium: #E5E5E7;
-      --quotation-dark-light: #4A5568;
-    }
-    
-    body {
-      font-family: 'Inter', sans-serif;
-      line-height: 1.2;
-      color: var(--quotation-dark);
-      background-color: #F9FAFB;
-      margin: 0;
-      padding: 0;
-      font-size: 9pt;
-      width: 210mm;
-      height: 297mm;
-      box-sizing: border-box;
-    }
-    
-    .quotation-container {
-      width: 210mm;
-      height: 297mm;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      box-sizing: border-box;
-      background-color: white; /* Ensure consistent background */
-    }
-    
-    .quotation-header {
-      background: var(--quotation-dark);
-      color: white;
-      padding: 15mm 10mm; /* Increased padding for better spacing */
-      flex-shrink: 0;
-    }
-    
-    .quotation-tag {
-      display: inline-block;
-      background-color: var(--quotation-yellow);
-      color: var(--quotation-dark);
-      font-weight: 600;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 8pt;
-      letter-spacing: 0.5px;
-    }
-    
-    .company-contact-details {
-      margin-top: 4px;
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 7pt;
-      line-height: 1.2;
-    }
-    
-    .quotation-section-title {
-      font-size: 10pt;
-      font-weight: 600;
-      color: var(--quotation-dark);
-      position: relative;
-      padding-left: 6px;
-      margin: 6px 0;
-    }
-    
-    .quotation-section-title:before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      height: 100%;
-      width: 2px;
-      background-color: var(--quotation-yellow);
-      border-radius: 2px;
-    }
-    
-    .info-item {
-      display: flex;
-      margin-bottom: 6px;
-    }
-    
-    .info-label {
-      color: var(--quotation-dark-light);
-      font-size: 7pt;
-      margin-bottom: 1px;
-    }
-    
-    .info-value {
-      font-weight: 500;
-      font-size: 8pt;
-    }
-    
-    .quotation-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 8pt;
-    }
-    
-    .quotation-table th {
-      background-color: var(--quotation-yellow);
-      color: var(--quotation-dark);
-      padding: 6px 8px;
-      font-weight: 600;
-      text-align: left;
-    }
-    
-    .quotation-table th:first-child {
-      border-top-left-radius: 6px;
-    }
-    
-    .quotation-table th:last-child {
-      border-top-right-radius: 6px;
-    }
-    
-    .quotation-table td {
-      padding: 5px 8px;
-      border-bottom: 1px solid var(--quotation-gray-medium);
-    }
-    
-    .quotation-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .total-row {
-      background-color: var(--quotation-gray-light);
-      font-weight: 600;
-    }
-    
-    .total-row td {
-      padding: 6px 8px !important;
-    }
-    
-    .service-icon {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-right: 6px;
-      flex-shrink: 0;
-    }
-    
-    .client-project-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      flex-grow: 0;
-      padding: 0 10mm;
-    }
-    
-    .info-box {
-      background-color: rgba(245, 245, 247, 0.5);
-      border-radius: 6px;
-      padding: 8px;
-    }
-    
-    .footer {
-      padding: 8mm 10mm;
-      background-color: var(--quotation-dark);
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 7pt;
-      flex-shrink: 0;
-    }
-    
-    .service-description {
-      display: flex;
-      align-items: center;
-    }
-    
-    .service-text {
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .service-title {
-      font-weight: 500;
-      margin: 0;
-    }
-    
-    .service-subtitle {
-      font-size: 6pt;
-      color: var(--quotation-dark-light);
-      margin: 1px 0 0 0;
-    }
-    
-    .main-content {
-      flex-grow: 1;
-      padding: 10mm;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: 'Inter', sans-serif; background: #fff; color: #111827; }
+    h1, h2, h3, h4, h5, h6 { font-weight: inherit; font-size: inherit; color: inherit; text-decoration: none; border: none; padding: 0; margin: 0; }
+    a { color: inherit; text-decoration: none; }
+    table { border-collapse: collapse; border-spacing: 0; }
+    th, td { border: none; padding: 0; text-align: left; font-weight: inherit; }
+    p { margin: 0; padding: 0; }
   </style>
 </head>
 <body>
-  <div class="quotation-container">
-    <!-- Header Section -->
-    <div class="quotation-header">
-      <div style="display: flex; justify-content: space-between; align-items: start;">
-        <div>
-          <h1 style="font-size: 14pt; font-weight: 700; letter-spacing: -0.5px; margin: 4px 0; color: white;">CEHPOINT</h1>
-          <div class="company-contact-details" style="line-height: 1.2;">
-            <div>● services.cehpoint.co.in | ● info@cehpoint.co.in</div>
-            <div>● Corporate number (IVR): +91 33 6902 9331</div>
-          </div>
-        </div>
-        <div style="text-align: right;">
-          <p style="opacity: 0.8; margin: 0; font-size: 8pt;">Date: ${currentDate}</p>
-        </div>
+  <!-- A4 container -->
+  <div style="width: 210mm; min-height: 297mm; background: #fff; display: flex; flex-direction: column; margin: 0 auto;">
+
+    <!-- ── Header ── -->
+    <div style="background-color: rgb(30, 58, 138); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start;">
+      <div>
+        <h1 style="font-size: 24pt; font-weight: 700; margin: 0; letter-spacing: -0.025em;">INVOICE</h1>
+        <p style="color: #bfdbfe; font-size: 9pt; margin: 4px 0 0 0; letter-spacing: 0.025em;">#${invoiceNumber}</p>
+      </div>
+      <div style="text-align: right;">
+        <h2 style="font-size: 14pt; font-weight: 700; margin: 0;">Cehpoint</h2>
+        <p style="font-size: 10px; color: #bfdbfe; margin: 4px 0 0 0;">info@cehpoint.co.in</p>
+        <p style="font-size: 10px; color: #bfdbfe; margin: 0;">cehpoint.co.in</p>
       </div>
     </div>
-    
-    <!-- Main Content -->
-    <div class="main-content">
-      <!-- Client & Project Info -->
-      <div class="client-project-grid">
-        <!-- Client Information Section -->
+
+    <!-- ── Body ── -->
+    <div style="padding: 32px 40px; flex-grow: 1; display: flex; flex-direction: column;">
+
+      <!-- Bill To / Dates grid -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 32px;">
+
+        <!-- Bill To -->
         <div>
-          <h3 class="quotation-section-title">Client Information</h3>
-          <div class="info-box">
-            <div class="info-item">
-              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
-              <div>
-                <span class="info-label">Name</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.clientName
-                }</p>
-              </div>
-            </div>
-            <div class="info-item">
-              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
-              <div>
-                <span class="info-label">Email</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.clientEmail
-                }</p>
-              </div>
-            </div>
-            <div class="info-item">
-              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
-              <div>
-                <span class="info-label">Phone</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.clientPhoneNumber
-                }</p>
-              </div>
-            </div>
-          </div>
+          <h3 style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px 0;">Bill To</h3>
+          <p style="color: #111827; font-weight: 700; font-size: 16px; margin: 0;">${formData.clientName}</p>
+          <p style="color: #4b5563; font-size: 12px; white-space: pre-line; margin: 4px 0 0 0;">${formData.clientEmail}<br>${formData.clientPhoneNumber}</p>
         </div>
-        
-        <!-- Project Information Section -->
-        <div>
-          <h3 class="quotation-section-title">Project Details</h3>
-          <div class="info-box">
-            <div class="info-item">
-              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
-              <div>
-                <span class="info-label">Project Name</span>
-                <p class="info-value" style="margin: 0;">${
-                  formData.projectName
-                }</p>
-              </div>
-            </div>
-            <div class="info-item">
-              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
-              <div>
-                <span class="info-label">Overview</span>
-                <p class="info-value" style="margin: 0; font-size: 7pt;">${
-                  formData.projectOverview.split(" ").slice(0, 100).join(" ") +
-                  (formData.projectOverview.split(" ").length > 15 ? "..." : "")
-                }</p>
-              </div>
-            </div>
-            <div class="info-item">
-              <span style="margin-right: 4px; color: var(--quotation-dark-light);">●</span>
-              <div>
-                <span class="info-label">Development</span>
-                <div style="display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px;">
-                  ${formData.developmentAreas
-                    .map(
-                      (area) => `
-                    <span style= color: var(--quotation-dark); padding: 1px 3px; border-radius: 3px; font-size: 6pt; font-weight: 500;">${area},</span>
-                  `
-                    )
-                    .join("")}
-                </div>
-              </div>
-            </div>
+
+        <!-- Dates + From -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <h3 style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0;">Issue Date</h3>
+            <p style="color: #111827; font-weight: 500; font-size: 14px; margin: 0;">${issueDate}</p>
+          </div>
+          <div>
+            <h3 style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0;">Due Date</h3>
+            <p style="color: #111827; font-weight: 500; font-size: 14px; margin: 0;">${dueDate}</p>
+          </div>
+          <div style="grid-column: span 2;">
+            <h3 style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0;">From</h3>
+            <p style="color: #111827; font-size: 12px; margin: 0;">Labpur, Sandipan Patsala Para, Birbhum, Bolpur, West Bengal - 731303</p>
+            <p style="color: #6b7280; font-size: 10px; margin: 2px 0 0 0;">GST: 19ETGPB5153Q1Z5</p>
           </div>
         </div>
       </div>
-      
-      <!-- Service Details & Pricing -->
-      <div style="flex-grow: 1; display: flex; flex-direction: column;">
-        <h3 class="quotation-section-title">Service & Pricing</h3>
-        <div style="overflow: hidden; border-radius: 6px; border: 1px solid var(--quotation-gray-medium); flex-grow: 1;">
-          <table class="quotation-table">
-            <thead>
-              <tr>
-                <th style="width: 50%;">Service Description</th>
-                <th style="text-align: center; width: 15%;">Qty</th>
-                <th style="text-align: right; width: 15%;">Rate</th>
-                <th style="text-align: right; width: 20%;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${
-                formData.seniorDevelopers > 0
-                  ? `
-              <tr>
-                <td>
-                  <div class="service-description">
-                    <div class="service-icon">
-                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
-                    </div>
-                    <div class="service-text">
-                      <p class="service-title">Senior Developer</p>
-                      <p class="service-subtitle">Experienced developer for complex tasks</p>
-                    </div>
-                  </div>
-                </td>
-                <td style="text-align: center;">${
-                  formData.seniorDevelopers
-                }</td>
-                <td style="text-align: right;">${formatCurrency(
-                  seniorDevRate
-                )}</td>
-                <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  seniorDevCost
-                )}</td>
-              </tr>
-              `
-                  : ""
-              }
-              
-              ${
-                formData.juniorDevelopers > 0
-                  ? `
-              <tr>
-                <td>
-                  <div class="service-description">
-                    <div class="service-icon">
-                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
-                    </div>
-                    <div class="service-text">
-                      <p class="service-title">Junior Developer</p>
-                      <p class="service-subtitle">Support implementation and coding</p>
-                    </div>
-                  </div>
-                </td>
-                <td style="text-align: center;">${
-                  formData.juniorDevelopers
-                }</td>
-                <td style="text-align: right;">${formatCurrency(
-                  juniorDevRate
-                )}</td>
-                <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  juniorDevCost
-                )}</td>
-              </tr>
-              `
-                  : ""
-              }
-              
-              ${
-                formData.uiUxDesigners > 0
-                  ? `
-              <tr>
-                <td>
-                  <div class="service-description">
-                    <div class="service-icon">
-                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
-                    </div>
-                    <div class="service-text">
-                      <p class="service-title">UI/UX Designer</p>
-                      <p class="service-subtitle">Design interface and user experience</p>
-                    </div>
-                  </div>
-                </td>
-                <td style="text-align: center;">${formData.uiUxDesigners}</td>
-                <td style="text-align: right;">${formatCurrency(uiUxRate)}</td>
-                <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  uiUxCost
-                )}</td>
-              </tr>
-              `
-                  : ""
-              }
-              
-              <tr>
-                <td>
-                  <div class="service-description">
-                    <div class="service-icon">
-                      <span style="color: var(--quotation-dark); font-size: 6pt;">●</span>
-                    </div>
-                    <div class="service-text">
-                      <p class="service-title">Project Management</p>
-                      <p class="service-subtitle">Coordination and delivery oversight</p>
-                    </div>
-                  </div>
-                </td>
-                <td style="text-align: center;">1</td>
-                <td style="text-align: right;">${formatCurrency(
-                  projectManagementCost
-                )}</td>
-                <td style="text-align: right; font-weight: 500;">${formatCurrency(
-                  projectManagementCost
-                )}</td>
-              </tr>
-              
-              <tr class="total-row">
-                <td colspan="2">
-                  <p style="font-weight: 700; font-size: 10pt; margin: 0;">Grand Total</p>
-                </td>
-                <td colspan="2" style="text-align: right;">
-                  <p style="font-weight: 700; font-size: 10pt; margin: 0;">${formatCurrency(
-                    totalCost
-                  )}</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+
+      <!-- Spacer below dates group to push content down -->
+      <div style="margin-bottom: 35px;"></div>
+
+      <!-- ── Line Items Table ── -->
+      <table cellspacing="0" cellpadding="0" border="0" style="width: 100%; border-collapse: collapse; margin-bottom: 24px; border: none;">
+        <thead>
+          <tr style="border-bottom: 2px solid #dbeafe;">
+            <th style="text-align: left; padding: 8px 0; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border: none !important; border-width: 0 !important;">Description</th>
+            <th style="text-align: right; padding: 8px 0; font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; width: 100px; border: none !important; border-width: 0 !important;">Amount</th>
+          </tr>
+        </thead>
+        <tbody style="font-size: 12px;">
+          ${lineItemRows.join("")}
+        </tbody>
+      </table>
+
+      <!-- ── Totals ── -->
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
+        <div style="width: 256px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; margin-bottom: 6px;">
+            <span>Subtotal</span><span>${fmt(subtotal)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; margin-bottom: 6px;">
+            <span>GST (18%)</span><span>${fmt(gstAmount)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: #1e3a8a; padding-top: 8px; border-top: 2px solid #dbeafe;">
+            <span>Grand Total</span><span>${fmt(totalCost)}</span>
+          </div>
+          <p style="font-size: 9px; color: #6b7280; text-align: right; margin: 4px 0 0 0; line-height: 1.2;">
+            This investment covers development, deployment, and ongoing strategic consulting.
+          </p>
         </div>
       </div>
-    </div>
-    
-    <!-- Footer Section -->
-    <div class="footer">
-      <p style="margin: 0;">This quotation is valid for 30 days from the issue date. All prices are subject to applicable taxes and may be adjusted based on project scope changes.</p>
+
+      <!-- ── Footer ── -->
+      <div style="margin-top: auto;">
+
+        <!-- Payment Options -->
+        <div style="font-size: 10px; color: #4b5563; margin-bottom: 24px; padding: 12px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;">
+          <p style="font-weight: 700; color: #1f2937; margin: 0 0 4px 0;">Accepted Payment Methods</p>
+          <p style="margin: 0; line-height: 1.5;">To make a payment via <strong style="color: #111827;">Bank Transfer, UPI, PayPal, or Cryptocurrency</strong>, please visit the <strong>Payment Page</strong> in your Client Portal.</p>
+        </div>
+
+        <!-- Terms & Conditions -->
+        <div style="font-size: 10px; color: #6b7280; margin-bottom: 24px;">
+          <p style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.025em; margin: 0 0 4px 0;">Terms &amp; Conditions</p>
+          <p style="margin: 0; line-height: 1.5;">Payment is due within 15 days of invoice date. Late payments may incur a 1.5%<br>monthly fee.</p>
+        </div>
+
+        <!-- Global Offices -->
+        <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+          <h3 style="font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; color: #6b7280;">Global Offices</h3>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 16px;">
+            <div style="font-size: 7px; line-height: 1.4;">
+              <p style="font-weight: 700; color: #1f2937; margin-bottom: 2px;"><span style="font-size: 9px;">🇮🇳</span> India</p>
+              <p style="color: #6b7280; font-weight: 500;">Cehpoint, Labpur, Sandipan Patsala Para, Birbhum, Bolpur, West Bengal - 731303</p>
+            </div>
+            <div style="font-size: 7px; line-height: 1.4;">
+              <p style="font-weight: 700; color: #1f2937; margin-bottom: 2px;"><span style="font-size: 9px;">🇺🇸</span> United States</p>
+              <p style="color: #6b7280; font-weight: 500;">5 Penn Plaza, 14th Floor, New York, NY 10001, US</p>
+            </div>
+            <div style="font-size: 7px; line-height: 1.4;">
+              <p style="font-weight: 700; color: #1f2937; margin-bottom: 2px;"><span style="font-size: 9px;">🇬🇧</span> United Kingdom</p>
+              <p style="color: #6b7280; font-weight: 500;">12 Steward Street, The Steward Building, London, E1 6FQ, Great Britain</p>
+            </div>
+            <div style="font-size: 7px; line-height: 1.4;">
+              <p style="font-weight: 700; color: #1f2937; margin-bottom: 2px;"><span style="font-size: 9px;">🇩🇪</span> Germany</p>
+              <p style="color: #6b7280; font-weight: 500;">Banking Circle S.A. - German Branch, Maximilianstra&#223;e 54, 80538 M&#252;nchen</p>
+            </div>
+            <div style="font-size: 7px; line-height: 1.4;">
+              <p style="font-weight: 700; color: #1f2937; margin-bottom: 2px;"><span style="font-size: 9px;">🇦🇺</span> Australia</p>
+              <p style="color: #6b7280; font-weight: 500;">Level 11/10 Carrington St, Sydney NSW 2000, Australia</p>
+            </div>
+            <div style="font-size: 7px; line-height: 1.4;">
+              <p style="font-weight: 700; color: #1f2937; margin-bottom: 2px;"><span style="font-size: 9px;">🇨🇦</span> Canada</p>
+              <p style="color: #6b7280; font-weight: 500;">736 Meridian Road N.E, Calgary, Alberta, CA</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 </body>
-</html>
-  `;
-
-  return quotationHtml;
+</html>`;
 };

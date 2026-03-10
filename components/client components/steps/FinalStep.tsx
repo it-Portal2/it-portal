@@ -65,8 +65,7 @@ export function FinalStep() {
     } catch (error) {
       console.error("Error downloading file:", error);
       toast.error(
-        `Failed to download file: ${
-          error instanceof Error ? error.message : "Unknown error"
+        `Failed to download file: ${error instanceof Error ? error.message : "Unknown error"
         }`
       );
     }
@@ -81,9 +80,8 @@ export function FinalStep() {
     try {
       // First priority: Use Cloudinary URL if available
       if (documentationUrl) {
-        const fileName = `${
-          formData.projectName || "project"
-        }_documentation.pdf`;
+        const fileName = `${formData.projectName || "project"
+          }_documentation.pdf`;
         await downloadFromUrl(documentationUrl, fileName);
         return;
       }
@@ -202,23 +200,18 @@ export function FinalStep() {
               <p className="text-sm text-muted-foreground">Team Composition</p>
               <p className="font-medium">
                 {formData.seniorDevelopers > 0 &&
-                  `${formData.seniorDevelopers} Senior Developer${
-                    formData.seniorDevelopers > 1 ? "s" : ""
+                  `${formData.seniorDevelopers} Senior Developer${formData.seniorDevelopers > 1 ? "s" : ""
                   }`}
                 {formData.juniorDevelopers > 0 &&
-                  `${formData.seniorDevelopers > 0 ? ", " : ""}${
-                    formData.juniorDevelopers
-                  } Junior Developer${
-                    formData.juniorDevelopers > 1 ? "s" : ""
+                  `${formData.seniorDevelopers > 0 ? ", " : ""}${formData.juniorDevelopers
+                  } Junior Developer${formData.juniorDevelopers > 1 ? "s" : ""
                   }`}
                 {formData.uiUxDesigners > 0 &&
-                  `${
-                    formData.seniorDevelopers > 0 ||
+                  `${formData.seniorDevelopers > 0 ||
                     formData.juniorDevelopers > 0
-                      ? ", "
-                      : ""
-                  }${formData.uiUxDesigners} UI/UX Designer${
-                    formData.uiUxDesigners > 1 ? "s" : ""
+                    ? ", "
+                    : ""
+                  }${formData.uiUxDesigners} UI/UX Designer${formData.uiUxDesigners > 1 ? "s" : ""
                   }`}
               </p>
             </div>
@@ -241,20 +234,20 @@ export function FinalStep() {
           </div>
         </div>
       </div>
- 
+
       <div className="flex flex-wrap justify-center gap-4 pt-4">
-      {formData.hasExistingDesign && formData.designLink && (
-        <div className="flex items-center">
-          
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => window.open(formData.designLink || "", "_blank")}
-          >
-         <LINK className="w-5 h-5 text-blue-500 mr-2 " />   View Design
-          </Button>
-        </div>
-      )}
+        {formData.hasExistingDesign && formData.designLink && (
+          <div className="flex items-center">
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.open(formData.designLink || "", "_blank")}
+            >
+              <LINK className="w-5 h-5 text-blue-500 mr-2 " />   View Design
+            </Button>
+          </div>
+        )}
         <Button
           variant="outline"
           className="gap-2"
@@ -281,8 +274,8 @@ export function FinalStep() {
           </DialogHeader>
           <div className="overflow-y-auto h-full p-4 border rounded-md">
             {formData.documentationFile &&
-            formData.documentationFileContent &&
-            !formData.improvedDocumentation ? (
+              formData.documentationFileContent &&
+              !formData.improvedDocumentation ? (
               <PdfViewer
                 fileUrl={formData.documentationFileContent}
                 fileName={formData.documentationFile.name}
@@ -319,7 +312,6 @@ export function FinalStep() {
           <div className="overflow-y-auto h-full p-4 border rounded-md">
             {formData.quotationPdf ? (
               <div
-                className="prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{
                   __html: formData.quotationPdf,
                 }}

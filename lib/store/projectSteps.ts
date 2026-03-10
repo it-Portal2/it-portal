@@ -177,18 +177,18 @@ export const useProjectFormStore = create<ProjectFormStore>()(
               designer
             );
           }
-          
+
           // If user adds UI/UX designer, reset hasExistingDesign flag
           if (data.uiUxDesigners && data.uiUxDesigners > 0) {
             newFormData.hasExistingDesign = false;
             newFormData.designLink = null;
           }
-          
+
           // If user sets hasExistingDesign to false, clear design link
           if (data.hasExistingDesign === false) {
             newFormData.designLink = null;
           }
-          
+
           return { formData: newFormData };
         }),
 
@@ -230,31 +230,30 @@ export const useProjectFormStore = create<ProjectFormStore>()(
 
       generateQuotation: () => {
         const { formData } = get();
-        const exchangeRate = 83;
-        const seniorDevRate =
-          formData.currency === "INR"
-            ? 75000
-            : Math.round((75000 * 1.04) / exchangeRate);
-        const juniorDevRate =
-          formData.currency === "INR"
-            ? 30000
-            : Math.round((30000 * 1.04) / exchangeRate);
-        const uiUxRate =
-          formData.currency === "INR"
-            ? 8000
-            : Math.round((8000 * 1.04) / exchangeRate);
-        const projectManagementCost =
-          formData.currency === "INR"
-            ? 50000
-            : Math.round((50000 * 1.04) / exchangeRate);
 
-        const totalCost =
+        // ─── Single source of truth: same rates as quotationUtils.ts ───
+        const exchangeRate = 83;
+        const GST_RATE = 0.18;
+        const toRate = (inr: number) =>
+          formData.currency === "INR"
+            ? inr
+            : Math.round((inr * 1.04) / exchangeRate);
+
+        const seniorDevRate = toRate(75000);
+        const juniorDevRate = toRate(30000);
+        const uiUxRate = toRate(8000);
+        const pmCost = toRate(50000);
+
+        const subtotal =
           formData.seniorDevelopers * seniorDevRate +
           formData.juniorDevelopers * juniorDevRate +
           formData.uiUxDesigners * uiUxRate +
-          projectManagementCost;
+          pmCost;
+        const totalCost = subtotal + Math.round(subtotal * GST_RATE);
 
+        // Update budget first so downstream reads are correct
         get().updateFormData({ projectBudget: totalCost });
+
         const quotationData: QuotationData = {
           clientName: formData.clientName,
           clientEmail: formData.clientEmail,
@@ -267,6 +266,7 @@ export const useProjectFormStore = create<ProjectFormStore>()(
           uiUxDesigners: formData.uiUxDesigners,
           currency: formData.currency,
         };
+
         const quotationHtml = generateQuotationHtml(quotationData);
         get().updateFormData({ quotationPdf: quotationHtml });
       },
