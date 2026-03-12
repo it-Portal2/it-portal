@@ -85,7 +85,7 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
   const juniorDevCost = formData.juniorDevelopers * juniorDevRate;
   const uiUxCost = formData.uiUxDesigners * uiUxRate;
   const subtotal = seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
-  const gstAmount = Math.round(subtotal * GST_RATE);
+  const gstAmount = formData.currency === "INR" ? Math.round(subtotal * GST_RATE) : 0;
   const totalCost = subtotal + gstAmount;
 
   const fmt = (amount: number) =>
@@ -212,9 +212,11 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
           <div style="display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; margin-bottom: 6px;">
             <span>Subtotal</span><span>${fmt(subtotal)}</span>
           </div>
+          ${formData.currency === "INR" ? `
           <div style="display: flex; justify-content: space-between; font-size: 12px; color: #4b5563; margin-bottom: 6px;">
             <span>GST (18%)</span><span>${fmt(gstAmount)}</span>
           </div>
+          ` : ""}
           <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; color: #1e3a8a; padding-top: 8px; border-top: 2px solid #dbeafe;">
             <span>Grand Total</span><span>${fmt(totalCost)}</span>
           </div>

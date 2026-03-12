@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
+import { AdvancedPlanDialog } from "./AdvancedPlanDialog";
 
 interface DeveloperTypeSelectorProps {
   title: string;
@@ -138,6 +139,7 @@ export function DevelopmentPreferences() {
   const { formData, updateFormData, validationErrors } = useProjectFormStore();
   const [newArea, setNewArea] = useState("");
   const [showDesignLinkDialog, setShowDesignLinkDialog] = useState(false);
+  const [showAdvancedPlanDialog, setShowAdvancedPlanDialog] = useState(false);
   const [designLink, setDesignLink] = useState(formData.designLink || "");
   const [linkError, setLinkError] = useState("");
 
@@ -236,6 +238,17 @@ export function DevelopmentPreferences() {
           </div>
         </div>
 
+        <div className="flex justify-end pt-2 pb-1">
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => setShowAdvancedPlanDialog(true)}
+          >
+            Advance Plan
+          </Button>
+        </div>
+
         <div className="space-y-4">
           <div className="space-y-3">
             <DeveloperTypeSelector
@@ -278,6 +291,11 @@ export function DevelopmentPreferences() {
           )}
         </div>
       </div>
+
+      <AdvancedPlanDialog
+        open={showAdvancedPlanDialog}
+        onOpenChange={setShowAdvancedPlanDialog}
+      />
 
       {/* Design Link Dialog */}
       <Dialog
