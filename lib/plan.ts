@@ -158,3 +158,57 @@ export const plans: PlanBundle[] = [
         textColor: "text-white"
     }
 ];
+
+export interface ServiceOption {
+    id: string;
+    name: string;
+    description: string;
+    includes: string[];
+    stat: string;
+    gradientFrom: string;
+    gradientTo: string;
+    icon: string;
+}
+
+export const services: ServiceOption[] = [
+    {
+        id: "cyber-security",
+        name: "Cyber Security",
+        description: "Comprehensive security audits, penetration testing, and threat protection strategies.",
+        includes: ["Pentesting", "Security Audits", "Compliance", "Threat Monitoring"],
+        stat: "150+ Audits",
+        gradientFrom: "from-blue-500",
+        gradientTo: "to-cyan-500",
+        icon: "Shield"
+    },
+    {
+        id: "e-commerce",
+        name: "E-commerce Solutions",
+        description: "Conversion-optimized platforms with seamless payment integration and omnichannel support.",
+        includes: ["Custom Storefronts", "Payment Integration", "Inventory Mgmt", "Mobile Commerce"],
+        stat: "35% Avg Growth",
+        gradientFrom: "from-green-500",
+        gradientTo: "to-emerald-500",
+        icon: "ShoppingCart"
+    },
+    {
+        id: "edutech",
+        name: "Edutech Platforms",
+        description: "Adaptive learning systems, virtual classrooms, and student management solutions.",
+        includes: ["LMS Development", "Virtual Classrooms", "Analytics", "Gamification"],
+        stat: "85+ Platforms",
+        gradientFrom: "from-orange-500",
+        gradientTo: "to-red-500",
+        icon: "BookOpen"
+    },
+    {
+        id: "fintech",
+        name: "Fintech Applications",
+        description: "Secure, compliant financial technology with blockchain and payment processing.",
+        includes: ["Digital Wallets", "Blockchain", "Compliance", "Analytics"],
+        stat: "42% YoY Growth",
+        gradientFrom: "from-yellow-500",
+        gradientTo: "to-amber-500",
+        icon: "DollarSign"
+    }
+];
