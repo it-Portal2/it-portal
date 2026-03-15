@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
 import { AdvancedPlanDialog } from "./AdvancedPlanDialog";
+import { RippleButton, RippleButtonRipples } from "@/components/animate-ui/components/buttons/ripple";
 
 interface DeveloperTypeSelectorProps {
   title: string;
@@ -238,15 +239,15 @@ export function DevelopmentPreferences() {
           </div>
         </div>
 
-        <div className="flex justify-end pt-2 pb-1">
-          <Button
+        <div className="flex justify-end pt-2 pb-1 relative">
+          <RippleButton
             type="button"
-            variant="default"
-            size="sm"
+            className="h-9 px-3 relative overflow-hidden text-sm"
             onClick={() => setShowAdvancedPlanDialog(true)}
           >
-            Advance Plan
-          </Button>
+            <span className="relative z-10 font-medium">Advance Plan</span>
+            <RippleButtonRipples color="rgba(255, 255, 255, 0.2)" />
+          </RippleButton>
         </div>
 
         <div className="space-y-4">
