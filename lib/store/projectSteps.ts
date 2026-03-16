@@ -12,6 +12,7 @@ export interface ProjectFormData {
   seniorDevelopers: number;
   juniorDevelopers: number;
   uiUxDesigners: number;
+  selectedBundles: any[]; // Changed from empty array to array of any
   designLink: string | null; // Added design link field
   hasExistingDesign: boolean; // Added flag to track if user has existing design
   documentationFile: File | null;
@@ -44,18 +45,31 @@ const projectDetailsSchema = z.object({
 
 const developmentPreferencesSchema = z
   .object({
-    developmentAreas: z
-      .array(z.string())
-      .min(1, "At least one development area is required"),
+    developmentAreas: z.array(z.string()),
     seniorDevelopers: z.number(),
     juniorDevelopers: z.number(),
     uiUxDesigners: z.number(),
+    selectedBundles: z.array(z.any()).optional(),
     hasExistingDesign: z.boolean().optional(),
     designLink: z.string().nullable().optional(),
   })
   .refine(
-    (data) =>
-      data.seniorDevelopers + data.juniorDevelopers + data.uiUxDesigners > 0,
+    (data) => {
+      const hasBundles = data.selectedBundles && data.selectedBundles.length > 0;
+      if (hasBundles) return true;
+      return data.developmentAreas.length > 0;
+    },
+    {
+      message: "At least one development area is required",
+      path: ["developmentAreas"],
+    }
+  )
+  .refine(
+    (data) => {
+      const hasBundles = data.selectedBundles && data.selectedBundles.length > 0;
+      if (hasBundles) return true;
+      return data.seniorDevelopers + data.juniorDevelopers + data.uiUxDesigners > 0;
+    },
     {
       message: "At least one team member is required",
       path: ["teamMembers"],
@@ -117,6 +131,7 @@ const defaultFormData: ProjectFormData = {
   seniorDevelopers: 0,
   juniorDevelopers: 0,
   uiUxDesigners: 0,
+  selectedBundles: [],
   designLink: null, // Added default value
   hasExistingDesign: false, // Added default value
   documentationFile: null,
@@ -189,6 +204,12 @@ export const useProjectFormStore = create<ProjectFormStore>()(
             newFormData.designLink = null;
           }
 
+          // Invalidate quotation if pricing related fields change
+          const pricingFields = ['developmentAreas', 'seniorDevelopers', 'juniorDevelopers', 'uiUxDesigners', 'selectedBundles', 'currency'];
+          if (pricingFields.some(field => field in data)) {
+            newFormData.quotationPdf = null;
+          }
+
           return { formData: newFormData };
         }),
 
@@ -244,12 +265,24 @@ export const useProjectFormStore = create<ProjectFormStore>()(
         const uiUxRate = toRate(8000);
         const pmCost = toRate(50000);
 
-        const subtotal =
-          formData.seniorDevelopers * seniorDevRate +
-          formData.juniorDevelopers * juniorDevRate +
-          formData.uiUxDesigners * uiUxRate +
-          pmCost;
-        const totalCost = subtotal + Math.round(subtotal * GST_RATE);
+        const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
+        
+        const seniorDevCost = hasBundles ? 0 : formData.seniorDevelopers * seniorDevRate;
+        const juniorDevCost = hasBundles ? 0 : formData.juniorDevelopers * juniorDevRate;
+        const uiUxCost = hasBundles ? 0 : formData.uiUxDesigners * uiUxRate;
+        const pmCostFinal = hasBundles ? 0 : pmCost;
+
+        // Calculate selected bundles cost
+        let bundlesCost = 0;
+        if (formData.selectedBundles && formData.selectedBundles.length > 0) {
+          bundlesCost = formData.selectedBundles.reduce((acc, bundle) => {
+            const numericPrice = Number(bundle.price.replace(/[^0-9.-]+/g, ""));
+            return acc + (isNaN(numericPrice) ? 0 : numericPrice);
+          }, 0);
+        }
+
+        const subtotal = seniorDevCost + juniorDevCost + uiUxCost + pmCostFinal + bundlesCost;
+        const totalCost = subtotal + (formData.currency === "INR" ? Math.round(subtotal * GST_RATE) : 0);
 
         // Update budget first so downstream reads are correct
         get().updateFormData({ projectBudget: totalCost });
@@ -264,6 +297,7 @@ export const useProjectFormStore = create<ProjectFormStore>()(
           seniorDevelopers: formData.seniorDevelopers,
           juniorDevelopers: formData.juniorDevelopers,
           uiUxDesigners: formData.uiUxDesigners,
+          selectedBundles: formData.selectedBundles,
           currency: formData.currency,
         };
 
@@ -295,6 +329,7 @@ export const useProjectFormStore = create<ProjectFormStore>()(
             seniorDevelopers: 0,
             juniorDevelopers: 0,
             uiUxDesigners: 0,
+            selectedBundles: [],
             designLink: null,
             hasExistingDesign: false,
           };

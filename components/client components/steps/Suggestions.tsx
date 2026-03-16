@@ -45,11 +45,13 @@ export function Suggestions({ onContinue }: SuggestionsProps) {
   const [designLink, setDesignLink] = useState(formData.designLink || "");
   const [linkError, setLinkError] = useState("");
 
-  const needsSeniorDev = formData.seniorDevelopers === 0;
-  const needsJuniorDev = formData.juniorDevelopers === 0;
-  const needsUiUx = formData.uiUxDesigners === 0 && !formData.hasExistingDesign;
+  const needsSeniorDev = formData.seniorDevelopers === 0 && (!formData.selectedBundles || formData.selectedBundles.length === 0);
+  const needsJuniorDev = formData.juniorDevelopers === 0 && (!formData.selectedBundles || formData.selectedBundles.length === 0);
+  const needsUiUx = formData.uiUxDesigners === 0 && !formData.hasExistingDesign && (!formData.selectedBundles || formData.selectedBundles.length === 0);
+  const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
 
   const canProceed =
+    hasBundles ||
     (formData.seniorDevelopers >= 1 && formData.juniorDevelopers >= 1) ||
     (formData.seniorDevelopers >= 1 && formData.uiUxDesigners >= 1) ||
     (formData.juniorDevelopers >= 1 && formData.uiUxDesigners >= 1) ||
@@ -153,7 +155,20 @@ export function Suggestions({ onContinue }: SuggestionsProps) {
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-6 pt-4">
+        {hasBundles ? (
+          <CardContent className="space-y-6 pt-4">
+            <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+              <h3 className="sm:text-lg font-semibold flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
+                Bundle Selected
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                You have selected a comprehensive bundle. Your dedicated team members to build your application have already been fully allocated for optimal delivery of your project. Let's proceed to the next step!
+              </p>
+            </div>
+          </CardContent>
+        ) : (
+          <CardContent className="space-y-6 pt-4">
           <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
             <h3 className="sm:text-lg font-semibold flex items-center gap-2">
               <ThumbsUp className="w-5 h-5 text-primary" />
@@ -251,6 +266,7 @@ export function Suggestions({ onContinue }: SuggestionsProps) {
             )}
           </div>
         </CardContent>
+        )}
 
         <CardFooter>
           <Button

@@ -39,6 +39,7 @@ export interface QuotationData {
   seniorDevelopers: number;
   juniorDevelopers: number;
   uiUxDesigners: number;
+  selectedBundles?: any[];
   currency: "INR" | "USD";
   // Optional overrides
   invoiceNumber?: string;
@@ -81,10 +82,31 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
       ? baseRates.projectManagementCost
       : Math.round((baseRates.projectManagementCost * 1.04) / exchangeRate);
 
-  const seniorDevCost = formData.seniorDevelopers * seniorDevRate;
-  const juniorDevCost = formData.juniorDevelopers * juniorDevRate;
-  const uiUxCost = formData.uiUxDesigners * uiUxRate;
-  const subtotal = seniorDevCost + juniorDevCost + uiUxCost + projectManagementCost;
+  const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
+
+  const seniorDevCost = hasBundles ? 0 : (formData.seniorDevelopers || 0) * seniorDevRate;
+  const juniorDevCost = hasBundles ? 0 : (formData.juniorDevelopers || 0) * juniorDevRate;
+  const uiUxCost = hasBundles ? 0 : (formData.uiUxDesigners || 0) * uiUxRate;
+  const projectManagementCostFinal = hasBundles ? 0 : projectManagementCost;
+  
+  // Calculate selected bundles cost
+  let bundlesCost = 0;
+  if (hasBundles) {
+    bundlesCost = formData.selectedBundles!.reduce((acc, bundle) => {
+      // Parse price string (e.g. "₹1,245,000" or "$15,000") to number
+      const numericPrice = Number(bundle.price.replace(/[^0-9.-]+/g, ""));
+      const baseInrPrice = isNaN(numericPrice) ? 0 : numericPrice;
+      
+      // Calculate currency adjusted price
+      const adjustedPrice = formData.currency === "INR" 
+        ? baseInrPrice 
+        : Math.round((baseInrPrice * 1.04) / exchangeRate);
+        
+      return acc + adjustedPrice;
+    }, 0);
+  }
+
+  const subtotal = seniorDevCost + juniorDevCost + uiUxCost + projectManagementCostFinal + bundlesCost;
   const gstAmount = formData.currency === "INR" ? Math.round(subtotal * GST_RATE) : 0;
   const totalCost = subtotal + gstAmount;
 
@@ -98,32 +120,54 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
   // Build dynamic line items matching index.html table row style
   const lineItemRows: string[] = [];
 
-  if (formData.seniorDevelopers > 0) {
+  if (!hasBundles) {
+    if (formData.seniorDevelopers > 0) {
+      lineItemRows.push(`
+        <tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Senior Developer &times; ${formData.seniorDevelopers}</td>
+          <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(seniorDevCost)}</td>
+        </tr>`);
+    }
+    if (formData.juniorDevelopers > 0) {
+      lineItemRows.push(`
+        <tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Junior Developer &times; ${formData.juniorDevelopers}</td>
+          <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(juniorDevCost)}</td>
+        </tr>`);
+    }
+    if (formData.uiUxDesigners > 0) {
+      lineItemRows.push(`
+        <tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">UI/UX Designer &times; ${formData.uiUxDesigners}</td>
+          <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(uiUxCost)}</td>
+        </tr>`);
+    }
     lineItemRows.push(`
-      <tr style="border-bottom: 1px solid #f3f4f6;">
-        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Senior Developer &times; ${formData.seniorDevelopers}</td>
-        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(seniorDevCost)}</td>
-      </tr>`);
+        <tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Project Management &amp; Delivery Oversight</td>
+          <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(projectManagementCostFinal)}</td>
+        </tr>`);
   }
-  if (formData.juniorDevelopers > 0) {
-    lineItemRows.push(`
-      <tr style="border-bottom: 1px solid #f3f4f6;">
-        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Junior Developer &times; ${formData.juniorDevelopers}</td>
-        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(juniorDevCost)}</td>
-      </tr>`);
+
+  // Add selected bundles to line items
+  if (hasBundles) {
+    formData.selectedBundles!.forEach(bundle => {
+      const numericPrice = Number(bundle.price.replace(/[^0-9.-]+/g, ""));
+      const baseInrPrice = isNaN(numericPrice) ? 0 : numericPrice;
+      
+      const priceValue = formData.currency === "INR" 
+        ? baseInrPrice 
+        : Math.round((baseInrPrice * 1.04) / exchangeRate);
+
+      lineItemRows.push(`
+        <tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">
+            ${bundle.name} <span style="font-size: 10px; color: #6b7280; font-weight: 400;">(${bundle.billing || 'Bundle'})</span>
+          </td>
+          <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(priceValue)}</td>
+        </tr>`);
+    });
   }
-  if (formData.uiUxDesigners > 0) {
-    lineItemRows.push(`
-      <tr style="border-bottom: 1px solid #f3f4f6;">
-        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">UI/UX Designer &times; ${formData.uiUxDesigners}</td>
-        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(uiUxCost)}</td>
-      </tr>`);
-  }
-  lineItemRows.push(`
-      <tr style="border-bottom: 1px solid #f3f4f6;">
-        <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Project Management &amp; Delivery Oversight</td>
-        <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(projectManagementCost)}</td>
-      </tr>`);
 
   return `<!DOCTYPE html>
 <html lang="en">

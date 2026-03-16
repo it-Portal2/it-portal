@@ -208,7 +208,9 @@ export function Documentation() {
           {
             projectName: formData.projectName,
             projectOverview: formData.projectOverview,
-            developmentAreas: formData.developmentAreas || [],
+            developmentAreas: formData.developmentAreas && formData.developmentAreas.length > 0
+              ? formData.developmentAreas
+              : (formData.selectedBundles?.map((b: any) => b.name) || []),
           },
           {
             timeout: 25000, // 25 seconds client timeout

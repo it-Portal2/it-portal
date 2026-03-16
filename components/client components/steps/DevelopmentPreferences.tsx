@@ -33,6 +33,7 @@ interface DeveloperTypeSelectorProps {
   currency: string;
   showLeadDesignerBadge?: boolean;
   designerProfileLink?: string;
+  disabled?: boolean;
 }
 
 // Updated DeveloperTypeSelector component with lead designer badge
@@ -45,6 +46,7 @@ function DeveloperTypeSelector({
   currency,
   showLeadDesignerBadge = false,
   designerProfileLink = "#",
+  disabled = false,
 }: DeveloperTypeSelectorProps) {
   const displayCost =
     currency === "INR"
@@ -60,7 +62,7 @@ function DeveloperTypeSelector({
   };
 
   return (
-    <div className="flex items-center justify-between p-3 border rounded-md">
+    <div className={`flex items-center justify-between p-3 border rounded-md ${disabled ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
       <div className="flex flex-col md:flex-row md:items-center">
         {/* Title + Cost */}
         <div>
@@ -118,7 +120,7 @@ function DeveloperTypeSelector({
           size="icon"
           variant="outline"
           onClick={() => onChange(Math.max(0, value - 1))}
-          disabled={value === 0}
+          disabled={disabled || value === 0}
         >
           <Minus className="w-4 h-4" />
         </Button>
@@ -128,6 +130,7 @@ function DeveloperTypeSelector({
           size="icon"
           variant="outline"
           onClick={() => onChange(value + 1)}
+          disabled={disabled}
         >
           <Plus className="w-4 h-4" />
         </Button>
@@ -143,6 +146,8 @@ export function DevelopmentPreferences() {
   const [showAdvancedPlanDialog, setShowAdvancedPlanDialog] = useState(false);
   const [designLink, setDesignLink] = useState(formData.designLink || "");
   const [linkError, setLinkError] = useState("");
+
+  const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
 
   const LEAD_DESIGNER_PROFILE_URL = "https://tithi-ui-ux-design.vercel.app";
 
@@ -211,10 +216,10 @@ export function DevelopmentPreferences() {
               value={newArea}
               onChange={(e) => setNewArea(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={`placeholder:text-xs ${validationErrors.projectName ? "border-destructive" : ""
-                }`}
+              disabled={hasBundles}
+              className={`placeholder:text-xs ${validationErrors.developmentAreas && !hasBundles ? "border-destructive" : ""} ${hasBundles ? "opacity-50 cursor-not-allowed" : ""}`}
             />
-            <Button type="button" onClick={addDevelopmentArea} size="sm">
+            <Button type="button" onClick={addDevelopmentArea} size="sm" disabled={hasBundles}>
               <Plus className="w-4 h-4" />
             </Button>
           </div>
@@ -230,7 +235,8 @@ export function DevelopmentPreferences() {
                 <button
                   type="button"
                   onClick={() => removeDevelopmentArea(area)}
-                  className="ml-2 text-muted-foreground hover:text-foreground"
+                  disabled={hasBundles}
+                  className={`ml-2 text-muted-foreground hover:text-foreground ${hasBundles ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -245,14 +251,54 @@ export function DevelopmentPreferences() {
             className="h-9 px-3 relative overflow-hidden text-sm"
             onClick={() => setShowAdvancedPlanDialog(true)}
           >
-            <span className="relative z-10 font-medium">Advance Plan</span>
+            <span className="relative z-10 font-medium">Services & Bundles</span>
             <RippleButtonRipples color="rgba(255, 255, 255, 0.2)" />
           </RippleButton>
         </div>
 
+        {/* Selected Bundles Display */}
+        {formData.selectedBundles && formData.selectedBundles.length > 0 && (
+          <div className="space-y-3 mt-4">
+            <h3 className="text-sm font-semibold text-foreground">Selected Bundles</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
+              {formData.selectedBundles.map((bundle, idx) => (
+                <div key={idx} className="flex flex-col justify-between p-3 border rounded-lg bg-card text-card-foreground shadow-sm relative group overflow-hidden">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
+                  
+                  <div className="relative z-10 flex justify-between items-start">
+                    <div className="space-y-0.5">
+                      <h4 className="font-bold text-sm tracking-tight">{bundle.name}</h4>
+                      <p className="text-xs font-semibold text-primary">{bundle.price}</p>
+                      {bundle.billing && (
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-1">
+                          {bundle.billing}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateFormData({
+                          selectedBundles: formData.selectedBundles.filter(b => b.name !== bundle.name)
+                        });
+                      }}
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                      aria-label="Remove bundle"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div className="space-y-3">
             <DeveloperTypeSelector
+              disabled={hasBundles}
               title="Senior Developer"
               cost={
                 formData.currency === "INR" ? "(₹70,000-80,000)" : "($940-1000)"
@@ -264,6 +310,7 @@ export function DevelopmentPreferences() {
             />
 
             <DeveloperTypeSelector
+              disabled={hasBundles}
               title="Junior Developer"
               cost={
                 formData.currency === "INR" ? "(₹20,000-40,000)" : "($376-500)"
@@ -275,6 +322,7 @@ export function DevelopmentPreferences() {
             />
 
             <DeveloperTypeSelector
+              disabled={hasBundles}
               title="UI/UX Designer (optional)"
               cost={formData.currency === "INR" ? "(₹8,000)" : "($100)"}
               tooltip="UI/UX designers craft user-friendly interfaces, creating wireframes and prototypes while prioritizing user needs. They integrate feedback, collaborate with developers, and maintain brand consistency. Proficient in design tools, they stay updated on trends."
@@ -296,6 +344,18 @@ export function DevelopmentPreferences() {
       <AdvancedPlanDialog
         open={showAdvancedPlanDialog}
         onOpenChange={setShowAdvancedPlanDialog}
+        onSelectPlan={(plan: any) => {
+          // Check if plan is already selected
+          const isAlreadySelected = formData.selectedBundles?.some(
+            (b) => b.name === plan.name
+          );
+          
+          if (!isAlreadySelected) {
+            updateFormData({
+              selectedBundles: [...(formData.selectedBundles || []), plan]
+            });
+          }
+        }}
       />
 
       {/* Design Link Dialog */}

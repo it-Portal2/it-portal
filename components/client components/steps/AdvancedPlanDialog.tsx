@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Shield, ShoppingCart, BookOpen, DollarSign, CircleCheck, ArrowRight, Brain, Blocks } from "lucide-react";
 import { plans, services, ServiceOption } from "@/lib/plan";
 import { ServiceDetailView } from "../services/ServiceDetailView";
+import { useProjectFormStore } from "@/lib/store/projectSteps";
 
 interface AdvancedPlanDialogProps {
   open: boolean;
@@ -26,6 +27,17 @@ export function AdvancedPlanDialog({
 }: AdvancedPlanDialogProps) {
   const [activeTab, setActiveTab] = useState<"bundle" | "service">("service");
   const [selectedService, setSelectedService] = useState<ServiceOption | null>(null);
+  const { formData } = useProjectFormStore();
+
+  const selectedBundleNames = formData.selectedBundles?.map((b: any) => b.name) || [];
+
+  // Reset state when dialog opens to ensure it starts at the Service selection view
+  useEffect(() => {
+    if (open) {
+      setActiveTab("service");
+      setSelectedService(null);
+    }
+  }, [open]);
 
   const iconMap: Record<string, React.ReactNode> = {
     Shield: <Shield className="w-8 h-8 text-white" />,
@@ -201,12 +213,19 @@ export function AdvancedPlanDialog({
                       {/* Choose button */}
                       <button
                         onClick={() => {
-                          onSelectPlan?.(plan);
-                          onOpenChange(false);
+                          if (!selectedBundleNames.includes(plan.name)) {
+                            onSelectPlan?.(plan);
+                            onOpenChange(false);
+                          }
                         }}
-                        className="mt-5 w-full py-3 bg-white text-black font-black text-sm rounded-xl hover:bg-opacity-90 active:scale-[0.98] transition-all"
+                        disabled={selectedBundleNames.includes(plan.name)}
+                        className={`mt-5 w-full py-3 font-black text-sm rounded-xl transition-all ${
+                          selectedBundleNames.includes(plan.name)
+                            ? "bg-white/30 text-white cursor-not-allowed border border-white/40"
+                            : "bg-white text-black hover:bg-opacity-90 active:scale-[0.98]"
+                        }`}
                       >
-                        CHOOSE BUNDLE
+                        {selectedBundleNames.includes(plan.name) ? "ALREADY SELECTED" : "CHOOSE BUNDLE"}
                       </button>
                     </div>
                   ))}
