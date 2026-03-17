@@ -14,7 +14,8 @@ import {
   Gift,
   Info,
   ChevronUp,
-  Activity
+  Activity,
+  ShieldCheck,
 } from "lucide-react";
 import {
   calculateAIAutomationPrice,
@@ -106,8 +107,8 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                     key={key}
                     onClick={() => setComplexity(key)}
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${complexity === key
-                        ? "bg-purple-50 border-purple-500 shadow-sm"
-                        : "bg-background border-muted hover:border-purple-300"
+                      ? "bg-purple-50 border-purple-500 shadow-sm"
+                      : "bg-background border-muted hover:border-purple-300"
                       }`}
                   >
                     <div className="text-sm font-bold truncate">{solutionComplexityPrices[key].label}</div>
@@ -133,8 +134,8 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                     key={key}
                     onClick={() => setWorkflow(key)}
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${workflow === key
-                        ? "bg-purple-50 border-purple-500 shadow-sm"
-                        : "bg-background border-muted hover:border-purple-300"
+                      ? "bg-purple-50 border-purple-500 shadow-sm"
+                      : "bg-background border-muted hover:border-purple-300"
                       }`}
                   >
                     <div className="text-sm font-bold truncate">{workflowPrices[key].label}</div>
@@ -164,8 +165,8 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                       key={feature.id}
                       onClick={() => toggleFeature(feature.id as FeatureType)}
                       className={`p-3 rounded-lg border cursor-pointer transition-all hover:bg-muted/50 ${isChecked
-                          ? "bg-purple-50 border-purple-500"
-                          : "bg-background border-border"
+                        ? "bg-purple-50 border-purple-500"
+                        : "bg-background border-border"
                         }`}
                     >
                       <div className="flex items-center gap-3">
@@ -190,10 +191,11 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
 
         {/* Right Column: Pricing Summary */}
         <div className="md:col-span-5 lg:col-span-4">
-          <div className="sticky top-24">
+          <div className="sticky top-0 space-y-6">
             <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
               <div className="flex flex-col space-y-1.5 p-5 border-b">
                 <div className="text-xl font-semibold leading-none tracking-tight">Estimated Investment</div>
+                <div className="text-sm text-muted-foreground mt-1">Indicative Estimation</div>
               </div>
 
               <div className="p-5 space-y-6">
@@ -212,18 +214,18 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
 
                 <div className="pt-5 border-t text-center">
                   <div className="text-sm text-muted-foreground mb-1 font-medium">Total Estimated Cost</div>
-                  <div className="text-3xl font-black text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-pink-600 mb-2">
+                  <div className="text-4xl font-black text-foreground mb-2">
                     {currency === "INR" ? "₹" : "$"}
                     {totalCost.toLocaleString()}
                   </div>
 
                   {baseInrCost >= 700000 && (
-                    <div className="mt-6 mb-4 p-4 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50 animate-in fade-in zoom-in duration-500 max-h-[400px] overflow-y-auto font-sans">
+                    <div className="mt-6 mb-4 p-4 rounded-xl border-2 border-dashed border-blue-600/30 bg-blue-600/5 animate-in fade-in zoom-in duration-500 max-h-[400px] overflow-y-auto font-sans">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="p-1.5 rounded-lg bg-purple-100">
-                          <Gift className="w-5 h-5 text-purple-600" />
+                        <div className="p-1.5 rounded-lg bg-blue-100">
+                          <Gift className="w-5 h-5 text-blue-600" />
                         </div>
-                        <span className="font-bold text-sm text-purple-700">Unlock Free AI Bundle</span>
+                        <span className="font-bold text-sm text-blue-700">Unlock Free AI Bundle</span>
                       </div>
                       <p className="text-xs text-muted-foreground mb-4 text-left">
                         Your estimation exceeds ₹7 Lakhs. Select **one** complimentary bundle as a gift:
@@ -232,8 +234,8 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                         <button
                           onClick={() => setFreeBundleOption("saved")}
                           className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${freeBundleOption === "saved"
-                              ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20"
-                              : "bg-background border-border hover:border-emerald-500/50"
+                            ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20"
+                            : "bg-background border-border hover:border-emerald-500/50"
                             }`}
                         >
                           <div className={`p-1.5 rounded-md ${freeBundleOption === "saved" ? "bg-white/20" : "bg-muted"}`}>
@@ -245,14 +247,14 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                           </div>
                         </button>
 
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2 mb-1 text-left">Select a Bundle:</div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2 mb-1 text-left">Select an AI Bundle:</div>
 
                         {aiBundles.map((plan) => (
                           <div key={plan.name} className="space-y-2">
                             <div
                               className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all relative ${freeBundleOption === plan.name
-                                  ? "bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-500/20"
-                                  : "bg-background border-border hover:border-purple-500/50"
+                                ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
+                                : "bg-background border-border hover:border-blue-500/50"
                                 }`}
                             >
                               <div
@@ -264,8 +266,8 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                                 </div>
                                 <div>
                                   <div className="text-xs font-bold">{plan.name}</div>
-                                  <div className={`text-[10px] ${freeBundleOption === plan.name ? "text-purple-100" : "text-muted-foreground"}`}>
-                                    Free Gift with AI Solution
+                                  <div className={`text-[10px] ${freeBundleOption === plan.name ? "text-blue-100" : "text-muted-foreground"}`}>
+                                    Free Gift with AI Service
                                   </div>
                                 </div>
                               </div>
@@ -273,8 +275,8 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                               <button
                                 onClick={() => setExpandedBundle(expandedBundle === plan.name ? null : plan.name)}
                                 className={`p-2 rounded-md transition-colors ${freeBundleOption === plan.name
-                                    ? "hover:bg-white/10 text-white"
-                                    : "hover:bg-muted text-muted-foreground"
+                                  ? "hover:bg-white/10 text-white"
+                                  : "hover:bg-muted text-muted-foreground"
                                   }`}
                                 title="View Details"
                               >
@@ -288,7 +290,7 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                                 <ul className="space-y-1">
                                   {plan.includes.map((item, i) => (
                                     <li key={i} className="text-[10px] flex items-center gap-2">
-                                      <div className="w-1 h-1 rounded-full bg-purple-500"></div>
+                                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
                                       {item}
                                     </li>
                                   ))}
@@ -308,19 +310,42 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
 
                   {onAdd && (
                     <Button
-                      className={`w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-purple-500/20 transition-all ${baseInrCost >= 700000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
+                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 700000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
                         }`}
                       onClick={() => {
                         if (baseInrCost >= 700000 && !freeBundleOption) return;
                         onAdd(totalCost, currency, freeBundleOption || undefined)
                       }}
                     >
-                      {baseInrCost >= 700000 && !freeBundleOption ? "Select a Bundle first" : "Add Service"}
+                      {baseInrCost >= 700000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
                     </Button>
                   )}
+                  <div className="text-xs text-muted-foreground mt-4">
+                    *Rough estimate. Final cost subject to exact requirements review.
+                  </div>
                 </div>
-
               </div>
+            </div>
+
+            <div className="p-5 rounded-xl border bg-card/50 text-sm text-muted-foreground">
+              <h4 className="font-bold text-foreground mb-3 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
+                Why Choose Cehpoint?
+              </h4>
+              <ul className="space-y-3 text-left">
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600 mt-1.5 shrink-0"></div>
+                  Advanced Neural Network Architecture
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 mt-1.5 shrink-0"></div>
+                  Ethical AI & Data Privacy Standards
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 shrink-0"></div>
+                  Seamless Enterprise System Integration
+                </li>
+              </ul>
             </div>
           </div>
         </div>

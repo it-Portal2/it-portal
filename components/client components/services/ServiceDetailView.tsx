@@ -2,7 +2,8 @@ import { ServiceOption } from "@/lib/plan";
 import { ArrowLeft, X } from "lucide-react";
 import { DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CyberSecurityDetail } from "./details/CyberSecurityDetail";
-import { WebAppDataDetail } from "./details/WebAppDataDetail";
+import { WebsiteDataDetail } from "./details/WebsiteDataDetail";
+import { MobileAppDataDetail } from "./details/MobileAppDataDetail";
 import { AIAutomationDetail } from "./details/AIAutomationDetail";
 import { CyberCrimeDetail } from "./details/CyberCrimeDetail";
 
@@ -23,8 +24,10 @@ export function ServiceDetailView({ service, onBack, onClose, onAddService }: Se
     switch (service.id) {
       case "cyber-security":
         return <CyberSecurityDetail onAdd={handleAdd} />;
-      case "web-app-dev":
-        return <WebAppDataDetail onAdd={handleAdd} />;
+      case "website-dev":
+        return <WebsiteDataDetail onAdd={handleAdd} />;
+      case "mobile-app-dev":
+        return <MobileAppDataDetail onAdd={handleAdd} />;
       case "ai-automation":
         return <AIAutomationDetail onAdd={handleAdd} />;
       case "cyber-crime":

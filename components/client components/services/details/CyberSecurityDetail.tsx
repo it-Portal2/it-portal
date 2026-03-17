@@ -373,9 +373,8 @@ export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
         {/* Estimated Investment */}
         <div className="md:col-span-5 lg:col-span-4">
           <div className="sticky top-0 space-y-6">
-            <div className="rounded-xl border bg-card text-card-foreground shadow-md ring-1 ring-blue-500/10 relative overflow-hidden">
-              <div className="absolute inset-0 bg-blue-500/5 pointer-events-none"></div>
-              <div className="flex flex-col space-y-1.5 p-5 border-b bg-background/50">
+            <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
+              <div className="flex flex-col space-y-1.5 p-5 border-b">
                 <div className="text-xl font-semibold leading-none tracking-tight">
                   Estimated Investment
                 </div>
@@ -383,7 +382,7 @@ export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
                   Indicative Estimation
                 </div>
               </div>
-              <div className="p-5 space-y-6 relative z-10 bg-background/50">
+              <div className="p-5 space-y-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                     Currency
@@ -401,7 +400,7 @@ export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
 
                 <div className="pt-5 border-t text-center">
                   <div className="text-sm text-muted-foreground mb-1 font-medium">Total Estimated Cost</div>
-                  <div className="text-4xl font-black text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-purple-500 mb-2">
+                  <div className="text-4xl font-black text-foreground mb-2">
                     {currency === "INR" ? "₹" : currency === "USD" ? "$" : currency === "EUR" ? "€" : "£"}
                     {totalCost.toLocaleString()}
                   </div>
@@ -411,7 +410,7 @@ export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
                         <div className="p-1.5 rounded-lg bg-blue-500/20">
                           <Gift className="w-5 h-5 text-blue-500" />
                         </div>
-                        <span className="font-bold text-sm text-blue-400">Unlock Free Cybersecurity Bundle</span>
+                        <span className="font-bold text-sm text-blue-700">Unlock Free Cybersecurity Bundle</span>
                       </div>
                       <p className="text-xs text-muted-foreground mb-4">
                         Your estimation exceeds ₹6 Lakhs. Select **one** complimentary bundle as a gift:
@@ -420,8 +419,8 @@ export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
                         <button
                           onClick={() => setFreeBundleOption("saved")}
                           className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${freeBundleOption === "saved"
-                              ? "bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-500/20"
-                              : "bg-background border-border hover:border-purple-500/50"
+                            ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20"
+                            : "bg-background border-border hover:border-emerald-500/50"
                             }`}
                         >
                           <div className={`p-1.5 rounded-md ${freeBundleOption === "saved" ? "bg-white/20" : "bg-muted"}`}>

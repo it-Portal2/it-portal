@@ -167,29 +167,44 @@ export interface ServiceOption {
     stat: string;
     gradientFrom: string;
     gradientTo: string;
-    icon: string;
+    image: string;
 }
 
 export const services: ServiceOption[] = [
     {
-        id: "web-app-dev",
-        name: "Web & App Development",
-        description: "Custom web and mobile applications built for performance, scalability, and seamless user experience across all platforms.",
+        id: "website-dev",
+        name: "Website Development",
+        description: "High-performance, SEO-optimized websites built with modern frameworks to establish your professional online presence.",
         includes: [
-            "Custom Website Development",
-            "Mobile App Development (Android & iOS)",
-            "E-Commerce & Web Applications",
-            "API Integration & Backend Systems"
+            "Custom UI/UX Design",
+            "Responsive Web Development",
+            "SEO Strategy & Implementation",
+            "CMS Integration"
         ],
-        stat: "150+ Projects Delivered",
+        stat: "100+ Sites Launched",
         gradientFrom: "from-blue-600",
-        gradientTo: "to-indigo-500",
-        icon: "MonitorSmartphone"
+        gradientTo: "to-cyan-500",
+        image: "/website_development_service.png"
+    },
+    {
+        id: "mobile-app-dev",
+        name: "Mobile App Development",
+        description: "Advanced native cross-platform mobile applications for iOS and Android with intuitive UI/UX and rich functionalities.",
+        includes: [
+            "iOS & Android Development",
+            "Cross-Platform Solutions (Flutter/React Native)",
+            "API Development",
+            "Cloud Backend Services"
+        ],
+        stat: "50+ Apps Published",
+        gradientFrom: "from-indigo-600",
+        gradientTo: "to-purple-500",
+        image: "/mobile_app_development_service.png"
     },
     {
         id: "ai-automation",
         name: "AI & Process Automation",
-        description: "Smart AI-powered systems that automate workflows, enhance productivity, and enable intelligent business operations.",
+        description: "Smart AI-powered systems that automate workflows, enhance productivity, and enable intelligent decisions.",
         includes: [
             "AI Chatbots & Virtual Assistants",
             "Workflow Automation",
@@ -199,22 +214,22 @@ export const services: ServiceOption[] = [
         stat: "40+ AI Solutions",
         gradientFrom: "from-purple-600",
         gradientTo: "to-pink-500",
-        icon: "Bot"
+        image: "/ai_automation_service_new.png"
     },
     {
         id: "cyber-security",
         name: "Cyber Security",
         description: "Comprehensive security audits, penetration testing, and threat protection strategies.",
-        includes: ["Pentesting", "Security Audits", "Compliance", "Threat Monitoring"],
+        includes: ["Security Audits", "Pentesting", "Compliance", "Threat Monitoring"],
         stat: "150+ Audits",
         gradientFrom: "from-blue-500",
         gradientTo: "to-cyan-500",
-        icon: "ShieldCheck"
+        image: "/cyber_security_service_new.png"
     },
     {
         id: "cyber-crime",
         name: "Cyber Crime Investigation",
-        description: "Professional digital forensics and cyber investigation services to identify, analyze, and resolve cyber crime incidents.",
+        description: "Professional digital forensics and cyber investigation services to resolve incidents.",
         includes: [
             "Digital Forensics",
             "Incident Investigation",
@@ -224,6 +239,6 @@ export const services: ServiceOption[] = [
         stat: "90+ Investigations",
         gradientFrom: "from-slate-700",
         gradientTo: "to-slate-900",
-        icon: "Fingerprint"
+        image: "/cyber_crime_investigation_service_new.png"
     }
 ];
