@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X, Shield, ShoppingCart, BookOpen, DollarSign, CircleCheck, ArrowRight, Brain, Blocks } from "lucide-react";
+import { X, ShieldCheck, MonitorSmartphone, Bot, Fingerprint, CircleCheck, ArrowRight } from "lucide-react";
 import { plans, services, ServiceOption } from "@/lib/plan";
 import { ServiceDetailView } from "../services/ServiceDetailView";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
@@ -17,7 +17,7 @@ import { useProjectFormStore } from "@/lib/store/projectSteps";
 interface AdvancedPlanDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelectPlan?: (plan: (typeof plans)[0] | ServiceOption) => void;
+  onSelectPlan?: (plans: any[]) => void;
 }
 
 export function AdvancedPlanDialog({
@@ -40,10 +40,10 @@ export function AdvancedPlanDialog({
   }, [open]);
 
   const iconMap: Record<string, React.ReactNode> = {
-    Shield: <Shield className="w-8 h-8 text-white" />,
-    ShoppingCart: <ShoppingCart className="w-8 h-8 text-white" />,
-    BookOpen: <BookOpen className="w-8 h-8 text-white" />,
-    DollarSign: <DollarSign className="w-8 h-8 text-white" />
+    ShieldCheck: <ShieldCheck className="w-8 h-8 text-white" />,
+    MonitorSmartphone: <MonitorSmartphone className="w-8 h-8 text-white" />,
+    Bot: <Bot className="w-8 h-8 text-white" />,
+    Fingerprint: <Fingerprint className="w-8 h-8 text-white" />
   };
 
   return (
@@ -54,6 +54,40 @@ export function AdvancedPlanDialog({
             service={selectedService}
             onBack={() => setSelectedService(null)}
             onClose={() => onOpenChange(false)}
+            onAddService={(name, cost, currency, freeBundleOption) => {
+              const formattedPrice = currency === "INR" ? `₹${cost.toLocaleString()}` : `$${cost.toLocaleString()}`;
+              const selectedPlans: any[] = [
+                {
+                  name: `${name} (Custom)`,
+                  price: formattedPrice,
+                  billing: "One Time",
+                }
+              ];
+
+              if (freeBundleOption) {
+                if (freeBundleOption === "saved") {
+                  selectedPlans.push({
+                    name: "🎁 Free Bundle Coupon",
+                    price: currency === "INR" ? "₹0" : "$0",
+                    billing: "Saved as Coupon",
+                  });
+                } else {
+                  // Find the selected bundle in plans
+                  const sourceBundle = plans.find(p => p.name === freeBundleOption);
+                  if (sourceBundle) {
+                    selectedPlans.push({
+                      ...sourceBundle,
+                      name: `🎁 Free ${sourceBundle.name}`,
+                      price: currency === "INR" ? "₹0" : "$0",
+                      billing: "Claimed (Free)",
+                    });
+                  }
+                }
+              }
+
+              onSelectPlan?.(selectedPlans);
+              onOpenChange(false);
+            }}
           />
         ) : (
           <>
@@ -214,16 +248,15 @@ export function AdvancedPlanDialog({
                       <button
                         onClick={() => {
                           if (!selectedBundleNames.includes(plan.name)) {
-                            onSelectPlan?.(plan);
+                            onSelectPlan?.([plan]);
                             onOpenChange(false);
                           }
                         }}
                         disabled={selectedBundleNames.includes(plan.name)}
-                        className={`mt-5 w-full py-3 font-black text-sm rounded-xl transition-all ${
-                          selectedBundleNames.includes(plan.name)
+                        className={`mt-5 w-full py-3 font-black text-sm rounded-xl transition-all ${selectedBundleNames.includes(plan.name)
                             ? "bg-white/30 text-white cursor-not-allowed border border-white/40"
                             : "bg-white text-black hover:bg-opacity-90 active:scale-[0.98]"
-                        }`}
+                          }`}
                       >
                         {selectedBundleNames.includes(plan.name) ? "ALREADY SELECTED" : "CHOOSE BUNDLE"}
                       </button>

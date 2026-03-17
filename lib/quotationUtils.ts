@@ -159,12 +159,16 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
         ? baseInrPrice 
         : Math.round((baseInrPrice * 1.04) / exchangeRate);
 
+      const displayPrice = priceValue === 0 
+        ? `<span style="color: #10b981; font-weight: 700;">FREE</span>`
+        : fmt(priceValue);
+
       lineItemRows.push(`
         <tr style="border-bottom: 1px solid #f3f4f6;">
           <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">
             ${bundle.name} <span style="font-size: 10px; color: #6b7280; font-weight: 400;">(${bundle.billing || 'Bundle'})</span>
           </td>
-          <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(priceValue)}</td>
+          <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${displayPrice}</td>
         </tr>`);
     });
   }

@@ -172,6 +172,36 @@ export interface ServiceOption {
 
 export const services: ServiceOption[] = [
     {
+        id: "web-app-dev",
+        name: "Web & App Development",
+        description: "Custom web and mobile applications built for performance, scalability, and seamless user experience across all platforms.",
+        includes: [
+            "Custom Website Development",
+            "Mobile App Development (Android & iOS)",
+            "E-Commerce & Web Applications",
+            "API Integration & Backend Systems"
+        ],
+        stat: "150+ Projects Delivered",
+        gradientFrom: "from-blue-600",
+        gradientTo: "to-indigo-500",
+        icon: "MonitorSmartphone"
+    },
+    {
+        id: "ai-automation",
+        name: "AI & Process Automation",
+        description: "Smart AI-powered systems that automate workflows, enhance productivity, and enable intelligent business operations.",
+        includes: [
+            "AI Chatbots & Virtual Assistants",
+            "Workflow Automation",
+            "Machine Learning Solutions",
+            "Data Analytics & Insights"
+        ],
+        stat: "40+ AI Solutions",
+        gradientFrom: "from-purple-600",
+        gradientTo: "to-pink-500",
+        icon: "Bot"
+    },
+    {
         id: "cyber-security",
         name: "Cyber Security",
         description: "Comprehensive security audits, penetration testing, and threat protection strategies.",
@@ -179,36 +209,21 @@ export const services: ServiceOption[] = [
         stat: "150+ Audits",
         gradientFrom: "from-blue-500",
         gradientTo: "to-cyan-500",
-        icon: "Shield"
+        icon: "ShieldCheck"
     },
     {
-        id: "e-commerce",
-        name: "E-commerce Solutions",
-        description: "Conversion-optimized platforms with seamless payment integration and omnichannel support.",
-        includes: ["Custom Storefronts", "Payment Integration", "Inventory Mgmt", "Mobile Commerce"],
-        stat: "35% Avg Growth",
-        gradientFrom: "from-green-500",
-        gradientTo: "to-emerald-500",
-        icon: "ShoppingCart"
-    },
-    {
-        id: "edutech",
-        name: "Edutech Platforms",
-        description: "Adaptive learning systems, virtual classrooms, and student management solutions.",
-        includes: ["LMS Development", "Virtual Classrooms", "Analytics", "Gamification"],
-        stat: "85+ Platforms",
-        gradientFrom: "from-orange-500",
-        gradientTo: "to-red-500",
-        icon: "BookOpen"
-    },
-    {
-        id: "fintech",
-        name: "Fintech Applications",
-        description: "Secure, compliant financial technology with blockchain and payment processing.",
-        includes: ["Digital Wallets", "Blockchain", "Compliance", "Analytics"],
-        stat: "42% YoY Growth",
-        gradientFrom: "from-yellow-500",
-        gradientTo: "to-amber-500",
-        icon: "DollarSign"
+        id: "cyber-crime",
+        name: "Cyber Crime Investigation",
+        description: "Professional digital forensics and cyber investigation services to identify, analyze, and resolve cyber crime incidents.",
+        includes: [
+            "Digital Forensics",
+            "Incident Investigation",
+            "Evidence Recovery",
+            "Cyber Law Support"
+        ],
+        stat: "90+ Investigations",
+        gradientFrom: "from-slate-700",
+        gradientTo: "to-slate-900",
+        icon: "Fingerprint"
     }
 ];

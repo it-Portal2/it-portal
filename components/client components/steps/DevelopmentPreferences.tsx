@@ -344,15 +344,23 @@ export function DevelopmentPreferences() {
       <AdvancedPlanDialog
         open={showAdvancedPlanDialog}
         onOpenChange={setShowAdvancedPlanDialog}
-        onSelectPlan={(plan: any) => {
-          // Check if plan is already selected
-          const isAlreadySelected = formData.selectedBundles?.some(
-            (b) => b.name === plan.name
-          );
+        onSelectPlan={(incomingPlans: any[]) => {
+          const currentBundles = [...(formData.selectedBundles || [])];
+          let updated = false;
+
+          incomingPlans.forEach((plan) => {
+            const isAlreadySelected = currentBundles.some(
+              (b) => b.name === plan.name
+            );
+            if (!isAlreadySelected) {
+              currentBundles.push(plan);
+              updated = true;
+            }
+          });
           
-          if (!isAlreadySelected) {
+          if (updated) {
             updateFormData({
-              selectedBundles: [...(formData.selectedBundles || []), plan]
+              selectedBundles: currentBundles
             });
           }
         }}

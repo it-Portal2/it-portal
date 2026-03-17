@@ -2,27 +2,33 @@ import { ServiceOption } from "@/lib/plan";
 import { ArrowLeft, X } from "lucide-react";
 import { DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { CyberSecurityDetail } from "./details/CyberSecurityDetail";
-import { ECommerceDetail } from "./details/ECommerceDetail";
-import { EdutechDetail } from "./details/EdutechDetail";
-import { FintechDetail } from "./details/FintechDetail";
+import { WebAppDataDetail } from "./details/WebAppDataDetail";
+import { AIAutomationDetail } from "./details/AIAutomationDetail";
+import { CyberCrimeDetail } from "./details/CyberCrimeDetail";
 
 interface ServiceDetailViewProps {
   service: ServiceOption;
   onBack: () => void;
   onClose: () => void;
+  onAddService?: (serviceName: string, cost: number, currency: string, freeBundleOption?: string) => void;
 }
 
-export function ServiceDetailView({ service, onBack, onClose }: ServiceDetailViewProps) {
+export function ServiceDetailView({ service, onBack, onClose, onAddService }: ServiceDetailViewProps) {
+  const handleAdd = (cost: number, currency: string, freeBundleOption?: string) => {
+    if (onAddService) {
+      onAddService(service.name, cost, currency, freeBundleOption);
+    }
+  };
   const renderDetailContent = () => {
     switch (service.id) {
       case "cyber-security":
-        return <CyberSecurityDetail />;
-      case "e-commerce":
-        return <ECommerceDetail />;
-      case "edutech":
-        return <EdutechDetail />;
-      case "fintech":
-        return <FintechDetail />;
+        return <CyberSecurityDetail onAdd={handleAdd} />;
+      case "web-app-dev":
+        return <WebAppDataDetail onAdd={handleAdd} />;
+      case "ai-automation":
+        return <AIAutomationDetail onAdd={handleAdd} />;
+      case "cyber-crime":
+        return <CyberCrimeDetail onAdd={handleAdd} />;
       default:
         return (
           <div className="p-8 border-2 border-dashed rounded-xl bg-muted/20 flex items-center justify-center text-muted-foreground">

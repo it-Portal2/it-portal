@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Server,
   ShieldCheck,
@@ -10,6 +11,11 @@ import {
   Activity,
   FileCheck,
   MessageCircle,
+  Gift,
+  Rocket,
+  ChevronDown,
+  ChevronUp,
+  Info,
 } from "lucide-react";
 import {
   Select,
@@ -31,8 +37,13 @@ import {
   VaptFeatureType,
   ComplianceType,
 } from "../pricing/cybersecurity";
+import { plans } from "@/lib/plan";
 
-export function CyberSecurityDetail() {
+interface CyberSecurityDetailProps {
+  onAdd?: (cost: number, currency: string, freeBundleOption?: string) => void;
+}
+
+export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
   const [complexity, setComplexity] = useState<TechComplexityType>("dynamic");
   const [hosting, setHosting] = useState<HostingEnvType>("cloud");
   const [vaptSelected, setVaptSelected] = useState<VaptFeatureType[]>(["web"]);
@@ -41,10 +52,32 @@ export function CyberSecurityDetail() {
   const [socEndpoints, setSocEndpoints] = useState(0);
   const [compliance, setCompliance] = useState<ComplianceType>("none");
   const [currency, setCurrency] = useState("INR");
+  const [freeBundleOption, setFreeBundleOption] = useState<string | null>(null);
+  const [expandedBundle, setExpandedBundle] = useState<string | null>(null);
 
-  const totalCost = useMemo(
-    () =>
-      calculateCybersecurityPrice(
+  const securityPlans = useMemo(() => {
+    return plans.filter(p =>
+      p.name.toLowerCase().includes("secure") ||
+      p.name.toLowerCase().includes("security")
+    );
+  }, []);
+
+  const { totalCost, baseInrCost } = useMemo(() => {
+    const total = calculateCybersecurityPrice(
+      complexity,
+      hosting,
+      vaptSelected,
+      webVars,
+      mobileVars,
+      socEndpoints,
+      compliance,
+      currency
+    );
+
+    // Calculate base INR cost for threshold checking
+    const baseInr = currency === "INR"
+      ? total
+      : calculateCybersecurityPrice(
         complexity,
         hosting,
         vaptSelected,
@@ -52,10 +85,11 @@ export function CyberSecurityDetail() {
         mobileVars,
         socEndpoints,
         compliance,
-        currency
-      ),
-    [complexity, hosting, vaptSelected, webVars, mobileVars, socEndpoints, compliance, currency]
-  );
+        "INR"
+      );
+
+    return { totalCost: total, baseInrCost: baseInr };
+  }, [complexity, hosting, vaptSelected, webVars, mobileVars, socEndpoints, compliance, currency]);
 
   const toggleVapt = (feature: VaptFeatureType) => {
     setVaptSelected((current) =>
@@ -72,7 +106,7 @@ export function CyberSecurityDetail() {
     cloud: <Cloud className="w-5 h-5" />,
     api: <Code className="w-5 h-5" />,
   };
-  
+
   const vaptColors: Record<VaptFeatureType, string> = {
     web: "text-blue-400 bg-blue-500/10 border-blue-500/50",
     mobile: "text-purple-400 bg-purple-500/10 border-purple-500/50",
@@ -85,7 +119,7 @@ export function CyberSecurityDetail() {
     <div className="w-full relative z-10 pb-4">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         <div className="md:col-span-7 lg:col-span-8 space-y-6">
-          
+
           {/* Infrastructure Profile */}
           <div className="rounded-xl border bg-card text-card-foreground shadow-sm">
             <div className="flex flex-col space-y-1.5 p-5 border-b">
@@ -139,7 +173,7 @@ export function CyberSecurityDetail() {
 
           {/* VAPT */}
           <div className="rounded-xl border bg-card text-card-foreground shadow-sm relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
               <ShieldCheck className="w-24 h-24" />
             </div>
             <div className="flex flex-col space-y-1.5 p-5 border-b">
@@ -158,16 +192,15 @@ export function CyberSecurityDetail() {
                   const isWebObj = key === "web";
                   const isMobileObj = key === "mobile";
                   const hasSliders = isWebObj || isMobileObj;
-                  
+
                   return (
                     <div
                       key={key}
                       onClick={() => !hasSliders && toggleVapt(key)}
-                      className={`p-4 rounded-xl border transition-all duration-300 w-full ${hasSliders ? "" : "cursor-pointer hover:bg-muted/50"} ${
-                        isSelected
-                          ? "bg-primary/5 border-primary/50"
-                          : "bg-background border-border"
-                      }`}
+                      className={`p-4 rounded-xl border transition-all duration-300 w-full ${hasSliders ? "" : "cursor-pointer hover:bg-muted/50"} ${isSelected
+                        ? "bg-primary/5 border-primary/50"
+                        : "bg-background border-border"
+                        }`}
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
@@ -181,11 +214,11 @@ export function CyberSecurityDetail() {
                             {data.label}
                           </label>
                         </div>
-                        <Checkbox 
-                          checked={isSelected} 
-                          onCheckedChange={() => toggleVapt(key)} 
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleVapt(key)}
                           className="data-[state=checked]:bg-primary"
-                          onClick={(e) => e.stopPropagation()} 
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </div>
 
@@ -206,7 +239,7 @@ export function CyberSecurityDetail() {
                               className="**:data-[slot=slider-track]:bg-muted-foreground/30"
                             />
                           </div>
-                          
+
                           <div className="pt-2 border-t">
                             <div className="flex justify-between text-xs mb-2">
                               <span className="text-muted-foreground">Subdomains</span>
@@ -241,7 +274,7 @@ export function CyberSecurityDetail() {
                               className="**:data-[slot=slider-track]:bg-muted-foreground/30"
                             />
                           </div>
-                          
+
                           <div className="pt-2 border-t">
                             <div className="flex justify-between text-xs mb-2">
                               <span className="text-muted-foreground">Target Platforms (iOS/Android)</span>
@@ -267,7 +300,7 @@ export function CyberSecurityDetail() {
 
           {/* SOC Monitoring */}
           <div className="rounded-xl border bg-card text-card-foreground shadow-sm relative overflow-hidden">
-             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
               <Activity className="w-24 h-24" />
             </div>
             <div className="flex flex-col space-y-1.5 p-5 border-b">
@@ -365,14 +398,115 @@ export function CyberSecurityDetail() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="pt-5 border-t text-center">
                   <div className="text-sm text-muted-foreground mb-1 font-medium">Total Estimated Cost</div>
                   <div className="text-4xl font-black text-transparent bg-clip-text bg-linear-to-r from-blue-500 to-purple-500 mb-2">
                     {currency === "INR" ? "₹" : currency === "USD" ? "$" : currency === "EUR" ? "€" : "£"}
                     {totalCost.toLocaleString()}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  {baseInrCost >= 600000 && (
+                    <div className="mt-6 mb-4 p-4 rounded-xl border-2 border-dashed border-blue-500/30 bg-blue-500/5 animate-in fade-in zoom-in duration-500 max-h-[400px] overflow-y-auto">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="p-1.5 rounded-lg bg-blue-500/20">
+                          <Gift className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <span className="font-bold text-sm text-blue-400">Unlock Free Cybersecurity Bundle</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Your estimation exceeds ₹6 Lakhs. Select **one** complimentary bundle as a gift:
+                      </p>
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          onClick={() => setFreeBundleOption("saved")}
+                          className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${freeBundleOption === "saved"
+                              ? "bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-500/20"
+                              : "bg-background border-border hover:border-purple-500/50"
+                            }`}
+                        >
+                          <div className={`p-1.5 rounded-md ${freeBundleOption === "saved" ? "bg-white/20" : "bg-muted"}`}>
+                            <Activity className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold">Save for Later (Coupon)</div>
+                            <div className={`text-[10px] ${freeBundleOption === "saved" ? "text-purple-100" : "text-muted-foreground"}`}>Receive as a coupon code</div>
+                          </div>
+                        </button>
+
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2 mb-1">Select a Security Bundle:</div>
+
+                        {securityPlans.map((plan) => (
+                          <div key={plan.name} className="space-y-2">
+                            <div
+                              className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all relative ${freeBundleOption === plan.name
+                                  ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
+                                  : "bg-background border-border hover:border-blue-500/50"
+                                }`}
+                            >
+                              <div
+                                onClick={() => setFreeBundleOption(plan.name)}
+                                className="flex-1 flex items-center gap-3 cursor-pointer"
+                              >
+                                <div className={`p-1.5 rounded-md ${freeBundleOption === plan.name ? "bg-white/20" : "bg-muted"}`}>
+                                  <Rocket className="w-4 h-4" />
+                                </div>
+                                <div>
+                                  <div className="text-xs font-bold">{plan.name}</div>
+                                  <div className={`text-[10px] ${freeBundleOption === plan.name ? "text-blue-100" : "text-muted-foreground"}`}>
+                                    Free Gift with Cybersecurity
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => setExpandedBundle(expandedBundle === plan.name ? null : plan.name)}
+                                className={`p-2 rounded-md transition-colors ${freeBundleOption === plan.name
+                                    ? "hover:bg-white/10 text-white"
+                                    : "hover:bg-muted text-muted-foreground"
+                                  }`}
+                                title="View Details"
+                              >
+                                {expandedBundle === plan.name ? <ChevronUp className="w-4 h-4" /> : <Info className="w-4 h-4" />}
+                              </button>
+                            </div>
+
+                            {expandedBundle === plan.name && (
+                              <div className="p-3 rounded-lg bg-muted/50 border border-border animate-in slide-in-from-top-2 duration-300">
+                                <div className="text-[10px] font-bold text-muted-foreground uppercase mb-2">What's included:</div>
+                                <ul className="space-y-1">
+                                  {plan.includes.map((item, i) => (
+                                    <li key={i} className="text-[10px] flex items-center gap-2">
+                                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                                <div className="mt-2 pt-2 border-t border-border/50">
+                                  <div className="text-[10px] italic text-muted-foreground">
+                                    <span className="font-bold not-italic">Training:</span> {plan.training}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {onAdd && (
+                    <Button
+                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      onClick={() => {
+                        if (baseInrCost >= 600000 && !freeBundleOption) return;
+                        onAdd(totalCost, currency, freeBundleOption || undefined);
+                      }}
+                    >
+                      Buy Service
+                    </Button>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-4">
                     *Rough estimate based on selected parameters. Need a detailed proposal?
                   </div>
                 </div>
