@@ -284,14 +284,14 @@ export function FinalStep() {
               <div
                 className="prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{
-                  __html: formData.improvedDocumentation,
+                  __html: formData.improvedDocumentation || "",
                 }}
               />
             ) : (
               <div
                 className="prose prose-sm max-w-none"
                 dangerouslySetInnerHTML={{
-                  __html: formData.generatedDocumentation,
+                  __html: formData.generatedDocumentation || "",
                 }}
               />
             )}
@@ -313,7 +313,7 @@ export function FinalStep() {
             {formData.quotationPdf ? (
               <div
                 dangerouslySetInnerHTML={{
-                  __html: formData.quotationPdf,
+                  __html: formData.quotationPdf || "",
                 }}
               />
             ) : (
