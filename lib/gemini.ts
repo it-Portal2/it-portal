@@ -106,8 +106,8 @@ async function tryWithDatabaseKeysOptimized<T>(
       if (
         timeElapsed >
         GEMINI_CONFIG.MAX_EXECUTION_TIME -
-          attempt.timeout -
-          GEMINI_CONFIG.TIMEOUT_BUFFER
+        attempt.timeout -
+        GEMINI_CONFIG.TIMEOUT_BUFFER
       ) {
         break;
       }
@@ -189,8 +189,8 @@ async function tryWithDatabaseKeysOptimized<T>(
             errorInfo.type === "quota"
               ? 2000
               : errorInfo.type === "auth"
-              ? 1000
-              : 500;
+                ? 1000
+                : 500;
 
           console.info(
             `[GEMINI_SERVICE] Applying retry delay before next attempt`,
@@ -290,8 +290,7 @@ async function tryWithDatabaseKeysOptimized<T>(
     });
 
     throw new Error(
-      `SYSTEM_ERROR: Failed to initialize AI service: ${
-        error instanceof Error ? error.message : "Unknown system error"
+      `SYSTEM_ERROR: Failed to initialize AI service: ${error instanceof Error ? error.message : "Unknown system error"
       }`
     );
   }
@@ -352,20 +351,17 @@ export async function analyzeCompleteApplicationOptimized(
               const sanitizedAnswer = sanitizeAnswer(qa.answer || "");
               const sanitizedQuestion = sanitizeAnswer(qa.question || "");
 
-              return `${
-                qa.id
-              } [${questionType.toUpperCase()}]: ${sanitizedQuestion}\nANSWER: ${sanitizedAnswer}`;
+              return `${qa.id
+                } [${questionType.toUpperCase()}]: ${sanitizedQuestion}\nANSWER: ${sanitizedAnswer}`;
             })
             .join("\n\n") || "No questions answered";
 
         // Simplified prompt - DO NOT ask for question/answer text in output (already available)
         const PROMPT = `Analyze candidate interview responses. Return ONLY valid JSON.
 
-CANDIDATE: ${candidateData.resumeAnalysis?.education || "N/A"} | ${
-          candidateData.resumeAnalysis?.experience || "N/A"
-        } | ${
-          candidateData.resumeAnalysis?.skills?.slice(0, 5).join(", ") || "N/A"
-        }
+CANDIDATE: ${candidateData.resumeAnalysis?.education || "N/A"} | ${candidateData.resumeAnalysis?.experience || "N/A"
+          } | ${candidateData.resumeAnalysis?.skills?.slice(0, 5).join(", ") || "N/A"
+          }
 
 QUESTIONS TO ANALYZE:
 ${questionAnswerPairs}
@@ -1166,10 +1162,9 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
             }
           );
           throw new Error(
-            `JSON parsing failed: ${
-              parseError instanceof Error
-                ? parseError.message
-                : "Unknown parsing error"
+            `JSON parsing failed: ${parseError instanceof Error
+              ? parseError.message
+              : "Unknown parsing error"
             }`
           );
         }
@@ -1232,8 +1227,7 @@ export async function generateTasksFromDeveloperDocumentationFromGeminiAI(
     }
 
     throw new Error(
-      `Task generation failed: ${
-        error instanceof Error ? error.message : "Unknown error"
+      `Task generation failed: ${error instanceof Error ? error.message : "Unknown error"
       }`
     );
   }
@@ -1275,18 +1269,16 @@ AI ANALYSIS INSIGHTS:
 ${sanitizedRecommendation}
 
 TECHNICAL COMPETENCY:
-Average Correctness Score: ${
-        (candidateData?.aiAnalysis?.correctnessScores || []).reduce(
-          (acc, curr) => acc + curr.score,
-          0
-        ) / (candidateData?.aiAnalysis?.correctnessScores?.length || 1) || 0
-      }/10
-Average Authenticity: ${
-        (candidateData?.aiAnalysis?.originalityScores ?? []).reduce(
+Average Correctness Score: ${(candidateData?.aiAnalysis?.correctnessScores || []).reduce(
+        (acc, curr) => acc + curr.score,
+        0
+      ) / (candidateData?.aiAnalysis?.correctnessScores?.length || 1) || 0
+        }/10
+Average Authenticity: ${(candidateData?.aiAnalysis?.originalityScores ?? []).reduce(
           (acc, curr) => acc + curr.score,
           0
         ) / (candidateData?.aiAnalysis?.originalityScores?.length || 1) || 0
-      }%
+        }%
 
 INSTRUCTIONS:
 1. Consider all global job roles across industries and domains (do not limit to a specific sector).

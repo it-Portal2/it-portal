@@ -36,21 +36,25 @@ import {
   HostingEnvType,
   VaptFeatureType,
   ComplianceType,
+  TECH_COMPLEXITY,
+  HOSTING_ENV,
+  VAPT_FEATURE,
+  COMPLIANCE,
 } from "../pricing/cybersecurity";
 import { plans } from "@/lib/plan";
 
 interface CyberSecurityDetailProps {
-  onAdd?: (cost: number, currency: string, freeBundleOption?: string) => void;
+  onAdd: (cost: number, currency: string, freeBundleOption?: string) => void;
 }
 
 export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
-  const [complexity, setComplexity] = useState<TechComplexityType>("dynamic");
-  const [hosting, setHosting] = useState<HostingEnvType>("cloud");
-  const [vaptSelected, setVaptSelected] = useState<VaptFeatureType[]>(["web"]);
+  const [complexity, setComplexity] = useState<TechComplexityType>(TECH_COMPLEXITY.DYNAMIC);
+  const [hosting, setHosting] = useState<HostingEnvType>(HOSTING_ENV.SHARED);
+  const [vaptSelected, setVaptSelected] = useState<VaptFeatureType[]>([]);
   const [webVars, setWebVars] = useState({ quantity: 1, subdomains: 0 });
   const [mobileVars, setMobileVars] = useState({ quantity: 1, platforms: 1 });
   const [socEndpoints, setSocEndpoints] = useState(0);
-  const [compliance, setCompliance] = useState<ComplianceType>("none");
+  const [compliance, setCompliance] = useState<ComplianceType>(COMPLIANCE.NONE);
   const [currency, setCurrency] = useState("INR");
   const [freeBundleOption, setFreeBundleOption] = useState<string | null>(null);
   const [expandedBundle, setExpandedBundle] = useState<string | null>(null);
@@ -134,9 +138,6 @@ export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
             <div className="p-5 space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                    Technology Complexity
-                  </label>
                   <Select value={complexity} onValueChange={(v) => setComplexity(v as TechComplexityType)}>
                     <SelectTrigger className="w-full bg-background border-input">
                       <SelectValue placeholder="Select complexity" />
@@ -493,18 +494,16 @@ export function CyberSecurityDetail({ onAdd }: CyberSecurityDetailProps) {
                     </div>
                   )}
 
-                  {onAdd && (
-                    <Button
-                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      onClick={() => {
-                        if (baseInrCost >= 600000 && !freeBundleOption) return;
-                        onAdd(totalCost, currency, freeBundleOption || undefined);
-                      }}
-                    >
-                      Buy Service
-                    </Button>
-                  )}
+                  <Button
+                    className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    onClick={() => {
+                      if (baseInrCost >= 600000 && !freeBundleOption) return;
+                      onAdd(totalCost, currency, freeBundleOption || undefined)
+                    }}
+                  >
+                    {baseInrCost >= 600000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
+                  </Button>
                   <div className="text-xs text-muted-foreground mt-4">
                     *Rough estimate based on selected parameters. Need a detailed proposal?
                   </div>

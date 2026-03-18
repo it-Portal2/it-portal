@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
 import { AdvancedPlanDialog } from "./AdvancedPlanDialog";
+import { Bundle } from "@/lib/plan";
 import { RippleButton, RippleButtonRipples } from "@/components/animate-ui/components/buttons/ripple";
 
 interface DeveloperTypeSelectorProps {
@@ -261,10 +262,10 @@ export function DevelopmentPreferences() {
           <div className="space-y-3 mt-4">
             <h3 className="text-sm font-semibold text-foreground">Selected Bundles</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
-              {formData.selectedBundles.map((bundle, idx) => (
+              {formData.selectedBundles.map((bundle: Bundle, idx) => (
                 <div key={idx} className="flex flex-col justify-between p-3 border rounded-lg bg-card text-card-foreground shadow-sm relative group overflow-hidden">
                   <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
-                  
+
                   <div className="relative z-10 flex justify-between items-start">
                     <div className="space-y-0.5">
                       <h4 className="font-bold text-sm tracking-tight">{bundle.name}</h4>
@@ -275,7 +276,7 @@ export function DevelopmentPreferences() {
                         </p>
                       )}
                     </div>
-                    
+
                     <button
                       type="button"
                       onClick={() => {
@@ -344,7 +345,7 @@ export function DevelopmentPreferences() {
       <AdvancedPlanDialog
         open={showAdvancedPlanDialog}
         onOpenChange={setShowAdvancedPlanDialog}
-        onSelectPlan={(incomingPlans: any[]) => {
+        onSelectPlan={(incomingPlans: Bundle[]) => {
           const currentBundles = [...(formData.selectedBundles || [])];
           let updated = false;
 
@@ -357,7 +358,7 @@ export function DevelopmentPreferences() {
               updated = true;
             }
           });
-          
+
           if (updated) {
             updateFormData({
               selectedBundles: currentBundles

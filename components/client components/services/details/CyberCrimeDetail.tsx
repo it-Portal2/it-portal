@@ -16,15 +16,21 @@ import {
   ChevronUp,
   Activity,
   ShieldCheck,
+  Database,
+  Binary,
+  Eye,
+  Gavel,
 } from "lucide-react";
 import {
   calculateCyberCrimePrice,
   investigationLevelPrices,
   priorityPrices,
-  featurePrices,
   LevelType,
   PriorityType,
-  FeatureType
+  FeatureType,
+  INVESTIGATION_LEVEL,
+  INVESTIGATION_PRIORITY,
+  INVESTIGATION_FEATURES
 } from "../pricing/cyber-crime";
 import {
   Select,
@@ -39,21 +45,21 @@ import { plans } from "@/lib/plan";
 
 
 const featuresList = [
-  { id: "data-recovery", label: "Advanced Data Recovery", icon: HardDrive },
-  { id: "forensic-report", label: "Court-Admissible Report", icon: FileText },
-  { id: "expert-witness", label: "Expert Witness Testimony", icon: Scale },
-  { id: "malware-analysis", label: "Deep Malware Analysis", icon: Terminal },
-  { id: "dark-web", label: "Dark Web Surveillance", icon: Lock },
-  { id: "legal-coord", label: "Legal & Law Liaison", icon: UserCheck },
+  { id: INVESTIGATION_FEATURES.DATA_RECOVERY, label: "Advanced Data Recovery", icon: Database },
+  { id: INVESTIGATION_FEATURES.FORENSIC_REPORT, icon: FileText, label: "Court-Admissible Report" },
+  { id: INVESTIGATION_FEATURES.EXPERT_WITNESS, icon: Scale, label: "Expert Witness Testimony" },
+  { id: INVESTIGATION_FEATURES.MALWARE_ANALYSIS, icon: Binary, label: "Deep Malware Analysis" },
+  { id: INVESTIGATION_FEATURES.DARK_WEB, icon: Eye, label: "Dark Web Surveillance" },
+  { id: INVESTIGATION_FEATURES.LEGAL_COORD, icon: Gavel, label: "Legal & Law Enforcement Liaison" },
 ];
 
 interface CyberCrimeDetailProps {
-  onAdd?: (cost: number, currency: string, freeBundleOption?: string) => void;
+  onAdd: (cost: number, currency: string, freeBundleOption?: string) => void;
 }
 
 export function CyberCrimeDetail({ onAdd }: CyberCrimeDetailProps) {
-  const [level, setLevel] = useState<LevelType>("standard");
-  const [priority, setPriority] = useState<PriorityType>("normal");
+  const [level, setLevel] = useState<LevelType>(INVESTIGATION_LEVEL.INITIAL);
+  const [priority, setPriority] = useState<PriorityType>(INVESTIGATION_PRIORITY.NORMAL);
   const [selectedFeatures, setSelectedFeatures] = useState<FeatureType[]>([]);
   const [currency, setCurrency] = useState<string>("INR");
   const [freeBundleOption, setFreeBundleOption] = useState<string | null>(null);
@@ -306,18 +312,16 @@ export function CyberCrimeDetail({ onAdd }: CyberCrimeDetailProps) {
                     </div>
                   )}
 
-                  {onAdd && (
-                    <Button
-                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      onClick={() => {
-                        if (baseInrCost >= 600000 && !freeBundleOption) return;
-                        onAdd(totalCost, currency, freeBundleOption || undefined)
-                      }}
-                    >
-                      {baseInrCost >= 600000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
-                    </Button>
-                  )}
+                  <Button
+                    className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    onClick={() => {
+                      if (baseInrCost >= 600000 && !freeBundleOption) return;
+                      onAdd(totalCost, currency, freeBundleOption || undefined)
+                    }}
+                  >
+                    {baseInrCost >= 600000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
+                  </Button>
                   <div className="text-xs text-muted-foreground mt-4">
                     *Rough estimate. Final cost subject to exact requirements review.
                   </div>

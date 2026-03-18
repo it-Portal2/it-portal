@@ -1,6 +1,7 @@
-export interface PlanBundle {
+export interface Bundle {
     name: string;
     price: string;
+    currency?: "INR" | "USD";
     billing: string;
     includes: string[];
     training: string;
@@ -8,7 +9,7 @@ export interface PlanBundle {
     textColor: string;
 }
 
-export const plans: PlanBundle[] = [
+export const plans: Bundle[] = [
     {
         name: "Tech Launch Bundle",
         price: "₹1,245,000",
@@ -184,7 +185,7 @@ export const services: ServiceOption[] = [
         stat: "100+ Sites Launched",
         gradientFrom: "from-blue-600",
         gradientTo: "to-cyan-500",
-        image: "/website_development_service.png"
+        image: "/website_development_service.webp"
     },
     {
         id: "mobile-app-dev",
@@ -199,7 +200,7 @@ export const services: ServiceOption[] = [
         stat: "50+ Apps Published",
         gradientFrom: "from-indigo-600",
         gradientTo: "to-purple-500",
-        image: "/mobile_app_development_service.png"
+        image: "/mobile_app_development_service.webp"
     },
     {
         id: "ai-automation",
@@ -214,7 +215,7 @@ export const services: ServiceOption[] = [
         stat: "40+ AI Solutions",
         gradientFrom: "from-purple-600",
         gradientTo: "to-pink-500",
-        image: "/ai_automation_service_new.png"
+        image: "/ai_automation_service_new.webp"
     },
     {
         id: "cyber-security",
@@ -224,7 +225,7 @@ export const services: ServiceOption[] = [
         stat: "150+ Audits",
         gradientFrom: "from-blue-500",
         gradientTo: "to-cyan-500",
-        image: "/cyber_security_service_new.png"
+        image: "/cyber_security_service_new.webp"
     },
     {
         id: "cyber-crime",
@@ -239,6 +240,6 @@ export const services: ServiceOption[] = [
         stat: "90+ Investigations",
         gradientFrom: "from-slate-700",
         gradientTo: "to-slate-900",
-        image: "/cyber_crime_investigation_service_new.png"
+        image: "/cyber_crime_investigation_service_new.webp"
     }
 ];

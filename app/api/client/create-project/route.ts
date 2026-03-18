@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
       requestBody = await request.json();
     } catch (parseError) {
       console.error(
-        `[API_PROJECT_DOCUMENTATION] Request body parsing failed: ${
-          parseError instanceof Error ? parseError.message : "Unknown error"
+        `[API_PROJECT_DOCUMENTATION] Request body parsing failed: ${parseError instanceof Error ? parseError.message : "Unknown error"
         }`
       );
       return NextResponse.json(
@@ -106,8 +105,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error(
-      `[API_PROJECT_DOCUMENTATION] Documentation generation failed: ${
-        error instanceof Error ? error.message : "Unknown error"
+      `[API_PROJECT_DOCUMENTATION] Documentation generation failed: ${error instanceof Error ? error.message : "Unknown error"
       }`
     );
 

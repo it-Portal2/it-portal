@@ -76,9 +76,9 @@ export function Documentation() {
         if (!validation.success) {
           const errorMessage = validation.error || "Invalid file format or size";
           setFileError(errorMessage);
-          toast.error("File validation failed", { 
+          toast.error("File validation failed", {
             description: errorMessage,
-            duration: 5000 
+            duration: 5000
           });
           return;
         }
@@ -105,9 +105,9 @@ export function Documentation() {
         const errorMessage =
           error instanceof Error ? error.message : "Failed to process file";
         setFileError(errorMessage);
-        toast.error("File processing error", { 
+        toast.error("File processing error", {
           description: errorMessage,
-          duration: 5000 
+          duration: 5000
         });
       }
     },
@@ -168,7 +168,7 @@ export function Documentation() {
           : "Document improvement failed - please try again";
 
       setFileError(errorMessage);
-      toast.error("AI improvement failed", { 
+      toast.error("AI improvement failed", {
         description: errorMessage,
         duration: 6000
       });
@@ -204,7 +204,7 @@ export function Documentation() {
 
         // Call the API route with enhanced timeout and error handling
         const response = await axios.post(
-          "/api/client/create-project", 
+          "/api/client/create-project",
           {
             projectName: formData.projectName,
             projectOverview: formData.projectOverview,
@@ -238,7 +238,7 @@ export function Documentation() {
 
         // Reset attempt counter on success
         setGenerationAttempts(0);
-        
+
       } catch (error) {
         console.error(`[CLIENT] Documentation generation attempt ${generationAttempts} failed:`, error);
 
@@ -304,7 +304,7 @@ export function Documentation() {
 
         if (shouldAutoRetry) {
           setIsAutoRetrying(true);
-          
+
           toast.error(`Generation attempt ${generationAttempts} failed`, {
             description: `${userFriendlyMessage}. Retrying automatically...`,
             duration: 3000,
@@ -393,17 +393,15 @@ export function Documentation() {
   const preparePdfForUpload = useCallback(async () => {
     if (formData.improvedDocumentation) {
       const pdfBlob = await htmlToPdfBlob(formData.improvedDocumentation);
-      const pdfFileName = `${
-        formData.projectName || "document"
-      }-improved-documentation.pdf`;
+      const pdfFileName = `${formData.projectName || "document"
+        }-improved-documentation.pdf`;
       return new File([pdfBlob], pdfFileName, { type: "application/pdf" });
     }
 
     if (formData.generatedDocumentation) {
       const pdfBlob = await htmlToPdfBlob(formData.generatedDocumentation);
-      const pdfFileName = `${
-        formData.projectName || "document"
-      }-documentation.pdf`;
+      const pdfFileName = `${formData.projectName || "document"
+        }-documentation.pdf`;
       return new File([pdfBlob], pdfFileName, { type: "application/pdf" });
     }
 
@@ -476,7 +474,7 @@ export function Documentation() {
             : "Failed to save project data";
 
         toast.dismiss(storeToastId);
-        toast.error("Save failed", { 
+        toast.error("Save failed", {
           description: errorMessage,
           duration: 6000
         });
@@ -599,7 +597,7 @@ export function Documentation() {
         error instanceof Error
           ? error.message
           : "Submission failed - please try again";
-      toast.error("Submission failed", { 
+      toast.error("Submission failed", {
         description: errorMessage,
         duration: 8000
       });
@@ -892,7 +890,7 @@ export function Documentation() {
             <div className="border rounded-lg p-8 text-center">
               <RefreshCw className="mx-auto h-10 w-10 text-primary mb-4 animate-spin" />
               <h3 className="font-medium">
-                {isAutoRetrying 
+                {isAutoRetrying
                   ? `Retrying generation... (Attempt ${generationAttempts}/${maxGenerationAttempts})`
                   : "Generating Documentation..."
                 }

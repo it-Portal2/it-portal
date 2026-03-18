@@ -4,6 +4,8 @@ import { persist, createJSONStorage } from "zustand/middleware"; // Add persist 
 import { z } from "zod";
 import { useAuthStore } from "./userStore";
 import { generateQuotationHtml, QuotationData } from "../quotationUtils";
+import { Bundle } from "../plan";
+import { convertCurrency, parsePriceString } from "../pricing-utils";
 
 export interface ProjectFormData {
   projectName: string;
@@ -12,13 +14,13 @@ export interface ProjectFormData {
   seniorDevelopers: number;
   juniorDevelopers: number;
   uiUxDesigners: number;
-  selectedBundles: any[]; // Changed from empty array to array of any
-  designLink: string | null; // Added design link field
+  selectedBundles: Bundle[]; // Changed from any[] to Bundle[]
+  designLink: string | null;
   hasExistingDesign: boolean; // Added flag to track if user has existing design
   documentationFile: File | null;
   documentationFileContent: string | null;
   documentationFileText: string | null;
-  generatedDocumentation: string | null | any;
+  generatedDocumentation: string | null;
   improvedDocumentation: string | null;
   quotationPdf: string | null;
   clientName: string;
@@ -43,13 +45,23 @@ const projectDetailsSchema = z.object({
   clientPhoneNumber: z.string().min(10, "Please enter a valid phone number"),
 });
 
+const bundleSchema = z.object({
+  name: z.string(),
+  price: z.string(),
+  billing: z.string(),
+  includes: z.array(z.string()),
+  training: z.string(),
+  bgColor: z.string(),
+  textColor: z.string(),
+});
+
 const developmentPreferencesSchema = z
   .object({
     developmentAreas: z.array(z.string()),
     seniorDevelopers: z.number(),
     juniorDevelopers: z.number(),
     uiUxDesigners: z.number(),
-    selectedBundles: z.array(z.any()).optional(),
+    selectedBundles: z.array(bundleSchema).optional(),
     hasExistingDesign: z.boolean().optional(),
     designLink: z.string().nullable().optional(),
   })
@@ -91,7 +103,7 @@ const developmentPreferencesSchema = z
 
 const documentationSchema = z
   .object({
-    documentationFile: z.any().optional(),
+    documentationFile: z.instanceof(File).nullable().optional(),
     documentationFileContent: z.string().nullable(),
     documentationFileText: z.string().nullable(),
     generatedDocumentation: z.string().optional(),
@@ -266,7 +278,7 @@ export const useProjectFormStore = create<ProjectFormStore>()(
         const pmCost = toRate(50000);
 
         const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
-        
+
         const seniorDevCost = hasBundles ? 0 : formData.seniorDevelopers * seniorDevRate;
         const juniorDevCost = hasBundles ? 0 : formData.juniorDevelopers * juniorDevRate;
         const uiUxCost = hasBundles ? 0 : formData.uiUxDesigners * uiUxRate;
@@ -275,9 +287,18 @@ export const useProjectFormStore = create<ProjectFormStore>()(
         // Calculate selected bundles cost
         let bundlesCost = 0;
         if (formData.selectedBundles && formData.selectedBundles.length > 0) {
-          bundlesCost = formData.selectedBundles.reduce((acc, bundle) => {
-            const numericPrice = Number(bundle.price.replace(/[^0-9.-]+/g, ""));
-            return acc + (isNaN(numericPrice) ? 0 : numericPrice);
+          bundlesCost = formData.selectedBundles.reduce((acc, bundle: Bundle) => {
+            const { amount, currency: bundleCurrency } = parsePriceString(bundle.price);
+            
+            // Calculate currency adjusted price
+            const adjustedPrice = convertCurrency(
+              amount, 
+              formData.currency, 
+              bundleCurrency, 
+              bundleCurrency === "INR"
+            );
+              
+            return acc + adjustedPrice;
           }, 0);
         }
 

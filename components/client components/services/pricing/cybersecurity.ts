@@ -1,36 +1,67 @@
-export type TechComplexityType = "basic" | "dynamic" | "complex";
-export type HostingEnvType = "shared" | "vps" | "cloud" | "onprem";
-export type VaptFeatureType = "web" | "mobile" | "network" | "cloud" | "api";
-export type ComplianceType = "none" | "iso27001" | "soc2" | "gdpr" | "hipaa" | "pci";
+import { convertCurrency } from "../../../../lib/pricing-utils";
+
+export const TECH_COMPLEXITY = {
+  BASIC: "basic",
+  DYNAMIC: "dynamic",
+  COMPLEX: "complex",
+} as const;
+export type TechComplexityType = typeof TECH_COMPLEXITY[keyof typeof TECH_COMPLEXITY];
+
+export const HOSTING_ENV = {
+  SHARED: "shared",
+  VPS: "vps",
+  CLOUD: "cloud",
+  ONPREM: "onprem",
+} as const;
+export type HostingEnvType = typeof HOSTING_ENV[keyof typeof HOSTING_ENV];
+
+export const VAPT_FEATURE = {
+  WEB: "web",
+  MOBILE: "mobile",
+  NETWORK: "network",
+  CLOUD: "cloud",
+  API: "api",
+} as const;
+export type VaptFeatureType = typeof VAPT_FEATURE[keyof typeof VAPT_FEATURE];
+
+export const COMPLIANCE = {
+  NONE: "none",
+  ISO27001: "iso27001",
+  SOC2: "soc2",
+  GDPR: "gdpr",
+  HIPAA: "hipaa",
+  PCI: "pci",
+} as const;
+export type ComplianceType = typeof COMPLIANCE[keyof typeof COMPLIANCE];
 
 export const complexityPrices: Record<TechComplexityType, { label: string; price: number }> = {
-  basic: { label: "Static/Basic Application", price: 10000 },
-  dynamic: { label: "Dynamic Web App", price: 25000 },
-  complex: { label: "Complex/Microservices", price: 50000 },
+  [TECH_COMPLEXITY.BASIC]: { label: "Static/Basic Application", price: 10000 },
+  [TECH_COMPLEXITY.DYNAMIC]: { label: "Dynamic Web App", price: 25000 },
+  [TECH_COMPLEXITY.COMPLEX]: { label: "Complex/Microservices", price: 50000 },
 };
 
 export const hostingPrices: Record<HostingEnvType, { label: string; price: number }> = {
-  shared: { label: "Shared Hosting", price: 0 },
-  vps: { label: "VPS/Dedicated Server", price: 10000 },
-  cloud: { label: "Cloud (AWS/Azure/GCP)", price: 20000 },
-  onprem: { label: "On-Premises Infrastructure", price: 35000 },
+  [HOSTING_ENV.SHARED]: { label: "Shared Hosting", price: 0 },
+  [HOSTING_ENV.VPS]: { label: "VPS/Dedicated Server", price: 10000 },
+  [HOSTING_ENV.CLOUD]: { label: "Cloud (AWS/Azure/GCP)", price: 20000 },
+  [HOSTING_ENV.ONPREM]: { label: "On-Premises Infrastructure", price: 35000 },
 };
 
 export const vaptPrices: Record<VaptFeatureType, { label: string; price: number; description?: string }> = {
-  web: { label: "Web Application", price: 30000 }, // BASE PRICE, dynamically scales with qty & subdomains
-  mobile: { label: "Mobile App", price: 45000 },
-  network: { label: "Network/Server", price: 20000 },
-  cloud: { label: "Cloud Infrastructure", price: 35000 },
-  api: { label: "API Endpoints", price: 25000 },
+  [VAPT_FEATURE.WEB]: { label: "Web Application", price: 30000 },
+  [VAPT_FEATURE.MOBILE]: { label: "Mobile App", price: 45000 },
+  [VAPT_FEATURE.NETWORK]: { label: "Network/Server", price: 20000 },
+  [VAPT_FEATURE.CLOUD]: { label: "Cloud Infrastructure", price: 35000 },
+  [VAPT_FEATURE.API]: { label: "API Endpoints", price: 25000 },
 };
 
 export const compliancePrices: Record<ComplianceType, { label: string; price: number }> = {
-  none: { label: "No Compliance Needed", price: 0 },
-  iso27001: { label: "ISO 27001 Readiness", price: 80000 },
-  soc2: { label: "SOC 2 Type II Prep", price: 100000 },
-  gdpr: { label: "GDPR Compliance Check", price: 50000 },
-  hipaa: { label: "HIPAA Assessment", price: 75000 },
-  pci: { label: "PCI-DSS Certification Prep", price: 120000 },
+  [COMPLIANCE.NONE]: { label: "No Compliance Needed", price: 0 },
+  [COMPLIANCE.ISO27001]: { label: "ISO 27001 Readiness", price: 80000 },
+  [COMPLIANCE.SOC2]: { label: "SOC 2 Type II Prep", price: 100000 },
+  [COMPLIANCE.GDPR]: { label: "GDPR Compliance Check", price: 50000 },
+  [COMPLIANCE.HIPAA]: { label: "HIPAA Assessment", price: 75000 },
+  [COMPLIANCE.PCI]: { label: "PCI-DSS Certification Prep", price: 120000 },
 };
 
 export const SOC_PER_ENDPOINT_PRICE = 500;
@@ -57,17 +88,17 @@ export function calculateCybersecurityPrice(
 
   // 2. VAPT Costs
   vaptSelected.forEach((vapt) => {
-    if (vapt === "web") {
+    if (vapt === VAPT_FEATURE.WEB) {
       // Base web price + (qty-1)*extra_price + subdomains*subdomain_price
-      let webTotal = vaptPrices.web.price;
+      let webTotal = vaptPrices[VAPT_FEATURE.WEB].price;
       if (webVars.quantity > 1) {
         webTotal += (webVars.quantity - 1) * VAPT_WEB_QTY_PRICE;
       }
       webTotal += webVars.subdomains * VAPT_WEB_SUBDOMAIN_PRICE;
       total += webTotal;
-    } else if (vapt === "mobile") {
+    } else if (vapt === VAPT_FEATURE.MOBILE) {
        // Base mobile price + (qty-1)*extra_price + (platforms-1)*platform_price
-       let mobileTotal = vaptPrices.mobile.price;
+       let mobileTotal = vaptPrices[VAPT_FEATURE.MOBILE].price;
        if (mobileVars.quantity > 1) {
          mobileTotal += (mobileVars.quantity - 1) * VAPT_MOBILE_QTY_PRICE;
        }
@@ -86,10 +117,5 @@ export function calculateCybersecurityPrice(
   // 4. Compliance Costs
   total += compliancePrices[compliance].price;
 
-  if (currency === "USD") {
-    // Exact match for DevelopmentPreferences.tsx manual USD mapping
-    return Math.round((total + 0.04 * total) / 83);
-  }
-
-  return total;
+  return convertCurrency(total, currency);
 }

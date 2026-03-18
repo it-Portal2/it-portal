@@ -18,7 +18,8 @@ import {
 import {
   calculateWebsitePrice,
   FeatureType,
-  WebsiteVars
+  WebsiteVars,
+  WEBSITE_FEATURES
 } from "../pricing/website-dev";
 import {
   Select,
@@ -33,16 +34,16 @@ import { Slider } from "@/components/ui/slider";
 import { plans } from "@/lib/plan";
 
 const featuresList = [
-  { id: "auth-system", label: "Advanced Auth & Security", icon: ShieldCheck },
-  { id: "payment-gate", label: "Payment Gateway Integration", icon: CreditCard },
-  { id: "api-dev", label: "REST/GraphQL API Development", icon: Database },
-  { id: "cloud-infra", label: "Cloud Infrastructure Setup", icon: Cloud },
-  { id: "push-notif", label: "Push Notification System", icon: Zap },
-  { id: "real-time", label: "Real-time Messaging/Sockets", icon: Activity },
+  { id: WEBSITE_FEATURES.AUTH_SYSTEM, label: "Advanced Auth & Security", icon: ShieldCheck },
+  { id: WEBSITE_FEATURES.PAYMENT_GATEWAY, label: "Payment Gateway Integration", icon: CreditCard },
+  { id: WEBSITE_FEATURES.API_DEV, label: "REST/GraphQL API Development", icon: Database },
+  { id: WEBSITE_FEATURES.CLOUD_INFRA, label: "Cloud Infrastructure Setup", icon: Cloud },
+  { id: WEBSITE_FEATURES.PUSH_NOTIF, label: "Push Notification System", icon: Zap },
+  { id: WEBSITE_FEATURES.REAL_TIME, label: "Real-time Messaging/Sockets", icon: Activity },
 ];
 
 interface WebsiteDataDetailProps {
-  onAdd?: (cost: number, currency: string, freeBundleOption?: string) => void;
+  onAdd: (cost: number, currency: string, freeBundleOption?: string) => void;
 }
 
 export function WebsiteDataDetail({ onAdd }: WebsiteDataDetailProps) {
@@ -286,18 +287,16 @@ export function WebsiteDataDetail({ onAdd }: WebsiteDataDetailProps) {
                     </div>
                   )}
 
-                  {onAdd && (
-                    <Button
-                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 500000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      onClick={() => {
-                        if (baseInrCost >= 500000 && !freeBundleOption) return;
-                        onAdd(totalCost, currency, freeBundleOption || undefined)
-                      }}
-                    >
-                      Buy Service
-                    </Button>
-                  )}
+                  <Button
+                    className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    onClick={() => {
+                      if (baseInrCost >= 600000 && !freeBundleOption) return;
+                      onAdd(totalCost, currency, freeBundleOption || undefined)
+                    }}
+                  >
+                    {baseInrCost >= 600000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
+                  </Button>
                   <div className="text-xs text-muted-foreground mt-4">
                     *Rough estimate. Final cost subject to exact requirements review.
                   </div>

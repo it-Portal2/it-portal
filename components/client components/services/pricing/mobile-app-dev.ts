@@ -1,3 +1,5 @@
+import { convertCurrency, calculateTotalWithFeatures } from "../../../../lib/pricing-utils";
+
 export const mobilePrices = {
   single: 100000,
   both: 150000,
@@ -15,9 +17,21 @@ export const featurePrices = {
 
 export type FeatureType = keyof typeof featurePrices;
 
+export const MOBILE_TYPE = {
+  CUSTOM: "custom",
+  PWA: "pwa",
+} as const;
+export type MobileType = typeof MOBILE_TYPE[keyof typeof MOBILE_TYPE];
+
+export const PLATFORM_OPTION = {
+  SINGLE: "single",
+  BOTH: "both",
+} as const;
+export type PlatformOption = typeof PLATFORM_OPTION[keyof typeof PLATFORM_OPTION];
+
 export interface MobileVars {
-  type: "custom" | "pwa";
-  platform: "single" | "both";
+  type: MobileType;
+  platform: PlatformOption;
 }
 
 export function calculateMobilePrice(
@@ -27,21 +41,13 @@ export function calculateMobilePrice(
 ): number {
   let total = 0;
 
-  if (vars.type === "pwa") {
+  if (vars.type === MOBILE_TYPE.PWA) {
     total = mobilePrices.pwa;
   } else {
-    total = vars.platform === "both" ? mobilePrices.both : mobilePrices.single;
+    total = vars.platform === PLATFORM_OPTION.BOTH ? mobilePrices.both : mobilePrices.single;
   }
 
-  features.forEach((feature) => {
-    if (featurePrices[feature]) {
-      total += featurePrices[feature].price;
-    }
-  });
+  total = calculateTotalWithFeatures(total, features, featurePrices);
 
-  if (currency === "USD") {
-    return Math.round((total + 0.04 * total) / 83);
-  }
-
-  return Math.round(total);
+  return convertCurrency(total, currency);
 }

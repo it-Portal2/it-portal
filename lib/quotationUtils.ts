@@ -1,3 +1,6 @@
+import { Bundle } from "./plan";
+import { convertCurrency, parsePriceString } from "./pricing-utils";
+
 // A function to get the current date in a formatted string (DD/MM/YYYY)
 export const getFormattedDate = (): string => {
   const date = new Date();
@@ -39,7 +42,7 @@ export interface QuotationData {
   seniorDevelopers: number;
   juniorDevelopers: number;
   uiUxDesigners: number;
-  selectedBundles?: any[];
+  selectedBundles?: Bundle[];
   currency: "INR" | "USD";
   // Optional overrides
   invoiceNumber?: string;
@@ -93,14 +96,15 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
   let bundlesCost = 0;
   if (hasBundles) {
     bundlesCost = formData.selectedBundles!.reduce((acc, bundle) => {
-      // Parse price string (e.g. "₹1,245,000" or "$15,000") to number
-      const numericPrice = Number(bundle.price.replace(/[^0-9.-]+/g, ""));
-      const baseInrPrice = isNaN(numericPrice) ? 0 : numericPrice;
+      const { amount, currency: bundleCurrency } = parsePriceString(bundle.price);
       
       // Calculate currency adjusted price
-      const adjustedPrice = formData.currency === "INR" 
-        ? baseInrPrice 
-        : Math.round((baseInrPrice * 1.04) / exchangeRate);
+      const adjustedPrice = convertCurrency(
+        amount, 
+        formData.currency, 
+        bundleCurrency, 
+        bundleCurrency === "INR" // Apply markup only if converting from INR
+      );
         
       return acc + adjustedPrice;
     }, 0);
@@ -152,12 +156,14 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
   // Add selected bundles to line items
   if (hasBundles) {
     formData.selectedBundles!.forEach(bundle => {
-      const numericPrice = Number(bundle.price.replace(/[^0-9.-]+/g, ""));
-      const baseInrPrice = isNaN(numericPrice) ? 0 : numericPrice;
+      const { amount, currency: bundleCurrency } = parsePriceString(bundle.price);
       
-      const priceValue = formData.currency === "INR" 
-        ? baseInrPrice 
-        : Math.round((baseInrPrice * 1.04) / exchangeRate);
+      const priceValue = convertCurrency(
+        amount, 
+        formData.currency, 
+        bundleCurrency, 
+        bundleCurrency === "INR"
+      );
 
       const displayPrice = priceValue === 0 
         ? `<span style="color: #10b981; font-weight: 700;">FREE</span>`

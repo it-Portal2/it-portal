@@ -11,14 +11,12 @@ interface ServiceDetailViewProps {
   service: ServiceOption;
   onBack: () => void;
   onClose: () => void;
-  onAddService?: (serviceName: string, cost: number, currency: string, freeBundleOption?: string) => void;
+  onAddService: (serviceName: string, cost: number, currency: string, freeBundleOption?: string) => void;
 }
 
 export function ServiceDetailView({ service, onBack, onClose, onAddService }: ServiceDetailViewProps) {
   const handleAdd = (cost: number, currency: string, freeBundleOption?: string) => {
-    if (onAddService) {
-      onAddService(service.name, cost, currency, freeBundleOption);
-    }
+    onAddService(service.name, cost, currency, freeBundleOption);
   };
   const renderDetailContent = () => {
     switch (service.id) {

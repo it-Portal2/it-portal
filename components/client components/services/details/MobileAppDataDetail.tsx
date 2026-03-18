@@ -22,7 +22,9 @@ import {
 import {
   calculateMobilePrice,
   FeatureType,
-  MobileVars
+  MobileVars,
+  MOBILE_TYPE,
+  PLATFORM_OPTION,
 } from "../pricing/mobile-app-dev";
 import {
   Select,
@@ -51,12 +53,12 @@ const featuresList = [
 ];
 
 interface MobileAppDataDetailProps {
-  onAdd?: (cost: number, currency: string, freeBundleOption?: string) => void;
+  onAdd: (cost: number, currency: string, freeBundleOption?: string) => void;
 }
 
 export function MobileAppDataDetail({ onAdd }: MobileAppDataDetailProps) {
   const [appCategory, setAppCategory] = useState<"custom" | "prebuilt">("custom");
-  const [vars, setVars] = useState<MobileVars>({ type: "custom", platform: "single" });
+  const [vars, setVars] = useState<MobileVars>({ type: MOBILE_TYPE.CUSTOM, platform: PLATFORM_OPTION.SINGLE });
   const [platformOption, setPlatformOption] = useState<"android" | "ios" | "both">("android");
   const [budgetSatisfied, setBudgetSatisfied] = useState<boolean | null>(null);
   const [selectedFeatures, setSelectedFeatures] = useState<FeatureType[]>([]);
@@ -67,9 +69,9 @@ export function MobileAppDataDetail({ onAdd }: MobileAppDataDetailProps) {
   // Update vars based on satisfaction and platform option
   useEffect(() => {
     if (budgetSatisfied === false) {
-      setVars({ type: "pwa", platform: "single" });
+      setVars({ type: MOBILE_TYPE.PWA, platform: PLATFORM_OPTION.SINGLE });
     } else {
-      setVars({ type: "custom", platform: platformOption === "both" ? "both" : "single" });
+      setVars({ type: MOBILE_TYPE.CUSTOM, platform: platformOption === "both" ? PLATFORM_OPTION.BOTH : PLATFORM_OPTION.SINGLE });
     }
   }, [budgetSatisfied, platformOption]);
 
@@ -383,17 +385,16 @@ export function MobileAppDataDetail({ onAdd }: MobileAppDataDetailProps) {
                     </div>
                   )}
 
-                  {onAdd && appCategory === "custom" && budgetSatisfied !== null && (
+                  {appCategory === "custom" && (
                     <Button
-                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 500000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
+                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
                         }`}
                       onClick={() => {
-                        if (baseInrCost >= 500000 && !freeBundleOption) return;
-                        const finalName = vars.type === "pwa" ? "Mobile App (PWA)" : `Custom App (${platformOption})`;
+                        if (baseInrCost >= 600000 && !freeBundleOption) return;
                         onAdd(totalCost, currency, freeBundleOption || undefined);
                       }}
                     >
-                      Buy Service
+                      {baseInrCost >= 600000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
                     </Button>
                   )}
                   {appCategory === "prebuilt" && (

@@ -16,6 +16,9 @@ import {
   ChevronUp,
   Activity,
   ShieldCheck,
+  BrainCircuit, // New icon
+  Database, // New icon
+  Cpu, // New icon
 } from "lucide-react";
 import {
   calculateAIAutomationPrice,
@@ -24,7 +27,10 @@ import {
   featurePrices,
   ComplexityType,
   WorkflowType,
-  FeatureType
+  FeatureType,
+  AI_COMPLEXITY,
+  AI_WORKFLOW,
+  AI_FEATURES
 } from "../pricing/ai-automation";
 import {
   Select,
@@ -39,21 +45,21 @@ import { plans } from "@/lib/plan";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const featuresList = [
-  { id: "chatbot", label: "AI Chatbot / Virtual Assistant", icon: MessageSquare },
-  { id: "nlp", label: "Natural Language Processing", icon: Brain },
-  { id: "ml-model", label: "Custom ML Model Training", icon: Bot },
-  { id: "data-viz", label: "Data Analytics & Dashboard", icon: BarChart3 },
-  { id: "auto-pilot", label: "Business Process Auto-pilot", icon: Zap },
-  { id: "third-party", label: "3rd Party API Orchestration", icon: Share2 },
+  { id: AI_FEATURES.CHATBOT, label: "AI Chatbot / Virtual Assistant", icon: MessageSquare },
+  { id: AI_FEATURES.NLP, label: "Natural Language Processing", icon: BrainCircuit },
+  { id: AI_FEATURES.ML_MODEL, label: "Custom ML Model Training", icon: Database },
+  { id: AI_FEATURES.DATA_VIZ, label: "Data Analytics & Dashboard", icon: BarChart3 },
+  { id: AI_FEATURES.AUTO_PILOT, label: "Business Process Auto-pilot", icon: Rocket },
+  { id: AI_FEATURES.THIRD_PARTY, label: "3rd Party API Orchestration", icon: Cpu },
 ];
 
 interface AIAutomationDetailProps {
-  onAdd?: (cost: number, currency: string, freeBundleOption?: string) => void;
+  onAdd: (cost: number, currency: string, freeBundleOption?: string) => void;
 }
 
 export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
-  const [complexity, setComplexity] = useState<ComplexityType>("advanced");
-  const [workflow, setWorkflow] = useState<WorkflowType>("fixed");
+  const [complexity, setComplexity] = useState<ComplexityType>(AI_COMPLEXITY.BASIC);
+  const [workflow, setWorkflow] = useState<WorkflowType>(AI_WORKFLOW.FIXED);
   const [selectedFeatures, setSelectedFeatures] = useState<FeatureType[]>([]);
   const [currency, setCurrency] = useState<string>("INR");
   const [freeBundleOption, setFreeBundleOption] = useState<string | null>(null);
@@ -308,18 +314,16 @@ export function AIAutomationDetail({ onAdd }: AIAutomationDetailProps) {
                     </div>
                   )}
 
-                  {onAdd && (
-                    <Button
-                      className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 700000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                      onClick={() => {
-                        if (baseInrCost >= 700000 && !freeBundleOption) return;
-                        onAdd(totalCost, currency, freeBundleOption || undefined)
-                      }}
-                    >
-                      {baseInrCost >= 700000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
-                    </Button>
-                  )}
+                  <Button
+                    className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 700000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    onClick={() => {
+                      if (baseInrCost >= 700000 && !freeBundleOption) return;
+                      onAdd(totalCost, currency, freeBundleOption || undefined)
+                    }}
+                  >
+                    {baseInrCost >= 700000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
+                  </Button>
                   <div className="text-xs text-muted-foreground mt-4">
                     *Rough estimate. Final cost subject to exact requirements review.
                   </div>
