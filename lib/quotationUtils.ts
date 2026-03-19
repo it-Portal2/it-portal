@@ -236,11 +236,7 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
             <h3 style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0;">Due Date</h3>
             <p style="color: #111827; font-weight: 500; font-size: 14px; margin: 0;">${dueDate}</p>
           </div>
-          <div style="grid-column: span 2;">
-            <h3 style="font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px 0;">From</h3>
-            <p style="color: #111827; font-size: 12px; margin: 0;">Labpur, Sandipan Patsala Para, Birbhum, Bolpur, West Bengal - 731303</p>
-            <p style="color: #6b7280; font-size: 10px; margin: 2px 0 0 0;">GST: 19ETGPB5153Q1Z5</p>
-          </div>
+
         </div>
       </div>
 
