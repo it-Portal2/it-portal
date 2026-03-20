@@ -148,7 +148,9 @@ export function DevelopmentPreferences() {
   const [designLink, setDesignLink] = useState(formData.designLink || "");
   const [linkError, setLinkError] = useState("");
 
-  const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
+  const selectedBundles = formData.selectedBundles || [];
+  const hasBundles = selectedBundles.some(b => b.billing !== "One Time");
+  const hasServices = selectedBundles.some(b => b.billing === "One Time");
 
   const LEAD_DESIGNER_PROFILE_URL = "https://tithi-ui-ux-design.vercel.app";
 
@@ -257,42 +259,76 @@ export function DevelopmentPreferences() {
           </RippleButton>
         </div>
 
-        {/* Selected Bundles Display */}
-        {formData.selectedBundles && formData.selectedBundles.length > 0 && (
-          <div className="space-y-3 mt-4">
-            <h3 className="text-sm font-semibold text-foreground">Selected Bundles</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
-              {formData.selectedBundles.map((bundle: Bundle, idx) => (
-                <div key={idx} className="flex flex-col justify-between p-3 border rounded-lg bg-card text-card-foreground shadow-sm relative group overflow-hidden">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
-
-                  <div className="relative z-10 flex justify-between items-start">
-                    <div className="space-y-0.5">
-                      <h4 className="font-bold text-sm tracking-tight">{bundle.name}</h4>
-                      <p className="text-xs font-semibold text-primary">{bundle.price}</p>
-                      {bundle.billing && (
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-1">
-                          {bundle.billing}
-                        </p>
-                      )}
+        {/* Selected Items Display */}
+        {(hasBundles || hasServices) && (
+          <div className="space-y-4 mt-4">
+            {hasBundles && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Selected Bundles</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
+                  {selectedBundles.filter(b => b.billing !== "One Time").map((bundle: Bundle, idx) => (
+                    <div key={idx} className="flex flex-col justify-between p-3 border rounded-lg bg-card text-card-foreground shadow-sm relative group overflow-hidden">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
+                      <div className="relative z-10 flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <h4 className="font-bold text-sm tracking-tight">{bundle.name}</h4>
+                          <p className="text-xs font-semibold text-primary">{bundle.price}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-1">
+                            {bundle.billing}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateFormData({
+                              selectedBundles: selectedBundles.filter(b => b.name !== bundle.name)
+                            });
+                          }}
+                          className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                          aria-label="Remove bundle"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateFormData({
-                          selectedBundles: formData.selectedBundles.filter(b => b.name !== bundle.name)
-                        });
-                      }}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                      aria-label="Remove bundle"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {hasServices && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-foreground">Selected Services</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2">
+                  {selectedBundles.filter(b => b.billing === "One Time").map((bundle: Bundle, idx) => (
+                    <div key={idx} className="flex flex-col justify-between p-3 border rounded-lg bg-card text-card-foreground shadow-sm relative group overflow-hidden">
+                      <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors" />
+                      <div className="relative z-10 flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <h4 className="font-bold text-sm tracking-tight">{bundle.name}</h4>
+                          <p className="text-xs font-semibold text-primary">{bundle.price}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-1">
+                            One Time
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateFormData({
+                              selectedBundles: selectedBundles.filter(b => b.name !== bundle.name)
+                            });
+                          }}
+                          className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                          aria-label="Remove service"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

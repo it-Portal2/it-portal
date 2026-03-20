@@ -277,12 +277,14 @@ export const useProjectFormStore = create<ProjectFormStore>()(
         const uiUxRate = toRate(8000);
         const pmCost = toRate(50000);
 
-        const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
+        const selectedBundles = formData.selectedBundles || [];
+        const hasBundles = selectedBundles.some(b => b.billing !== "One Time");
+        const hasServices = selectedBundles.some(b => b.billing === "One Time");
 
         const seniorDevCost = hasBundles ? 0 : formData.seniorDevelopers * seniorDevRate;
         const juniorDevCost = hasBundles ? 0 : formData.juniorDevelopers * juniorDevRate;
         const uiUxCost = hasBundles ? 0 : formData.uiUxDesigners * uiUxRate;
-        const pmCostFinal = hasBundles ? 0 : pmCost;
+        const pmCostFinal = (hasBundles || hasServices) ? 0 : pmCost;
 
         // Calculate selected bundles cost
         let bundlesCost = 0;

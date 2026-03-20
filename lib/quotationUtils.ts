@@ -85,16 +85,18 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
       ? baseRates.projectManagementCost
       : Math.round((baseRates.projectManagementCost * 1.04) / exchangeRate);
 
-  const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
+  const selectedBundles = formData.selectedBundles || [];
+  const hasBundles = selectedBundles.some(b => b.billing !== "One Time");
+  const hasServices = selectedBundles.some(b => b.billing === "One Time");
 
   const seniorDevCost = hasBundles ? 0 : (formData.seniorDevelopers || 0) * seniorDevRate;
   const juniorDevCost = hasBundles ? 0 : (formData.juniorDevelopers || 0) * juniorDevRate;
   const uiUxCost = hasBundles ? 0 : (formData.uiUxDesigners || 0) * uiUxRate;
-  const projectManagementCostFinal = hasBundles ? 0 : projectManagementCost;
+  const projectManagementCostFinal = (hasBundles || hasServices) ? 0 : projectManagementCost;
   
   // Calculate selected bundles cost
   let bundlesCost = 0;
-  if (hasBundles) {
+  if (hasBundles || hasServices) {
     bundlesCost = formData.selectedBundles!.reduce((acc, bundle) => {
       const { amount, currency: bundleCurrency } = parsePriceString(bundle.price);
       
@@ -146,15 +148,17 @@ export const generateQuotationHtml = (formData: QuotationData): string => {
           <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(uiUxCost)}</td>
         </tr>`);
     }
-    lineItemRows.push(`
+    if (projectManagementCostFinal > 0) {
+      lineItemRows.push(`
         <tr style="border-bottom: 1px solid #f3f4f6;">
           <td style="padding: 12px 0; color: #1f2937; font-weight: 500; border: none !important; border-width: 0 !important;">Project Management &amp; Delivery Oversight</td>
           <td style="padding: 12px 0; text-align: right; color: #111827; font-weight: 600; border: none !important; border-width: 0 !important;">${fmt(projectManagementCostFinal)}</td>
         </tr>`);
+    }
   }
 
   // Add selected bundles to line items
-  if (hasBundles) {
+  if (hasBundles || hasServices) {
     formData.selectedBundles!.forEach(bundle => {
       const { amount, currency: bundleCurrency } = parsePriceString(bundle.price);
       

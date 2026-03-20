@@ -48,10 +48,13 @@ export function Suggestions({ onContinue }: SuggestionsProps) {
   const needsSeniorDev = formData.seniorDevelopers === 0 && (!formData.selectedBundles || formData.selectedBundles.length === 0);
   const needsJuniorDev = formData.juniorDevelopers === 0 && (!formData.selectedBundles || formData.selectedBundles.length === 0);
   const needsUiUx = formData.uiUxDesigners === 0 && !formData.hasExistingDesign && (!formData.selectedBundles || formData.selectedBundles.length === 0);
-  const hasBundles = formData.selectedBundles && formData.selectedBundles.length > 0;
+  const selectedBundles = formData.selectedBundles || [];
+  const hasBundles = selectedBundles.some(b => b.billing !== "One Time");
+  const hasServices = selectedBundles.some(b => b.billing === "One Time");
 
   const canProceed =
     hasBundles ||
+    hasServices ||
     (formData.seniorDevelopers >= 1 && formData.juniorDevelopers >= 1) ||
     (formData.seniorDevelopers >= 1 && formData.uiUxDesigners >= 1) ||
     (formData.juniorDevelopers >= 1 && formData.uiUxDesigners >= 1) ||
@@ -155,17 +158,30 @@ export function Suggestions({ onContinue }: SuggestionsProps) {
           </CardDescription>
         </CardHeader>
 
-        {hasBundles ? (
+        {hasBundles || hasServices ? (
           <CardContent className="space-y-6 pt-4">
-            <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
-              <h3 className="sm:text-lg font-semibold flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-500" />
-                Bundle Selected
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                You have selected a comprehensive bundle. Your dedicated team members to build your application have already been fully allocated for optimal delivery of your project. Let's proceed to the next step!
-              </p>
-            </div>
+            {hasBundles && (
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                <h3 className="sm:text-lg font-semibold flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  Bundle Selected
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  You have selected a comprehensive bundle. Your dedicated team members to build your application have already been fully allocated for optimal delivery of your project. Let's proceed to the next step!
+                </p>
+              </div>
+            )}
+            {hasServices && (
+              <div className="p-4 bg-primary/5 rounded-lg border border-primary/10">
+                <h3 className="sm:text-lg font-semibold flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  Service Selected
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  You have selected a professional service. Our team is ready to deliver high-quality results tailored to your specific requirements. Let's proceed to the next step!
+                </p>
+              </div>
+            )}
           </CardContent>
         ) : (
           <CardContent className="space-y-6 pt-4">
