@@ -10,11 +10,6 @@ import {
   Terminal,
   Lock,
   UserCheck,
-  Rocket,
-  Gift,
-  Info,
-  ChevronUp,
-  Activity,
   ShieldCheck,
   Database,
   Binary,
@@ -62,15 +57,6 @@ export function CyberCrimeDetail({ onAdd }: CyberCrimeDetailProps) {
   const [priority, setPriority] = useState<PriorityType>(INVESTIGATION_PRIORITY.NORMAL);
   const [selectedFeatures, setSelectedFeatures] = useState<FeatureType[]>([]);
   const [currency, setCurrency] = useState<string>("INR");
-  const [freeBundleOption, setFreeBundleOption] = useState<string | null>(null);
-  const [expandedBundle, setExpandedBundle] = useState<string | null>(null);
-
-  const securityBundles = useMemo(() => {
-    return plans.filter(p => {
-      const name = p.name.toLowerCase();
-      return name.includes("secure") || name.includes("security");
-    });
-  }, []);
 
   const { totalCost, baseInrCost } = useMemo(() => {
     const total = calculateCyberCrimePrice(level, priority, selectedFeatures, currency);
@@ -223,104 +209,13 @@ export function CyberCrimeDetail({ onAdd }: CyberCrimeDetailProps) {
                     {totalCost.toLocaleString()}
                   </div>
 
-                  {baseInrCost >= 600000 && (
-                    <div className="mt-6 mb-4 p-4 rounded-xl border-2 border-dashed border-blue-600/30 bg-blue-600/5 animate-in fade-in zoom-in duration-500 max-h-[400px] overflow-y-auto font-sans">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="p-1.5 rounded-lg bg-blue-100">
-                          <Gift className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <span className="font-bold text-sm text-blue-700">Unlock Free Security Bundle</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-4 text-left">
-                        Your estimation exceeds ₹6 Lakhs. Select **one** complimentary bundle as a gift:
-                      </p>
-                      <div className="grid grid-cols-1 gap-2">
-                        <button
-                          onClick={() => setFreeBundleOption("saved")}
-                          className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${freeBundleOption === "saved"
-                            ? "bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20"
-                            : "bg-background border-border hover:border-emerald-500/50"
-                            }`}
-                        >
-                          <div className={`p-1.5 rounded-md ${freeBundleOption === "saved" ? "bg-white/20" : "bg-muted"}`}>
-                            <Activity className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold">Save for Later (Coupon)</div>
-                            <div className={`text-[10px] ${freeBundleOption === "saved" ? "text-emerald-100" : "text-muted-foreground"}`}>Receive as a coupon code</div>
-                          </div>
-                        </button>
-
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2 mb-1 text-left">Select a Security Bundle:</div>
-
-                        {securityBundles.map((plan) => (
-                          <div key={plan.name} className="space-y-2">
-                            <div
-                              className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all relative ${freeBundleOption === plan.name
-                                ? "bg-blue-600 border-blue-600 text-slate-100 shadow-md shadow-blue-500/20"
-                                : "bg-background border-border hover:border-blue-500/50"
-                                }`}
-                            >
-                              <div
-                                onClick={() => setFreeBundleOption(plan.name)}
-                                className="flex-1 flex items-center gap-3 cursor-pointer"
-                              >
-                                <div className={`p-1.5 rounded-md ${freeBundleOption === plan.name ? "bg-white/20" : "bg-muted"}`}>
-                                  <Rocket className="w-4 h-4" />
-                                </div>
-                                <div>
-                                  <div className="text-xs font-bold">{plan.name}</div>
-                                  <div className={`text-[10px] ${freeBundleOption === plan.name ? "text-blue-100" : "text-muted-foreground"}`}>
-                                    Free Gift with Investigation
-                                  </div>
-                                </div>
-                              </div>
-
-                              <button
-                                onClick={() => setExpandedBundle(expandedBundle === plan.name ? null : plan.name)}
-                                className={`p-2 rounded-md transition-colors ${freeBundleOption === plan.name
-                                  ? "hover:bg-white/10 text-white"
-                                  : "hover:bg-muted text-muted-foreground"
-                                  }`}
-                                title="View Details"
-                              >
-                                {expandedBundle === plan.name ? <ChevronUp className="w-4 h-4" /> : <Info className="w-4 h-4" />}
-                              </button>
-                            </div>
-
-                            {expandedBundle === plan.name && (
-                              <div className="p-3 rounded-lg bg-white border border-border shadow-sm animate-in slide-in-from-top-2 duration-300 text-left">
-                                <div className="text-[10px] font-bold text-muted-foreground uppercase mb-2">What's included:</div>
-                                <ul className="space-y-1">
-                                  {plan.includes.map((item, i) => (
-                                    <li key={i} className="text-[10px] flex items-center gap-2">
-                                      <div className="w-1 h-1 rounded-full bg-blue-500"></div>
-                                      {item}
-                                    </li>
-                                  ))}
-                                </ul>
-                                <div className="mt-2 pt-2 border-t border-border/50">
-                                  <div className="text-[10px] italic text-muted-foreground">
-                                    <span className="font-bold not-italic">Training:</span> {plan.training}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
                   <Button
-                    className={`w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all ${baseInrCost >= 600000 && !freeBundleOption ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
+                    className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-6 rounded-xl text-lg shadow-lg shadow-blue-500/20 transition-all"
                     onClick={() => {
-                      if (baseInrCost >= 600000 && !freeBundleOption) return;
-                      onAdd(totalCost, currency, freeBundleOption || undefined)
+                      onAdd(totalCost, currency)
                     }}
                   >
-                    {baseInrCost >= 600000 && !freeBundleOption ? "Select a Bundle first" : "Buy Service"}
+                    Buy Service
                   </Button>
                   <div className="text-xs text-muted-foreground mt-4">
                     *Rough estimate. Final cost subject to exact requirements review.

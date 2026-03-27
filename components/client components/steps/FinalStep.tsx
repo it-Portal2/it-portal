@@ -30,44 +30,28 @@ export function FinalStep() {
 
   const downloadFromUrl = async (url: string, fileName: string) => {
     try {
-      // Fetch the file as a blob
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/pdf",
-        },
-      });
+      // Try fetching first (allows renaming the file during download)
+      // Note: This only works if the target server allows CORS
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch file: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
       }
 
-      // Get the blob from the response
       const blob = await response.blob();
-
-      // Create a URL for the blob
       const blobUrl = URL.createObjectURL(blob);
-
-      // Create a link element
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = fileName;
       document.body.appendChild(link);
-
-      // Trigger the download
       link.click();
-
-      // Clean up
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      console.error("Error downloading file:", error);
-      toast.error(
-        `Failed to download file: ${error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+      console.error("Download failed, falling back to direct link:", error);
+      // Fallback: If fetch fails (usually CORS), just open the cloud link directly
+      window.open(url, "_blank");
+      toast.info("Opening file directly from storage");
     }
   };
 
