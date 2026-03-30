@@ -35,7 +35,12 @@ export function FinalStep() {
       const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.status} ${response.statusText}`);
+        // If it's a genuine server error (like 404), report it clearly
+        console.error(`Server error: ${response.status} ${response.statusText}`);
+        toast.error(`File could not be accessed (Error ${response.status}). Redirecting to original link...`);
+        // Fallback to direct navigation so user can see the error page if fetch fails
+        window.location.href = url;
+        return;
       }
 
       const blob = await response.blob();
@@ -48,10 +53,11 @@ export function FinalStep() {
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      console.error("Download failed, falling back to direct link:", error);
-      // Fallback: If fetch fails (usually CORS), just open the cloud link directly
-      window.open(url, "_blank");
-      toast.info("Opening file directly from storage");
+      
+      // This catch block handles network errors or CORS failures
+      console.error("Download fetch failed (likely CORS or network error):", error);
+      toast.info("Directly accessing file from storage...");
+      window.location.href = url;
     }
   };
 

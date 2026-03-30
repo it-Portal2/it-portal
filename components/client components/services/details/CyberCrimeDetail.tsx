@@ -6,10 +6,7 @@ import {
   FileText,
   ShieldAlert,
   Scale,
-  HardDrive,
   Terminal,
-  Lock,
-  UserCheck,
   ShieldCheck,
   Database,
   Binary,
@@ -36,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { plans } from "@/lib/plan";
+
 
 
 const featuresList = [
@@ -49,7 +46,7 @@ const featuresList = [
 ];
 
 interface CyberCrimeDetailProps {
-  onAdd: (cost: number, currency: string, freeBundleOption?: string) => void;
+  onAdd: (cost: number, currency: string) => void;
 }
 
 export function CyberCrimeDetail({ onAdd }: CyberCrimeDetailProps) {
@@ -58,13 +55,8 @@ export function CyberCrimeDetail({ onAdd }: CyberCrimeDetailProps) {
   const [selectedFeatures, setSelectedFeatures] = useState<FeatureType[]>([]);
   const [currency, setCurrency] = useState<string>("INR");
 
-  const { totalCost, baseInrCost } = useMemo(() => {
-    const total = calculateCyberCrimePrice(level, priority, selectedFeatures, currency);
-    const baseInr = currency === "INR"
-      ? total
-      : calculateCyberCrimePrice(level, priority, selectedFeatures, "INR");
-
-    return { totalCost: total, baseInrCost: baseInr };
+  const totalCost = useMemo(() => {
+    return calculateCyberCrimePrice(level, priority, selectedFeatures, currency);
   }, [level, priority, selectedFeatures, currency]);
 
   const toggleFeature = (featureId: FeatureType) => {
