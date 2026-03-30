@@ -30,44 +30,34 @@ export function FinalStep() {
 
   const downloadFromUrl = async (url: string, fileName: string) => {
     try {
-      // Fetch the file as a blob
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/pdf",
-        },
-      });
+      // Try fetching first (allows renaming the file during download)
+      // Note: This only works if the target server allows CORS
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch file: ${response.status} ${response.statusText}`
-        );
+        // If it's a genuine server error (like 404), report it clearly
+        console.error(`Server error: ${response.status} ${response.statusText}`);
+        toast.error(`File could not be accessed (Error ${response.status}). Redirecting to original link...`);
+        // Fallback to direct navigation so user can see the error page if fetch fails
+        window.location.href = url;
+        return;
       }
 
-      // Get the blob from the response
       const blob = await response.blob();
-
-      // Create a URL for the blob
       const blobUrl = URL.createObjectURL(blob);
-
-      // Create a link element
       const link = document.createElement("a");
       link.href = blobUrl;
       link.download = fileName;
       document.body.appendChild(link);
-
-      // Trigger the download
       link.click();
-
-      // Clean up
       document.body.removeChild(link);
       URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      console.error("Error downloading file:", error);
-      toast.error(
-        `Failed to download file: ${error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+      
+      // This catch block handles network errors or CORS failures
+      console.error("Download fetch failed (likely CORS or network error):", error);
+      toast.info("Directly accessing file from storage...");
+      window.location.href = url;
     }
   };
 

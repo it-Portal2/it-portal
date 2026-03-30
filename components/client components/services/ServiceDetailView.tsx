@@ -29,7 +29,7 @@ export function ServiceDetailView({ service, onBack, onClose, onAddService }: Se
       case "ai-automation":
         return <AIAutomationDetail onAdd={handleAdd} />;
       case "cyber-crime":
-        return <CyberCrimeDetail onAdd={handleAdd} />;
+        return <CyberCrimeDetail onAdd={(cost, currency) => onAddService(service.name, cost, currency)} />;
       default:
         return (
           <div className="p-8 border-2 border-dashed rounded-xl bg-muted/20 flex items-center justify-center text-muted-foreground">
