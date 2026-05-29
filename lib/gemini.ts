@@ -14,7 +14,7 @@ import {
   extractQuestionTypeFromId,
   validateQuestionStructure,
 } from "./analysis-utils";
-import { getActiveGoogleAIKeys } from "@/lib/firebase/admin";
+import { getActiveGoogleAIKeys, getAiConfig } from "@/lib/firebase/admin";
 import {
   AIKeyFromDB,
   AttemptResult,
@@ -116,8 +116,11 @@ async function tryWithDatabaseKeysOptimized<T>(
 
       try {
         const genAI = new GoogleGenerativeAI(key.apiKey);
+        const aiConfig = await getAiConfig();
+        const modelName = aiConfig.geminiModel || GEMINI_CONFIG.MODEL_NAME;
+        console.log(`[AI:gemini] attempt ${attemptIndex + 1}/${retryStrategy.length} — model: ${modelName} | key: ${key.aiId}`);
         const model = genAI.getGenerativeModel({
-          model: GEMINI_CONFIG.MODEL_NAME,
+          model: modelName,
           generationConfig: {
             ...GEMINI_CONFIG.GENERATION_CONFIG,
             ...configOverride,
@@ -791,24 +794,7 @@ export async function generateImprovedDocumentationFromGeminiAI(
     console.error(`Documentation generation failed`, {
       errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
-
-    if (error instanceof Error) {
-      const apiError = error as APIError;
-      return NextResponse.json(
-        {
-          name: apiError.name,
-          status: apiError.status,
-          headers: apiError.headers,
-          message: apiError.message,
-        },
-        { status: apiError.status || 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { message: DEFAULT_ERROR_MESSAGE },
-      { status: 500 }
-    );
+    throw error;
   }
 }
 
@@ -1001,24 +987,7 @@ export async function generateDocumentationFromGeminiAI(
       projectName,
       errorMessage: error instanceof Error ? error.message : "Unknown error",
     });
-
-    if (error instanceof Error) {
-      const apiError = error as APIError;
-      return NextResponse.json(
-        {
-          name: apiError.name,
-          status: apiError.status,
-          headers: apiError.headers,
-          message: apiError.message,
-        },
-        { status: apiError.status || 500 }
-      );
-    }
-
-    return NextResponse.json(
-      { message: DEFAULT_ERROR_MESSAGE },
-      { status: 500 }
-    );
+    throw error;
   }
 }
 

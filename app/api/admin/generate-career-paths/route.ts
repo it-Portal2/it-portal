@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateCareerPathRecommendations } from "@/lib/gemini";
+import { generateCareerPathRecommendations } from "@/lib/ai-client";
 import { updateApplicationCareerRecommendations } from "@/lib/firebase/admin";
 import { revalidatePath } from "next/cache";
 import {

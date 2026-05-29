@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateTasksFromDeveloperDocumentationFromGeminiAI } from "@/lib/gemini";
+import { generateTasksFromDeveloperDocumentationFromGeminiAI } from "@/lib/ai-client";
 import {
   GeminiConfigurationError,
   GeminiValidationError,

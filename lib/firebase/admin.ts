@@ -1105,16 +1105,17 @@ export async function createAIKey(
       };
     }
 
-    // Check if priority already exists
+    // Check if priority already exists within the same provider
     const existingKeysRef = adminDb.collection("aiKeys");
     const prioritySnapshot = await existingKeysRef
+      .where("provider", "==", provider)
       .where("priority", "==", priority)
       .get();
 
     if (!prioritySnapshot.empty) {
       return {
         success: false,
-        error: `Priority ${priority} already exists. Please choose a different priority.`,
+        error: `Priority ${priority} already exists for provider ${provider}. Please choose a different priority.`,
       };
     }
 
@@ -1179,21 +1180,23 @@ export async function updateAIKey(
       }
     }
 
-    // Check if new priority conflicts with existing keys (if priority is being updated)
+    // Check if new priority conflicts within the same provider (if priority is being updated)
     if (updates.priority) {
+      const currentDoc = await adminDb.collection("aiKeys").doc(docId).get();
+      const currentProvider = updates.provider ?? currentDoc.data()?.provider;
       const existingKeysRef = adminDb.collection("aiKeys");
       const prioritySnapshot = await existingKeysRef
+        .where("provider", "==", currentProvider)
         .where("priority", "==", updates.priority)
         .get();
 
-      // Check if any existing key (other than current one) has this priority
       const conflictingKey = prioritySnapshot.docs.find(
         (doc) => doc.id !== docId
       );
       if (conflictingKey) {
         return {
           success: false,
-          error: `Priority ${updates.priority} already exists. Please choose a different priority.`,
+          error: `Priority ${updates.priority} already exists for provider ${currentProvider}. Please choose a different priority.`,
         };
       }
     }
@@ -1303,6 +1306,75 @@ export async function getActiveGoogleAIKeys(): Promise<AIKeyFromDB[]> {
       }`
     );
   }
+}
+
+export async function getActiveOpenRouterAIKeys(): Promise<AIKeyFromDB[]> {
+  try {
+    const aiKeysRef = adminDb.collection("aiKeys");
+    const querySnapshot = await aiKeysRef
+      .where("status", "==", "active")
+      .where("provider", "==", "OpenRouter")
+      .orderBy("priority", "asc")
+      .get();
+
+    const aiKeys: AIKeyFromDB[] = [];
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+
+      if (data.aiID && data.apiKey && typeof data.priority === "number") {
+        aiKeys.push({
+          aiId: data.aiID,
+          apiKey: data.apiKey,
+          priority: data.priority,
+          status: data.status,
+        });
+      }
+    });
+
+    return aiKeys;
+  } catch (error) {
+    console.error("Error fetching OpenRouter AI keys:", error);
+    throw new Error(
+      `DATABASE_ERROR: Failed to fetch AI keys from database: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
+}
+
+import type { AiConfig } from "@/lib/types";
+
+const AI_CONFIG_DEFAULTS: AiConfig = {
+  provider: "openrouter",
+  geminiModel: "gemini-2.5-flash",
+  openrouterModel: "deepseek/deepseek-v4-flash:free",
+};
+
+let aiConfigCache: { value: AiConfig; fetchedAt: number } | null = null;
+const AI_CONFIG_CACHE_TTL_MS = 30_000;
+
+export async function getAiConfig(): Promise<AiConfig> {
+  const now = Date.now();
+  if (aiConfigCache && now - aiConfigCache.fetchedAt < AI_CONFIG_CACHE_TTL_MS) {
+    return aiConfigCache.value;
+  }
+  try {
+    const snap = await adminDb.collection("aiConfig").doc("active").get();
+    const merged: AiConfig = { ...AI_CONFIG_DEFAULTS, ...(snap.exists ? snap.data() : {}) };
+    if (merged.provider !== "gemini" && merged.provider !== "openrouter") {
+      merged.provider = "openrouter";
+    }
+    aiConfigCache = { value: merged, fetchedAt: now };
+    return merged;
+  } catch {
+    return AI_CONFIG_DEFAULTS;
+  }
+}
+
+export async function updateAiConfig(patch: Partial<AiConfig>): Promise<void> {
+  await adminDb.collection("aiConfig").doc("active").set(patch, { merge: true });
+  aiConfigCache = null;
 }
 
 export interface ClientRecord {

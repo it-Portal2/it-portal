@@ -1,6 +1,6 @@
 // app/api/analyzeResume/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeResumeWithAI, generateInterviewQuestions } from "@/lib/gemini";
+import { analyzeResumeWithAI, generateInterviewQuestions } from "@/lib/ai-client";
 
 export const maxDuration = 60;
 export const runtime = "nodejs";

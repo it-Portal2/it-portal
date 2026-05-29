@@ -226,6 +226,10 @@ export function Documentation() {
 
         const generatedDoc = response.data.documentation;
 
+        if (typeof generatedDoc !== "string" || generatedDoc.trim().length === 0) {
+          throw new Error("AI returned an invalid response. Please retry.");
+        }
+
         updateFormData({
           generatedDocumentation: generatedDoc,
           cloudinaryDocumentationUrl: null,

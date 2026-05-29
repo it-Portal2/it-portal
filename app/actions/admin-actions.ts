@@ -42,8 +42,12 @@ import {
   createDeveloper,
   removeProjectDocument,
   addProjectDocuments,
+  getAiConfig,
+  updateAiConfig,
+  getActiveGoogleAIKeys,
+  getActiveOpenRouterAIKeys,
 } from "@/lib/firebase/admin";
-import { ProjectDocument } from "@/lib/types";
+import { ProjectDocument, AiConfig } from "@/lib/types";
 
 export async function acceptProjectAction(
   projectId: string,
@@ -823,4 +827,236 @@ export async function deleteDeveloperAction(
   }
 
   return result;
+}
+
+export async function getAiConfigAction(): Promise<AiConfig> {
+  return await getAiConfig();
+}
+
+export async function updateAiConfigAction(patch: Partial<AiConfig>): Promise<void> {
+  await updateAiConfig(patch);
+  revalidatePath("/admin/settings");
+}
+
+export async function getGeminiModelsAction(): Promise<
+  { id: string; displayName: string }[]
+> {
+  const keys = await getActiveGoogleAIKeys();
+  if (keys.length === 0) {
+    throw new Error(
+      "No active Google keys found. Add a Google provider key in the API Keys table first."
+    );
+  }
+
+  const lastError: string[] = [];
+
+  for (const key of keys) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${key.apiKey}`
+    );
+
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try {
+        const body = await res.json();
+        detail = body?.error?.message ?? detail;
+      } catch { /* ignore */ }
+      lastError.push(`Key ${key.aiId}: ${detail}`);
+      continue; // try the next key
+    }
+
+    const data = await res.json();
+    const models: { id: string; displayName: string }[] = [];
+
+    for (const m of data.models ?? []) {
+      if (
+        Array.isArray(m.supportedGenerationMethods) &&
+        m.supportedGenerationMethods.includes("generateContent") &&
+        typeof m.name === "string"
+      ) {
+        models.push({
+          id: (m.name as string).replace(/^models\//, ""),
+          displayName: m.displayName ?? m.name,
+        });
+      }
+    }
+
+    return models.sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  // All keys failed
+  throw new Error(
+    `All Google keys failed: ${lastError.join(" | ")}`
+  );
+}
+
+export interface AITestResult {
+  success: boolean;
+  model: string;
+  keyUsed?: string;
+  response?: string;
+  durationMs: number;
+  tokens?: { prompt: number; completion: number; total: number };
+  error?: string;
+  keysTried: { keyId: string; error: string }[];
+}
+
+const TEST_PROMPT =
+  "Hello! Please respond with exactly one short friendly sentence confirming you are working correctly.";
+
+export async function testAIProviderAction(
+  provider: "openrouter" | "gemini"
+): Promise<AITestResult> {
+  const config = await getAiConfig();
+  const start = Date.now();
+  const keysTried: { keyId: string; error: string }[] = [];
+
+  if (provider === "openrouter") {
+    const keys = await getActiveOpenRouterAIKeys();
+    if (keys.length === 0) {
+      return {
+        success: false,
+        model: config.openrouterModel,
+        durationMs: Date.now() - start,
+        error: "No active OpenRouter keys found. Add one in the API Keys table.",
+        keysTried: [],
+      };
+    }
+
+    for (const key of keys) {
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key.apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: config.openrouterModel,
+            messages: [{ role: "user", content: TEST_PROMPT }],
+            max_tokens: 150,
+            temperature: 0.7,
+          }),
+        });
+
+        const durationMs = Date.now() - start;
+        let body: any;
+        try { body = await res.json(); } catch { body = null; }
+
+        // Build a rich error string from whatever OpenRouter gives us
+        const extractORError = (b: any, httpStatus: number): string => {
+          if (!b) return `HTTP ${httpStatus}`;
+          const e = b.error ?? b;
+          const parts: string[] = [];
+          if (e?.message) parts.push(e.message);
+          if (e?.code !== undefined && e.code !== null) parts.push(`code: ${e.code}`);
+          if (e?.metadata?.provider_name) parts.push(`provider: ${e.metadata.provider_name}`);
+          if (e?.metadata?.raw) parts.push(`raw: ${String(e.metadata.raw).slice(0, 200)}`);
+          return parts.length ? parts.join(" | ") : `HTTP ${httpStatus}`;
+        };
+
+        if (!res.ok) {
+          keysTried.push({ keyId: key.aiId, error: extractORError(body, res.status) });
+          continue;
+        }
+
+        // OpenRouter can return HTTP 200 with an error body (provider-side failure)
+        if (body?.error) {
+          keysTried.push({ keyId: key.aiId, error: extractORError(body, res.status) });
+          continue;
+        }
+
+        const response = body?.choices?.[0]?.message?.content ?? "";
+        const usage = body?.usage;
+
+        return {
+          success: true,
+          model: body?.model ?? config.openrouterModel,
+          keyUsed: key.aiId,
+          response,
+          durationMs,
+          tokens: usage
+            ? { prompt: usage.prompt_tokens ?? 0, completion: usage.completion_tokens ?? 0, total: usage.total_tokens ?? 0 }
+            : undefined,
+          keysTried,
+        };
+      } catch (err) {
+        keysTried.push({ keyId: key.aiId, error: err instanceof Error ? err.message : String(err) });
+      }
+    }
+
+    return {
+      success: false,
+      model: config.openrouterModel,
+      durationMs: Date.now() - start,
+      error: `All ${keys.length} key(s) failed.`,
+      keysTried,
+    };
+  } else {
+    // Gemini — use REST API directly so we get full usage metadata
+    const keys = await getActiveGoogleAIKeys();
+    if (keys.length === 0) {
+      return {
+        success: false,
+        model: config.geminiModel,
+        durationMs: Date.now() - start,
+        error: "No active Google keys found. Add one in the API Keys table.",
+        keysTried: [],
+      };
+    }
+
+    for (const key of keys) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${key.apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: TEST_PROMPT }] }],
+              generationConfig: { maxOutputTokens: 150, temperature: 0.7 },
+            }),
+          }
+        );
+
+        const durationMs = Date.now() - start;
+
+        if (!res.ok) {
+          let errMsg = `HTTP ${res.status}`;
+          try {
+            const body = await res.json();
+            errMsg = body?.error?.message ?? errMsg;
+          } catch { /* ignore */ }
+          keysTried.push({ keyId: key.aiId, error: errMsg });
+          continue;
+        }
+
+        const data = await res.json();
+        const response = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+        const usage = data.usageMetadata;
+
+        return {
+          success: true,
+          model: config.geminiModel,
+          keyUsed: key.aiId,
+          response,
+          durationMs,
+          tokens: usage
+            ? { prompt: usage.promptTokenCount ?? 0, completion: usage.candidatesTokenCount ?? 0, total: usage.totalTokenCount ?? 0 }
+            : undefined,
+          keysTried,
+        };
+      } catch (err) {
+        keysTried.push({ keyId: key.aiId, error: err instanceof Error ? err.message : String(err) });
+      }
+    }
+
+    return {
+      success: false,
+      model: config.geminiModel,
+      durationMs: Date.now() - start,
+      error: `All ${keys.length} key(s) failed.`,
+      keysTried,
+    };
+  }
 }

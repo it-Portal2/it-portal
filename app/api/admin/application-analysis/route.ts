@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeCompleteApplicationOptimized } from "@/lib/gemini";
+import { analyzeCompleteApplicationOptimized } from "@/lib/ai-client";
 import {
   GeminiConfigurationError,
   GeminiValidationError,

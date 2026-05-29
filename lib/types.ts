@@ -217,6 +217,13 @@ export interface InsertApplication {
   resumeAnalysis: ResumeAnalysis;
 }
 // AI Key Database Types
+export interface AiConfig {
+  provider: "gemini" | "openrouter";
+  geminiModel: string;
+  openrouterModel: string;
+  openrouterPdfEngine?: string;
+}
+
 export interface AIKeyFromDB {
   aiId: string; // Unique identifier (replaces Firebase doc id)
   apiKey: string; // The actual API key
