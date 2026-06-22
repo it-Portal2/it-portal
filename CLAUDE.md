@@ -96,3 +96,9 @@ After changes, run in order (show actual output — don't assert success):
 3. `npm run build`
 
 <!-- When Claude is corrected on a project-specific convention, add the correction here. -->
+
+## Performance work log
+
+Branch `perf/dashboard-optimizations` implements the audit in `~/.claude/plans/identify-in-detail-think-federated-yeti.md` (instant nav skeletons, dynamic detail pages, post-mutation freshness, button pending states, bundle/middleware). One commit per phase; no Claude/AI commit attribution.
+
+- **Phase 1 — Loading & error UI:** Added `loading.tsx` skeletons across all admin/client/developer route segments + `error.tsx` boundaries per role. Shared skeletons in [components/ui-custom/page-skeletons.tsx](components/ui-custom/page-skeletons.tsx) and [components/ui-custom/error-state.tsx](components/ui-custom/error-state.tsx). No logic changes.
