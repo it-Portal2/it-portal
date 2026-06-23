@@ -14,6 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui-custom/loading-button";
 import {
   Card,
   CardContent,
@@ -57,6 +58,8 @@ const ProjectRequestDetail = ({
   const [showRejectionForm, setShowRejectionForm] = useState(false);
   const [error] = useState<string | null>(initialError);
   const [finalBudget, setFinalBudget] = useState(project?.projectBudget || "");
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   if (error || !project) {
     return (
@@ -91,21 +94,29 @@ const ProjectRequestDetail = ({
       return;
     }
 
-    const result = await acceptProjectAction(
-      project.id,
-      date.toISOString(),
-      Number(finalBudget)
-    );
+    setIsAccepting(true);
+    try {
+      const result = await acceptProjectAction(
+        project.id,
+        date.toISOString(),
+        Number(finalBudget)
+      );
 
-    if (result.success) {
-      toast.success("Project Accepted", {
-        description: "The project has been moved to ongoing projects",
-      });
-      router.push("/admin/ongoing");
-    } else {
-      toast.error("Error", {
-        description: result.error || "Failed to accept project",
-      });
+      if (result.success) {
+        toast.success("Project Accepted", {
+          description: "The project has been moved to ongoing projects",
+        });
+        router.push("/admin/ongoing");
+      } else {
+        toast.error("Error", {
+          description: result.error || "Failed to accept project",
+        });
+        setIsAccepting(false);
+      }
+    } catch (err) {
+      console.error("Error accepting project:", err);
+      toast.error("Error", { description: "Failed to accept project" });
+      setIsAccepting(false);
     }
   };
 
@@ -117,17 +128,25 @@ const ProjectRequestDetail = ({
       return;
     }
 
-    const result = await rejectProjectAction(project.id, rejectionReason);
+    setIsRejecting(true);
+    try {
+      const result = await rejectProjectAction(project.id, rejectionReason);
 
-    if (result.success) {
-      toast.success("Project Rejected", {
-        description: "The project has been moved to rejected projects",
-      });
-      router.push("/admin/rejected");
-    } else {
-      toast.error("Error", {
-        description: result.error || "Failed to reject project",
-      });
+      if (result.success) {
+        toast.success("Project Rejected", {
+          description: "The project has been moved to rejected projects",
+        });
+        router.push("/admin/rejected");
+      } else {
+        toast.error("Error", {
+          description: result.error || "Failed to reject project",
+        });
+        setIsRejecting(false);
+      }
+    } catch (err) {
+      console.error("Error rejecting project:", err);
+      toast.error("Error", { description: "Failed to reject project" });
+      setIsRejecting(false);
     }
   };
   const currencySymbols: Record<string, string> = {
@@ -327,13 +346,15 @@ const ProjectRequestDetail = ({
             <CardContent>
               {!showRejectionForm ? (
                 <div className="flex flex-col gap-3">
-                  <Button
+                  <LoadingButton
                     className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md"
                     onClick={handleAccept}
+                    loading={isAccepting}
+                    loadingText="Accepting..."
                   >
                     <CheckCircle className="h-4 w-4" />
                     Accept Project
-                  </Button>
+                  </LoadingButton>
                   <Button
                     variant="outline"
                     className="w-full flex items-center justify-center gap-2 border-red-200 text-red-600 hover:bg-red-50 shadow-sm"
@@ -355,13 +376,15 @@ const ProjectRequestDetail = ({
                     className="border-primary/20 focus-visible:ring-primary/30"
                   />
                   <div className="flex gap-2 pt-2">
-                    <Button
+                    <LoadingButton
                       variant="destructive"
                       className="flex-1"
                       onClick={handleReject}
+                      loading={isRejecting}
+                      loadingText="Rejecting..."
                     >
                       Confirm Rejection
-                    </Button>
+                    </LoadingButton>
                     <Button
                       variant="outline"
                       className="flex-1 border-primary/20"

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { completeProjectAction } from "@/app/actions/admin-actions";
 import { ArrowLeft, FileText, Calendar, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui-custom/loading-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, isValid } from "date-fns"; 
 import { Progress } from "@/components/ui/progress";
@@ -31,6 +32,7 @@ export default function OngoingProjectDetailsClient({
   const router = useRouter();
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState<DocumentType>("quotation");
+  const [isCompleting, setIsCompleting] = useState(false);
 
   if (error || !project) {
     return (
@@ -59,17 +61,27 @@ export default function OngoingProjectDetailsClient({
   };
 
   const handleMarkAsCompleted = async () => {
-    const result = await completeProjectAction(project.id);
+    setIsCompleting(true);
+    try {
+      const result = await completeProjectAction(project.id);
 
-    if (result.success) {
-      toast.success("Project Marked as Completed", {
-        description: "The project has been moved to completed projects",
-      });
-      router.push("/admin/completed");
-    } else {
+      if (result.success) {
+        toast.success("Project Marked as Completed", {
+          description: "The project has been moved to completed projects",
+        });
+        router.push("/admin/completed");
+      } else {
+        toast.error("Error", {
+          description: result.error || "Failed to mark project as completed",
+        });
+        setIsCompleting(false);
+      }
+    } catch (err) {
+      console.error("Error completing project:", err);
       toast.error("Error", {
-        description: result.error || "Failed to mark project as completed",
+        description: "Failed to mark project as completed",
       });
+      setIsCompleting(false);
     }
   };
 
@@ -147,13 +159,15 @@ export default function OngoingProjectDetailsClient({
               </p>
             </div>
 
-            <Button
+            <LoadingButton
               className="flex items-center gap-2"
               onClick={handleMarkAsCompleted}
+              loading={isCompleting}
+              loadingText="Completing..."
             >
               <CheckSquare className="h-4 w-4" />
               Mark as Completed
-            </Button>
+            </LoadingButton>
           </div>
         </div>
 

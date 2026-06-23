@@ -1,6 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui-custom/loading-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -98,6 +99,9 @@ export default function ApplicationDetailPageClient({
   const [maxAttempts] = useState(3);
   const [analysisPhase, setAnalysisPhase] = useState("");
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState<
+    null | "Accepted" | "Rejected"
+  >(null);
   const [isCareerAnalyzing, setIsCareerAnalyzing] = useState(false);
   const [careerAnalysisProgress, setCareerAnalysisProgress] = useState(0);
   const [careerAnalysisPhase, setCareerAnalysisPhase] = useState("");
@@ -129,6 +133,7 @@ export default function ApplicationDetailPageClient({
   const handleApplicationStatusChange = async (
     status: "Accepted" | "Rejected",
   ) => {
+    setStatusUpdating(status);
     try {
       const response = await updateApplicationStatusAction(
         applicationDetails?.id,
@@ -154,6 +159,8 @@ export default function ApplicationDetailPageClient({
           ? "Failed to accept application"
           : "Failed to reject application",
       );
+    } finally {
+      setStatusUpdating(null);
     }
   };
 
@@ -744,23 +751,33 @@ export default function ApplicationDetailPageClient({
             id="action-buttons-section"
             className="flex items-center gap-3 flex-wrap"
           >
-            <Button
+            <LoadingButton
               onClick={() => handleApplicationStatusChange("Accepted")}
               className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-              disabled={applicationDetails?.applicationStatus === "Accepted"}
+              disabled={
+                applicationDetails?.applicationStatus === "Accepted" ||
+                statusUpdating !== null
+              }
+              loading={statusUpdating === "Accepted"}
+              loadingText="Accepting..."
             >
               <CheckCircle className="h-4 w-4" />
               Accept Candidate
-            </Button>
-            <Button
+            </LoadingButton>
+            <LoadingButton
               onClick={() => handleApplicationStatusChange("Rejected")}
               variant="destructive"
               className="gap-2 bg-red-600 hover:bg-red-700 text-white shadow-lg"
-              disabled={applicationDetails?.applicationStatus === "Rejected"}
+              disabled={
+                applicationDetails?.applicationStatus === "Rejected" ||
+                statusUpdating !== null
+              }
+              loading={statusUpdating === "Rejected"}
+              loadingText="Rejecting..."
             >
               <XCircle className="h-4 w-4" />
               Reject
-            </Button>
+            </LoadingButton>
 
             {/* Enhanced AI Analysis Button */}
             <Button

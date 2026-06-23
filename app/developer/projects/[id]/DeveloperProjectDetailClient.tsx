@@ -17,6 +17,7 @@ import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui-custom/loading-button";
 import {
   Card,
   CardContent,
@@ -59,6 +60,7 @@ export default function DeveloperProjectDetailClient({
   ); // Local progress state
   const [loadingTasks, setLoadingTasks] = useState<boolean>(false);
   const [generatingTasks, setGeneratingTasks] = useState<boolean>(false);
+  const [isUpdatingProgress, setIsUpdatingProgress] = useState<boolean>(false);
 
   useEffect(() => {
     setLocalProgress(project?.progress || 0);
@@ -384,20 +386,28 @@ export default function DeveloperProjectDetailClient({
       return;
     }
 
-    const progressResult = await updateProjectProgressAction(
-      project.id,
-      manualProgress,
-      undefined,
-      `/developer/projects/${project.id}`
-    );
-    if (progressResult.success) {
-      setManualProgress(manualProgress);
-      toast.success(`Progress updated to ${manualProgress}%`);
-      if (manualProgress === 100) {
-        toast.success("Project completed! No further changes allowed.");
+    setIsUpdatingProgress(true);
+    try {
+      const progressResult = await updateProjectProgressAction(
+        project.id,
+        manualProgress,
+        undefined,
+        `/developer/projects/${project.id}`
+      );
+      if (progressResult.success) {
+        setManualProgress(manualProgress);
+        toast.success(`Progress updated to ${manualProgress}%`);
+        if (manualProgress === 100) {
+          toast.success("Project completed! No further changes allowed.");
+        }
+      } else {
+        toast.error(progressResult.error || "Failed to update progress");
       }
-    } else {
-      toast.error(progressResult.error || "Failed to update progress");
+    } catch (error) {
+      console.error("Error updating progress:", error);
+      toast.error("Failed to update progress");
+    } finally {
+      setIsUpdatingProgress(false);
     }
   };
 
@@ -620,10 +630,15 @@ export default function DeveloperProjectDetailClient({
                     </ul>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" onClick={handleGenerateTasks}>
+                    <LoadingButton
+                      className="w-full"
+                      onClick={handleGenerateTasks}
+                      loading={generatingTasks}
+                      loadingText="Generating..."
+                    >
                       <Sparkles className="mr-2 h-4 w-4" />
                       Generate Tasks
-                    </Button>
+                    </LoadingButton>
                   </CardFooter>
                 </Card>
 
@@ -712,12 +727,14 @@ export default function DeveloperProjectDetailClient({
                       disabled={project.isCompleted}
                     />
                     <span className="text-sm">%</span>
-                    <Button
+                    <LoadingButton
                       onClick={handleUpdateManualProgress}
                       disabled={project.isCompleted}
+                      loading={isUpdatingProgress}
+                      loadingText="Updating..."
                     >
                       Update
-                    </Button>
+                    </LoadingButton>
                   </div>
                 </div>
                 <div>

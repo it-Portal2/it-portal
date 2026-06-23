@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { LoadingButton } from "@/components/ui-custom/loading-button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -35,6 +36,10 @@ const PaymentDetailsDialog = ({
   payment: PaymentRecord
   onStatusUpdate: (id: string, status: "verified" | "rejected") => void
 }) => {
+  const [statusUpdating, setStatusUpdating] = useState<
+    null | "verified" | "rejected"
+  >(null)
+
   const getCurrencySymbol = (currency: string) => {
     switch (currency) {
       case "USD":
@@ -52,12 +57,20 @@ const PaymentDetailsDialog = ({
   }
 
   const handleStatusUpdate = async (status: "verified" | "rejected") => {
-    const result = await updatePaymentStatusAction(payment.id, status, "/admin/payments");
-    if (result.success) {
-      onStatusUpdate(payment.id, status);
-      toast.success(`Payment ${status} successfully`);
-    } else {
-      toast.error(result.error || "Failed to update payment status");
+    setStatusUpdating(status);
+    try {
+      const result = await updatePaymentStatusAction(payment.id, status, "/admin/payments");
+      if (result.success) {
+        onStatusUpdate(payment.id, status);
+        toast.success(`Payment ${status} successfully`);
+      } else {
+        toast.error(result.error || "Failed to update payment status");
+      }
+    } catch (error) {
+      console.error("Error updating payment status:", error);
+      toast.error("Failed to update payment status");
+    } finally {
+      setStatusUpdating(null);
     }
   };
 
@@ -102,14 +115,27 @@ const PaymentDetailsDialog = ({
             </div>
             {payment.status === "pending" && (
               <div className="flex gap-2">
-                <Button variant="destructive" size="sm" onClick={() => handleStatusUpdate("rejected")}>
+                <LoadingButton
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleStatusUpdate("rejected")}
+                  disabled={statusUpdating !== null}
+                  loading={statusUpdating === "rejected"}
+                  loadingText="Rejecting..."
+                >
                   <XCircle className="h-4 w-4 mr-1" />
                   Reject
-                </Button>
-                <Button size="sm" onClick={() => handleStatusUpdate("verified")}>
+                </LoadingButton>
+                <LoadingButton
+                  size="sm"
+                  onClick={() => handleStatusUpdate("verified")}
+                  disabled={statusUpdating !== null}
+                  loading={statusUpdating === "verified"}
+                  loadingText="Verifying..."
+                >
                   <CheckCircle className="h-4 w-4 mr-1" />
                   Verify
-                </Button>
+                </LoadingButton>
               </div>
             )}
           </div>
