@@ -96,6 +96,10 @@ const pageMetadata: PageMetadataDict = {
     title: "Payment History",
     description: "View your payment history and invoices",
   },
+  "/client/payment/": {
+    title: "Payment",
+    description: "Make a payment and view your payment records",
+  },
   "/client/chat/": {
     title: "Support Chat",
     description: "Get support and communicate with our team",

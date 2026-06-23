@@ -1,5 +1,10 @@
+import { ClientLoadingShell } from "@/components/ui-custom/client-loading-shell";
 import { DetailSkeleton } from "@/components/ui-custom/page-skeletons";
 
 export default function Loading() {
-  return <DetailSkeleton />;
+  return (
+    <ClientLoadingShell>
+      <DetailSkeleton />
+    </ClientLoadingShell>
+  );
 }
