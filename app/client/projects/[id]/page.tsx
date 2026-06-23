@@ -1,7 +1,10 @@
-import { fetchAllProjects, fetchProjectById } from "@/app/actions/common-actions";
+import { cache } from "react";
+import { fetchProjectById } from "@/app/actions/common-actions";
 import ProjectDetailClient from "./ProjectDetailClient";
 import type { Project } from "@/lib/types";
 
+// Dedupe the per-id read within a single request render.
+const getProject = cache(fetchProjectById);
 
 export default async function ProjectDetailPage({
   params,
@@ -14,7 +17,7 @@ export default async function ProjectDetailPage({
   let error: string | null = null;
 
   try {
-    const response = await fetchProjectById(id);
+    const response = await getProject(id);
 
     if (!response.success || !response.data) {
       error = response.error || "Project not found";
@@ -26,14 +29,4 @@ export default async function ProjectDetailPage({
   }
   // Pass data to client component
   return <ProjectDetailClient initialProject={project} error={error} />;
-}
-
-export async function generateStaticParams() {
-  const response = await fetchAllProjects();
-  const projects: Project[] =
-    response.success && response.data ? response.data : [];
-
-  return projects.map((project) => ({
-    id: project.id.toString(),
-  }));
 }
