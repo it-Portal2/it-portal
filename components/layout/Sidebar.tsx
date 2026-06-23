@@ -23,7 +23,6 @@ import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useAuthStore } from "@/lib/store/userStore";
-import { toast } from "sonner";
 
 interface SidebarProps {
   role: "admin" | "developer" | "client" | "subadmin";
@@ -135,13 +134,10 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
       : clientLinks;
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      toast.success("You have been successfully logged out.");
-      setIsMobileMenuOpen(false);
-    } catch (error) {
-      toast.error("Failed to logout");
-    }
+    setIsMobileMenuOpen(false);
+    // logout() resets auth state, clears cookies and hard-redirects to the auth
+    // page (which shows the "logged out" toast via ?loggedout=1).
+    await logout();
   };
 
   // Close mobile menu when clicking outside

@@ -58,6 +58,22 @@ export default function AuthPage() {
     }
   }, [error]);
 
+  // One-time "logged out" confirmation after a hard-redirect logout.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("loggedout") === "1") {
+      toast.success("You have been logged out.");
+      params.delete("loggedout");
+      const qs = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (qs ? `?${qs}` : "")
+      );
+    }
+  }, []);
+
   // Handle client signup form changes
   const handleClientSignupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setClientSignupForm({
@@ -105,7 +121,10 @@ export default function AuthPage() {
       );
 
       if (success) {
-        toast.success("Account created successfully!");
+        // Navigation to the dashboard is underway — keep the button pending
+        // until this page unmounts (no toast over a still-loading dashboard,
+        // no idle button on a blank screen). Errors reset the flag via the
+        // `error` effect above.
         setClientSignupForm({
           name: "",
           email: "",
@@ -113,10 +132,11 @@ export default function AuthPage() {
           password: "",
           confirmPassword: "",
         });
+        return;
       }
+      setIsSigningUp(false);
     } catch (error) {
       console.error("Signup error:", error);
-    } finally {
       setIsSigningUp(false);
     }
   };
@@ -134,12 +154,14 @@ export default function AuthPage() {
       const success = await login(loginForm.email, loginForm.password, "client");
 
       if (success) {
-        toast.success(`Welcome back!`);
+        // Keep the button pending through navigation; errors reset it via the
+        // `error` effect above.
         setLoginForm({ email: "", password: "" });
+        return;
       }
+      setIsLoggingIn(false);
     } catch (error) {
       console.error("Login error:", error);
-    } finally {
       setIsLoggingIn(false);
     }
   };
@@ -157,12 +179,14 @@ export default function AuthPage() {
       const success = await login(loginForm.email, loginForm.password, "admin");
 
       if (success) {
-        toast.success(`Welcome back!`);
+        // Keep the button pending through navigation; errors reset it via the
+        // `error` effect above.
         setLoginForm({ email: "", password: "" });
+        return;
       }
+      setIsLoggingIn(false);
     } catch (error) {
       console.error("Login error:", error);
-    } finally {
       setIsLoggingIn(false);
     }
   };
@@ -180,12 +204,14 @@ export default function AuthPage() {
       const success = await login(loginForm.email, loginForm.password, "developer");
 
       if (success) {
-        toast.success(`Welcome back!`);
+        // Keep the button pending through navigation; errors reset it via the
+        // `error` effect above.
         setLoginForm({ email: "", password: "" });
+        return;
       }
+      setIsLoggingIn(false);
     } catch (error) {
       console.error("Login error:", error);
-    } finally {
       setIsLoggingIn(false);
     }
   };
@@ -201,11 +227,13 @@ export default function AuthPage() {
       const success = await googleLogin();
 
       if (success) {
-        toast.success("Google sign-in successful!");
+        // Keep the button pending through navigation; errors reset it via the
+        // `error` effect above.
+        return;
       }
+      setIsGoogleSigningIn(false);
     } catch (error) {
       console.error("Google sign-in error:", error);
-    } finally {
       setIsGoogleSigningIn(false);
     }
   };

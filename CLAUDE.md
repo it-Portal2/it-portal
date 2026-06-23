@@ -118,3 +118,10 @@ Implements the audit in `~/.claude/plans/identify-in-detail-think-federated-yeti
 ### Remaining (not blocking)
 - User manual smoke-test of the flows above; then push branch / open PR / merge to `main` (branch is 6 commits ahead, unpushed).
 - **Phase 6** (Next.js 16 + React 19 upgrade) is a separate future workstream — see the plan file.
+
+## Auth flow log
+
+Branch `fix/auth-flow` (off `perf/dashboard-optimizations`) fixes login/signup/logout timing bugs. Plan: `~/.claude/plans/identify-in-detail-think-federated-yeti.md`. Gate: `tsc` + `build` + review agent. No Claude/AI commit attribution.
+
+- **Track A — login/signup/logout UX (done):** Root cause was navigation fired-but-not-awaited + page content not gated on auth (only the sidebar was). Fixes: (1) [components/layout/Layout.tsx](components/layout/Layout.tsx) is now an auth gate — full-screen loader ([components/ui-custom/full-screen-loader.tsx](components/ui-custom/full-screen-loader.tsx)) while `!isInitialized`, and `router.replace("/")` + loader when `!isAuthenticated`, so the dashboard no longer flashes on login or lingers on logout. (2) `logout()` in [lib/hooks/useAuth.ts](lib/hooks/useAuth.ts) now `resetAuth()`-first then `signOut` + `/api/clearCookie` + hard redirect `window.location.href="/?loggedout=1"` (clean teardown; toast shown on arrival). (3) Auth handlers in [app/page.tsx](app/page.tsx) keep the button pending through navigation and no longer fire a success toast over a still-loading dashboard; post-auth nav uses `router.replace`. (4) signup / new Google users `await setCustomClaims` + refresh token so the role claim is on the token (middleware skips its Firestore fallback → faster first load).
+- **Track B — auth-cookie httpOnly hardening: NOT YET DONE** (separate pass). The `firebaseToken` cookie is still JS-readable. Must first locate the cross-origin Vite token handoff (CLAUDE.md gotcha) and switch it to an on-demand token before flipping httpOnly.

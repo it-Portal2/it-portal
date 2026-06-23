@@ -67,14 +67,20 @@ export const useAuth = () => {
 
         await setDoc(doc(db, "users", user.uid), userProfile);
 
-        // Set custom claims but don't wait for token refresh
-        setCustomClaims(user.uid, "client").catch(console.error);
-        
-        // Get current token without forcing refresh
-        const token = await user.getIdToken(false);
+        // Set the role custom claim and WAIT, so the refreshed token carries it
+        // and middleware can skip its Firestore fallback on the first navigation.
+        // A claim failure shouldn't block signup — the fallback still covers it.
+        try {
+          await setCustomClaims(user.uid, "client");
+        } catch (claimErr) {
+          console.error("setCustomClaims failed (continuing):", claimErr);
+        }
+
+        // Force a refresh so the token includes the freshly-set role claim.
+        const token = await user.getIdToken(true);
         document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
 
-        router.push("/client");
+        router.replace("/client");
         return true;
       } catch (error: any) {
         console.error("Signup error:", error);
@@ -133,7 +139,7 @@ export const useAuth = () => {
           redirectPath = "/client";
         }
 
-        router.push(redirectPath);
+        router.replace(redirectPath);
         return true;
       } catch (error: any) {
         console.error("Login error:", error);
@@ -196,20 +202,25 @@ export const useAuth = () => {
         userRole = userDoc.data().role as UserRole;
       }
 
-      // Set custom claims in background (don't wait)
+      // For brand-new Google users, set the role claim and WAIT so the refreshed
+      // token carries it (middleware then skips its Firestore fallback).
       if (isNewUser) {
         console.log("Setting custom claims for new Google user...");
-        setCustomClaims(user.uid, userRole).catch(console.error);
+        try {
+          await setCustomClaims(user.uid, userRole);
+        } catch (claimErr) {
+          console.error("setCustomClaims failed (continuing):", claimErr);
+        }
       }
 
-      // Get token without forcing refresh to avoid expiration issues
-      const token = await user.getIdToken(false);
+      // Force a refresh only for new users (to pick up the freshly-set claim).
+      const token = await user.getIdToken(isNewUser);
       console.log("Got token for user");
 
       document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
 
       console.log("Redirecting to client dashboard...");
-      router.push("/client");
+      router.replace("/client");
       return true;
       
     } catch (error: any) {
@@ -232,19 +243,22 @@ export const useAuth = () => {
   }, [isProcessing, setError, setLoading, router]);
 
   const logout = useCallback(async () => {
+    // Flip auth state first so the in-app auth gate (Layout) immediately swaps
+    // the dashboard for the loader — no lingering content while we tear down.
+    resetAuth();
     try {
       await signOut(auth);
-      
+      // Server-side clear (httpOnly-safe) + client cookie + persisted state.
+      await fetch("/api/clearCookie", { method: "POST" }).catch(() => {});
       document.cookie = "firebaseToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       localStorage.removeItem("auth-storage");
-      
-      resetAuth();
-      router.push("/");
     } catch (error: any) {
       console.error("Logout error:", error);
-      setError(error.message || "Failed to logout");
+    } finally {
+      // Hard redirect for a guaranteed clean teardown of all React/auth state.
+      window.location.href = "/?loggedout=1";
     }
-  }, [resetAuth, router, setError]);
+  }, [resetAuth]);
 
   return {
     signUp,
