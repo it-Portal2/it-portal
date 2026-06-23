@@ -12,6 +12,7 @@ import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase";
 import { useAuthStore, UserRole, UserProfile } from "@/lib/store/userStore";
 import { useRouter } from "next/navigation";
+import { setAuthCookie, clearAuthCookie } from "@/lib/auth-cookie";
 
 export const useAuth = () => {
   const router = useRouter();
@@ -20,9 +21,15 @@ export const useAuth = () => {
 
   const setCustomClaims = async (uid: string, role: UserRole) => {
     try {
+      // Send the caller's ID token so the API can authenticate + authorize the
+      // request (prevents anyone from granting themselves an elevated role).
+      const idToken = await auth.currentUser?.getIdToken();
       const response = await fetch("/api/setCustomClaims", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
         body: JSON.stringify({ uid, role }),
       });
       if (!response.ok) {
@@ -76,9 +83,10 @@ export const useAuth = () => {
           console.error("setCustomClaims failed (continuing):", claimErr);
         }
 
-        // Force a refresh so the token includes the freshly-set role claim.
+        // Force a refresh so the token includes the freshly-set role claim,
+        // then store it as the httpOnly cookie (server-side).
         const token = await user.getIdToken(true);
-        document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+        await setAuthCookie(token);
 
         router.replace("/client");
         return true;
@@ -128,7 +136,7 @@ export const useAuth = () => {
         });
 
         const token = await user.getIdToken(true);
-        document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+        await setAuthCookie(token);
 
         let redirectPath = "/";
         if (userRole === "admin" || userRole === "subadmin") {
@@ -213,11 +221,10 @@ export const useAuth = () => {
         }
       }
 
-      // Force a refresh only for new users (to pick up the freshly-set claim).
+      // Force a refresh only for new users (to pick up the freshly-set claim),
+      // then store the token as the httpOnly cookie (server-side).
       const token = await user.getIdToken(isNewUser);
-      console.log("Got token for user");
-
-      document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
+      await setAuthCookie(token);
 
       console.log("Redirecting to client dashboard...");
       router.replace("/client");
@@ -253,9 +260,8 @@ export const useAuth = () => {
     resetAuth();
     try {
       await signOut(auth);
-      // Server-side clear (httpOnly-safe) + client cookie + persisted state.
-      await fetch("/api/clearCookie", { method: "POST" }).catch(() => {});
-      document.cookie = "firebaseToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      // Clear the httpOnly cookie server-side + drop persisted client state.
+      await clearAuthCookie();
       localStorage.removeItem("auth-storage");
     } catch (error: any) {
       console.error("Logout error:", error);

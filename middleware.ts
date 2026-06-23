@@ -102,9 +102,9 @@ export async function middleware(request: NextRequest) {
       //   console.log("Middleware: Setting token from URL to cookie");
       const response = NextResponse.next();
       response.cookies.set("firebaseToken", urlToken, {
-        httpOnly: false,
+        httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         maxAge: 7 * 24 * 60 * 60,
       });

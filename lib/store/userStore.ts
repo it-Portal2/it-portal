@@ -4,6 +4,7 @@ import { User as FirebaseUser, onAuthStateChanged, onIdTokenChanged } from "fire
 import { auth } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase";
+import { setAuthCookie, clearAuthCookie } from "@/lib/auth-cookie";
 
 export type UserRole = "client" | "admin" | "developer" | "subadmin";
 
@@ -164,26 +165,21 @@ const initializeAuth = () => {
 
   // Update cookies when token changes (but don't force refresh)
   tokenUnsubscribe = onIdTokenChanged(auth, async (user) => {
-    if (user) {
-      try {
-        // Only refresh token if it's about to expire (within 5 minutes)
-        const tokenResult = await user.getIdTokenResult();
-        const expirationTime = new Date(tokenResult.expirationTime);
-        const now = new Date();
-        const fiveMinutes = 5 * 60 * 1000;
-        
-        if (expirationTime.getTime() - now.getTime() < fiveMinutes) {
-          const token = await user.getIdToken(true);
-          document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
-        } else {
-          const token = await user.getIdToken(false);
-          document.cookie = `firebaseToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict`;
-        }
-      } catch (error) {
-        console.error("Token refresh error:", error);
-      }
-    } else {
-      document.cookie = "firebaseToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    if (!user) {
+      // Signed out — clear the httpOnly cookie server-side.
+      clearAuthCookie();
+      return;
+    }
+    try {
+      // Force a refresh only when the token is about to expire (< 5 min), then
+      // persist it as the httpOnly cookie (server-side).
+      const tokenResult = await user.getIdTokenResult();
+      const msToExpiry =
+        new Date(tokenResult.expirationTime).getTime() - Date.now();
+      const token = await user.getIdToken(msToExpiry < 5 * 60 * 1000);
+      await setAuthCookie(token);
+    } catch (error) {
+      console.error("Token refresh error:", error);
     }
   });
 };
