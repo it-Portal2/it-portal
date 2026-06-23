@@ -893,7 +893,9 @@ export async function getAllSubadmins(): Promise<SubadminProfile[]> {
     const subadmins: SubadminProfile[] = [];
 
     querySnapshot.forEach((doc) => {
-      const data = doc.data();
+      // Convert Firestore Timestamps to ISO strings so the record is a plain
+      // serializable object (safe to pass to Client Components).
+      const data = convertTimestamp(doc.data());
       subadmins.push({
         uid: doc.id,
         ...data,
@@ -1465,7 +1467,9 @@ export async function getAllClients(): Promise<ClientRecord[]> {
     const clients: ClientRecord[] = [];
 
     querySnapshot.forEach((doc) => {
-      const data = doc.data();
+      // Convert Firestore Timestamps to ISO strings so the record is a plain
+      // serializable object (safe to pass to Client Components).
+      const data = convertTimestamp(doc.data());
       clients.push({
         uid: doc.id,
         ...data,
@@ -1657,7 +1661,9 @@ export async function getAllDevelopers(): Promise<DeveloperRecord[]> {
     const developers: DeveloperRecord[] = [];
 
     querySnapshot.forEach((doc) => {
-      const data = doc.data();
+      // Convert Firestore Timestamps to ISO strings so the record is a plain
+      // serializable object (safe to pass to Client Components).
+      const data = convertTimestamp(doc.data());
       developers.push({
         uid: doc.id,
         ...data,
