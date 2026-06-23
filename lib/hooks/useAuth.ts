@@ -243,8 +243,13 @@ export const useAuth = () => {
   }, [isProcessing, setError, setLoading, router]);
 
   const logout = useCallback(async () => {
-    // Flip auth state first so the in-app auth gate (Layout) immediately swaps
-    // the dashboard for the loader — no lingering content while we tear down.
+    // Flag so the auth page shows a single "logged out" toast on arrival.
+    try {
+      sessionStorage.setItem("loggedOut", "1");
+    } catch {}
+    // Flip auth state — the in-app auth gate (Layout) immediately swaps the
+    // dashboard for the loader and performs the single navigation to "/".
+    // (No window.location redirect here: doing both caused a double refresh.)
     resetAuth();
     try {
       await signOut(auth);
@@ -254,9 +259,6 @@ export const useAuth = () => {
       localStorage.removeItem("auth-storage");
     } catch (error: any) {
       console.error("Logout error:", error);
-    } finally {
-      // Hard redirect for a guaranteed clean teardown of all React/auth state.
-      window.location.href = "/?loggedout=1";
     }
   }, [resetAuth]);
 

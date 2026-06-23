@@ -58,20 +58,14 @@ export default function AuthPage() {
     }
   }, [error]);
 
-  // One-time "logged out" confirmation after a hard-redirect logout.
+  // One-time "logged out" confirmation after logout navigates here.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("loggedout") === "1") {
-      toast.success("You have been logged out.");
-      params.delete("loggedout");
-      const qs = params.toString();
-      window.history.replaceState(
-        {},
-        "",
-        window.location.pathname + (qs ? `?${qs}` : "")
-      );
-    }
+    try {
+      if (sessionStorage.getItem("loggedOut") === "1") {
+        sessionStorage.removeItem("loggedOut");
+        toast.success("You have been logged out.");
+      }
+    } catch {}
   }, []);
 
   // Handle client signup form changes

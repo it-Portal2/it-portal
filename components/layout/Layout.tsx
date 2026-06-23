@@ -27,26 +27,29 @@ const Layout = ({ user, title, description, children }: LayoutProps) => {
     }
   }, [isInitialized, isAuthenticated, router]);
 
-  // Auth boundary: don't render protected content until auth state is known,
-  // and never render it when unauthenticated. This removes the post-login
-  // flash and keeps the dashboard from lingering after logout.
-  if (!isInitialized) {
-    return <FullScreenLoader />;
-  }
-  if (!isAuthenticated) {
+  // Auth boundary:
+  // - Definitively unauthenticated (e.g. after logout / expired session) →
+  //   show the redirecting loader (the effect above navigates to "/").
+  if (isInitialized && !isAuthenticated) {
     return <FullScreenLoader label="Redirecting…" />;
+  }
+  // - Auth state not yet known AND no persisted profile to render → brief
+  //   full loader (prevents a null-profile flash). When a persisted session
+  //   exists, `profile` is already populated, so we fall through and render
+  //   the full shell immediately — only the page content shows its route-level
+  //   skeleton, the sidebar/header stay put.
+  if (!profile) {
+    return <FullScreenLoader />;
   }
 
   return (
     <div className="flex h-screen overflow-hidden">
       <div>
-        {profile && (
-          <SideBar
-            role={profile.role}
-            userName={profile.name}
-            userAvatar={profile.avatar}
-          />
-        )}
+        <SideBar
+          role={profile.role}
+          userName={profile.name}
+          userAvatar={profile.avatar}
+        />
       </div>
       <div className="flex-1 overflow-auto">
         <div className="p-6 md:p-8">
