@@ -83,8 +83,8 @@ export default function OngoingProjectDetailsClient({
     if (onProjectUpdate) {
       onProjectUpdate();
     } else {
-      // Alternatively, refresh the page
-      window.location.reload();
+      // Re-fetch server data and merge into the current view — no full reload.
+      router.refresh();
     }
   };
 

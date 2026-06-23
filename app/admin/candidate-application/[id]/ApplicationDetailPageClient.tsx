@@ -141,6 +141,9 @@ export default function ApplicationDetailPageClient({
             ? "Application accepted successfully!"
             : "Application rejected successfully!",
         );
+        // Re-fetch the server component so the displayed status (a prop)
+        // reflects the new value immediately — no manual reload.
+        router.refresh();
       } else {
         toast.error(`Error: ${response.error}`);
       }

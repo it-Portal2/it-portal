@@ -3,7 +3,7 @@ import CandidatesApplicationsClient from "@/components/admin/candidate-applicati
 
 import { Suspense } from "react";
 
-export const revalidate = 200;
+export const revalidate = 30;
 export default async function CandidatesApplications() {
   const response = await fetchAllApplicationsAction();
   return (
