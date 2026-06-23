@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Layout from "@/components/layout/Layout";
-import type { Project, User } from "@/lib/types";
+import type { Project } from "@/lib/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { FilePlus2 } from "lucide-react";
@@ -14,7 +13,6 @@ interface ClientDashboardUIProps {
   projects: Project[] | undefined;
   loading: boolean;
   error: string | null;
-  profile: User | null;
 }
 
 // This is the client component that handles UI state and rendering
@@ -22,7 +20,6 @@ export default function ClientDashboardUI({
   projects,
   loading,
   error,
-  profile,
 }: ClientDashboardUIProps) {
   const [activeTab, setActiveTab] = useState("all");
 
@@ -42,11 +39,7 @@ export default function ClientDashboardUI({
       : projects?.filter((project) => project.status === activeTab);
 
   return (
-    <Layout
-      user={profile || ({} as User)}
-      title="Client Dashboard"
-      description="Monitor your project requests and their progress"
-    >
+    <>
       <div className="space-y-8">
         {/* Status Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -84,7 +77,7 @@ export default function ClientDashboardUI({
             </TabsList>
           </Tabs>
 
-          <Link href="/client/create-project">
+          <Link href="/client/create-project/" prefetch>
             <Button className="w-full sm:w-auto">
               <FilePlus2 className="mr-2 h-4 w-4" />
               Create New Project Request
@@ -110,7 +103,7 @@ export default function ClientDashboardUI({
                   ? "You haven't submitted any projects yet."
                   : `You don't have any ${activeTab} projects.`}
               </p>
-              <Link href="/client/create-project" className="mt-4 inline-block">
+              <Link href="/client/create-project/" className="mt-4 inline-block">
                 <Button>
                   <FilePlus2 className="mr-2 h-4 w-4" />
                   Create Your First Project
@@ -126,6 +119,6 @@ export default function ClientDashboardUI({
           )}
         </div>
       </div>
-    </Layout>
+    </>
   );
 }

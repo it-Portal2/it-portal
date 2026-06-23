@@ -15,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import Layout from "@/components/layout/Layout";
-import { UserProfile } from "@/lib/store/userStore";
 import { useAuthStore } from "@/lib/store/userStore";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -207,11 +205,7 @@ const ClientSettings = () => {
   };
 
   return (
-    <Layout
-      user={profile || ({} as UserProfile)}
-      title="Settings"
-      description="Manage your account preferences"
-    >
+    <>
       <div className="space-y-6">
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="grid grid-cols-2 w-full md:w-auto">
@@ -389,7 +383,7 @@ const ClientSettings = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </Layout>
+    </>
   );
 };
 

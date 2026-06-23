@@ -1,9 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Layout from "@/components/layout/Layout";
-import { useAuthStore } from "@/lib/store/userStore";
-import type { User } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -47,14 +44,8 @@ const itemVariants = {
 };
 
 export default function ServicesPage() {
-  const { profile } = useAuthStore();
-
   return (
-    <Layout
-      user={profile || ({} as User)}
-      title="Explore Our Services"
-      description="Discover additional Cehpoint services to help grow your business"
-    >
+    <>
       <div className="space-y-10">
         {/* Hero Section */}
         <motion.div
@@ -217,6 +208,6 @@ export default function ServicesPage() {
           </div>
         </motion.div>
       </div>
-    </Layout>
+    </>
   );
 }

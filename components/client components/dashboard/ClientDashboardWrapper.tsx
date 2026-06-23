@@ -39,10 +39,9 @@ export default function ClientDashboardWrapper() {
 
   return (
     <ClientDashboardUI
-      projects={projects }
+      projects={projects}
       loading={loading}
       error={error}
-      profile={profile}
     />
   );
 }

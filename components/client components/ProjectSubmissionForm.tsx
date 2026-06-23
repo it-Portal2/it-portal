@@ -1,16 +1,29 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
 import { StepsProgress } from "./steps/StepsProgress";
 import { ProjectDetails } from "./steps/ProjectDetails";
 import { DevelopmentPreferences } from "./steps/DevelopmentPreferences";
 import { Suggestions } from "./steps/Suggestions";
-import { Documentation } from "./steps/Documentation";
-import { FinalStep } from "./steps/FinalStep";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+
+// Only the two genuinely heavy steps are code-split: Documentation (rich-text
+// editor) and FinalStep (PDF preview). They're loaded on demand to keep the
+// initial create-project bundle small, but prefetched in the background on
+// mount (see effect below), so step transitions stay instant — no per-step
+// loader in the normal flow. The light steps stay eager for instant rendering.
+const Documentation = dynamic(
+  () => import("./steps/Documentation").then((m) => m.Documentation),
+  { ssr: false },
+);
+const FinalStep = dynamic(
+  () => import("./steps/FinalStep").then((m) => m.FinalStep),
+  { ssr: false },
+);
 
 export function ProjectSubmissionForm() {
   return <ProjectFormContent />;
@@ -20,6 +33,13 @@ function ProjectFormContent() {
   const { step, nextStep, prevStep, formData, validateCurrentStep, resetForm } =
     useProjectFormStore();
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Warm the lazy heavy-step chunks in the background so that by the time the
+  // user advances to them, they're already cached and render instantly.
+  useEffect(() => {
+    void import("./steps/Documentation");
+    void import("./steps/FinalStep");
+  }, []);
 
   // Reset form when reaching step 4 and refreshing/navigating away
   useEffect(() => {

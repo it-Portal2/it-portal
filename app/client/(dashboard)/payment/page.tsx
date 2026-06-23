@@ -1,8 +1,7 @@
 "use client";
 import type React from "react";
 import { useEffect, useState } from "react";
-import Layout from "@/components/layout/Layout";
-import { useAuthStore, type UserProfile } from "@/lib/store/userStore";
+import { useAuthStore } from "@/lib/store/userStore";
 import { toast } from "sonner";
 import { getAllPaymentDetailsAction } from "@/app/actions/common-actions";
 import {
@@ -922,11 +921,7 @@ const Payment = () => {
     paymentDetails.crypto.walletAddress && paymentDetails.crypto.network;
 
   return (
-    <Layout
-      user={profile || ({} as UserProfile)}
-      title="Payment"
-      description="Manage your payment details and receipts"
-    >
+    <>
       <div className="space-y-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1541,7 +1536,7 @@ const Payment = () => {
           </div>
         </motion.div>
       </div>
-    </Layout>
+    </>
   );
 };
 
