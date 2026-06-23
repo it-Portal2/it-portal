@@ -48,7 +48,11 @@ export async function middleware(request: NextRequest) {
 
     // console.log(`Middleware: Required role for ${pathname}: ${requiredRole}`);
 
-    // If no role in token, check Firestore (for newly created users)
+    // If no role in token, check Firestore (for newly created users).
+    // PERF: this Firestore read runs on every protected navigation for users
+    // whose token lacks a `role` custom claim. Ensure POST /api/setCustomClaims
+    // runs at signup/login so the role lives on the token and this branch is
+    // skipped entirely.
     if (!role && requiredRole) {
       // console.log("Middleware: No role in token, checking Firestore...");
 

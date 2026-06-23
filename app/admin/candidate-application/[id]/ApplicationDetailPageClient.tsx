@@ -34,8 +34,6 @@ import {
   BrainCircuit,
   Video,
 } from "lucide-react";
-import html2canvas from "html2canvas-pro";
-import jsPDF from "jspdf";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { CircularProgress } from "@/components/ui-custom/CircularProgress";
@@ -537,6 +535,13 @@ export default function ApplicationDetailPageClient({
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
           navigator.userAgent,
         );
+
+      // Lazily load the heavy PDF libraries only when a report is generated,
+      // keeping them out of this page's initial JS bundle.
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas-pro"),
+        import("jspdf"),
+      ]);
 
       // Generate high-quality canvas using html2canvas-pro (supports oklch)
       const canvas = await html2canvas(element, {

@@ -9,8 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { useProjectFormStore } from "@/lib/store/projectSteps";
-import { PdfViewer } from "../PdfViewer";
 import Link from "next/link";
 import {
   htmlToPdfBlob,
@@ -18,6 +18,13 @@ import {
 } from "@/lib/htmlToPdfConvertion";
 import { toast } from "sonner";
 // Adjust import path as needed
+
+// react-pdf is heavy and client-only; load it on demand to keep it out of the
+// initial bundle for this step.
+const PdfViewer = dynamic(
+  () => import("../PdfViewer").then((m) => m.PdfViewer),
+  { ssr: false },
+);
 
 export function FinalStep() {
   const { formData } = useProjectFormStore();

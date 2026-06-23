@@ -31,6 +31,73 @@ interface SidebarProps {
   userAvatar: string | null;
 }
 
+// Static nav links hoisted to module scope so they aren't rebuilt on every
+// Sidebar render (the arrays depend only on role, which selects between them).
+const adminLinks = [
+  { href: "/admin", icon: <LayoutDashboard size={20} />, title: "Dashboard" },
+  {
+    href: "/admin/requests",
+    icon: <FileText size={20} />,
+    title: "Project Requests",
+  },
+  {
+    href: "/admin/ongoing",
+    icon: <Clock size={20} />,
+    title: "Ongoing Projects",
+  },
+  {
+    href: "/admin/completed",
+    icon: <CheckCircle size={20} />,
+    title: "Completed Projects",
+  },
+  {
+    href: "/admin/rejected",
+    icon: <XCircle size={20} />,
+    title: "Rejected Projects",
+  },
+  {
+    href: "/admin/candidate-application",
+    icon: <Briefcase size={20} />,
+    title: "Candidate Applications",
+  },
+  {
+    href: "/admin/payments",
+    icon: <CreditCard size={20} />,
+    title: "All payment details",
+  },
+];
+
+const developerLinks = [
+  {
+    href: "/developer",
+    icon: <LayoutDashboard size={20} />,
+    title: "Dashboard",
+  },
+  {
+    href: "/developer/projects",
+    icon: <Briefcase size={20} />,
+    title: "My Projects",
+  },
+];
+
+const clientLinks = [
+  {
+    href: "/client",
+    icon: <LayoutDashboard size={20} />,
+    title: "Dashboard",
+  },
+  {
+    href: "/client/payment",
+    icon: <CreditCard size={20} />,
+    title: "Payment",
+  },
+  {
+    href: "/client/services",
+    icon: <Compass size={20} />,
+    title: "Explore Services",
+  },
+];
+
 const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -58,71 +125,6 @@ const SideBar = ({ role, userName, userAvatar }: SidebarProps) => {
     console.log("Sidebar not rendering - no role available");
     return null;
   }
-
-  const adminLinks = [
-    { href: "/admin", icon: <LayoutDashboard size={20} />, title: "Dashboard" },
-    {
-      href: "/admin/requests",
-      icon: <FileText size={20} />,
-      title: "Project Requests",
-    },
-    {
-      href: "/admin/ongoing",
-      icon: <Clock size={20} />,
-      title: "Ongoing Projects",
-    },
-    {
-      href: "/admin/completed",
-      icon: <CheckCircle size={20} />,
-      title: "Completed Projects",
-    },
-    {
-      href: "/admin/rejected",
-      icon: <XCircle size={20} />,
-      title: "Rejected Projects",
-    },
-    {
-      href: "/admin/candidate-application",
-      icon: <Briefcase size={20} />,
-      title: "Candidate Applications",
-    },
-    {
-      href: "/admin/payments",
-      icon: <CreditCard size={20} />,
-      title: "All payment details",
-    },
-  ];
-
-  const developerLinks = [
-    {
-      href: "/developer",
-      icon: <LayoutDashboard size={20} />,
-      title: "Dashboard",
-    },
-    {
-      href: "/developer/projects",
-      icon: <Briefcase size={20} />,
-      title: "My Projects",
-    },
-  ];
-
-  const clientLinks = [
-    {
-      href: "/client",
-      icon: <LayoutDashboard size={20} />,
-      title: "Dashboard",
-    },
-    {
-      href: "/client/payment",
-      icon: <CreditCard size={20} />,
-      title: "Payment",
-    },
-    {
-      href: "/client/services",
-      icon: <Compass size={20} />,
-      title: "Explore Services",
-    },
-  ];
 
   // Both admin and subadmin use admin links
   const links =
