@@ -4,6 +4,8 @@
 
 @theme {
   --font-pop: var(--font-poppins);
+  --font-auth-body: var(--font-inter);
+  --font-auth-display: var(--font-space-grotesk);
 }
 
 :root {
