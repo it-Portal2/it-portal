@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { uploadUpiQrToCloudinary } from "@/lib/cloudinary";
 import { getAllPaymentDetailsAction } from "@/app/actions/common-actions";
@@ -26,7 +27,12 @@ import {
   savePaypalDetailsAction,
   saveUpiDetailsAction,
 } from "@/app/actions/admin-actions";
+import { updatePaymentMethodActiveAction } from "@/app/actions/payment-actions";
+import PayuConfigCard from "@/components/admin/settings/payment/PayuConfigCard";
+import InternationalAccountsManager from "@/components/admin/settings/payment/InternationalAccountsManager";
 import { useAuthStore } from "@/lib/store/userStore";
+
+type MethodKey = "upi" | "paypal" | "bankDetails" | "crypto";
 
 type PaymentDetailsForm = {
   paypal: {
@@ -88,6 +94,16 @@ const PaymentTab = () => {
     },
   });
 
+  // Per-method visibility on the client page. Defaults to active so existing
+  // configured methods stay visible until an admin turns one off.
+  const [active, setActive] = useState<Record<MethodKey, boolean>>({
+    upi: true,
+    paypal: true,
+    bankDetails: true,
+    crypto: true,
+  });
+  const [togglingMethod, setTogglingMethod] = useState<MethodKey | null>(null);
+
   const handlePaymentChange = (
     section: keyof PaymentDetailsForm,
     field: string,
@@ -101,6 +117,43 @@ const PaymentTab = () => {
       },
     }));
   };
+
+  const handleToggleActive = async (method: MethodKey) => {
+    if (!profile?.uid) {
+      toast.error("Please sign in to update visibility");
+      return;
+    }
+    const next = !active[method];
+    setTogglingMethod(method);
+    setActive((prev) => ({ ...prev, [method]: next }));
+    const result = await updatePaymentMethodActiveAction(
+      profile.uid,
+      method,
+      next
+    );
+    if (!result.success) {
+      setActive((prev) => ({ ...prev, [method]: !next })); // revert
+      toast.error(result.error || "Failed to update visibility");
+    }
+    setTogglingMethod(null);
+  };
+
+  const renderActiveToggle = (method: MethodKey) => (
+    <div className="flex items-center gap-2 shrink-0">
+      <Switch
+        checked={active[method]}
+        onCheckedChange={() => handleToggleActive(method)}
+        disabled={togglingMethod === method}
+      />
+      <span
+        className={`text-sm ${
+          active[method] ? "text-green-600" : "text-muted-foreground"
+        }`}
+      >
+        {active[method] ? "Active" : "Inactive"}
+      </span>
+    </div>
+  );
 
   const handleUpiQrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!profile?.uid) {
@@ -297,6 +350,13 @@ const PaymentTab = () => {
             qrCodeUrl: "",
           },
         });
+        // Absent flags mean "active" (preserves pre-existing configs).
+        setActive({
+          upi: paymentData.active?.upi ?? true,
+          paypal: paymentData.active?.paypal ?? true,
+          bankDetails: paymentData.active?.bankDetails ?? true,
+          crypto: paymentData.active?.crypto ?? true,
+        });
       } else if (result.error && result.error !== "Payment details not found") {
         toast.error(result.error);
       }
@@ -469,13 +529,18 @@ const PaymentTab = () => {
       {/* PayPal Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            PayPal Details
-          </CardTitle>
-          <CardDescription>
-            Configure your PayPal account for payments
-          </CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                PayPal Details
+              </CardTitle>
+              <CardDescription>
+                Configure your PayPal account for payments
+              </CardDescription>
+            </div>
+            {renderActiveToggle("paypal")}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -539,13 +604,18 @@ const PaymentTab = () => {
       {/* UPI Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            UPI Details
-          </CardTitle>
-          <CardDescription>
-            Configure your UPI ID and QR code for payments
-          </CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                UPI Details
+              </CardTitle>
+              <CardDescription>
+                Configure your UPI ID and QR code for payments
+              </CardDescription>
+            </div>
+            {renderActiveToggle("upi")}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -657,13 +727,18 @@ const PaymentTab = () => {
       {/* Bank Details Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Bank Details
-          </CardTitle>
-          <CardDescription>
-            Configure your bank account details for payments
-          </CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Bank Details
+              </CardTitle>
+              <CardDescription>
+                Configure your bank account details for payments
+              </CardDescription>
+            </div>
+            {renderActiveToggle("bankDetails")}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -760,13 +835,18 @@ const PaymentTab = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bitcoin className="h-5 w-5" />
-            Crypto Payment Details
-          </CardTitle>
-          <CardDescription>
-            Configure your cryptocurrency wallet for payments
-          </CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Bitcoin className="h-5 w-5" />
+                Crypto Payment Details
+              </CardTitle>
+              <CardDescription>
+                Configure your cryptocurrency wallet for payments
+              </CardDescription>
+            </div>
+            {renderActiveToggle("crypto")}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -887,6 +967,10 @@ const PaymentTab = () => {
           </Button>
         </CardFooter>
       </Card>
+
+      <PayuConfigCard />
+
+      <InternationalAccountsManager />
     </div>
   );
 };

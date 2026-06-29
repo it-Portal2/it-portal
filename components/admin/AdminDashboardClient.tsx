@@ -46,7 +46,9 @@ export default function AdminDashboardClient({
     ongoingProjects:
       projects?.filter(
         (p) =>
-          p.status === "in-progress" || (p.progress > 0 && p.progress < 100)
+          p.status === "in-progress" ||
+          p.status === "started" ||
+          (p.progress > 0 && p.progress < 100)
       ).length || 0,
     completedProjects:
       projects?.filter((p) => p.status === "completed").length || 0,
@@ -64,7 +66,8 @@ export default function AdminDashboardClient({
     projects
       ?.filter(
         (p): p is Project & { deadline: string } =>
-          p.deadline !== undefined && p.status === "in-progress"
+          p.deadline !== undefined &&
+          (p.status === "in-progress" || p.status === "started")
       )
       .map((p) => {
         const deadlineDate = new Date(p.deadline);

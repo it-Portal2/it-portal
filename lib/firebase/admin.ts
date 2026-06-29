@@ -317,8 +317,42 @@ export interface PaymentDetails {
     network: string;
     qrCodeUrl: string;
   };
+  // Per-method visibility on the client payment page. Absent = treated as active
+  // (preserves behaviour for docs created before this field existed).
+  active?: {
+    upi: boolean;
+    paypal: boolean;
+    bankDetails: boolean;
+    crypto: boolean;
+  };
   createdAt: string;
   updatedAt: string;
+}
+
+export async function updatePaymentMethodActive(
+  uid: string,
+  method: "upi" | "paypal" | "bankDetails" | "crypto",
+  isActive: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!uid || !method) {
+      return { success: false, error: "User ID and method are required" };
+    }
+
+    const paymentRef = adminDb.collection("PaymentDetails").doc(uid);
+    await paymentRef.set(
+      {
+        active: { [method]: isActive },
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating payment method status:", error);
+    return { success: false, error: "Failed to update payment method status" };
+  }
 }
 
 export async function savePaymentDetails(

@@ -2,6 +2,7 @@
 import {
   getClientPaymentRecords,
   getClientProjects,
+  getProjectPaymentRecords,
   getProjectsByStatus,
   getRecentProjects,
   PaymentFormData,
@@ -85,6 +86,23 @@ export async function submitPaymentRecordAction(
   } catch (error: any) {
     console.error("Error submitting payment record:", error);
     return { success: false, error: error.message || "Failed to submit payment record" };
+  }
+}
+
+// Get payment records for a single project (manual + PayU online)
+export async function fetchProjectPaymentRecordsAction(
+  clientEmail: string,
+  projectName: string
+) {
+  try {
+    const records = await getProjectPaymentRecords(clientEmail, projectName);
+    return { success: true, data: records };
+  } catch (error: any) {
+    console.error("Error fetching project payment records:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to fetch project payments",
+    };
   }
 }
 

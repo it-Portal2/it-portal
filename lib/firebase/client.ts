@@ -146,6 +146,16 @@ export async function submitPaymentRecord(paymentData: PaymentFormData) {
   }
 }
 
+// Get payment records for a single project (filtered in memory to avoid a
+// composite index). Includes both manual receipts and PayU online payments.
+export async function getProjectPaymentRecords(
+  clientEmail: string,
+  projectName: string
+) {
+  const all = await getClientPaymentRecords(clientEmail);
+  return all.filter((r) => r.projectName === projectName);
+}
+
 // Get all payment records for a specific client
 export async function getClientPaymentRecords(clientEmail: string) {
   try {

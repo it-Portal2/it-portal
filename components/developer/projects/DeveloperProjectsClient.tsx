@@ -32,7 +32,8 @@ export default function DeveloperProjectsClient({
 
     const matchesTab =
       (activeTab === "all" && project.status !== "pending") ||
-      (activeTab === "in-progress" && project.status === "in-progress") ||
+      (activeTab === "in-progress" &&
+        (project.status === "in-progress" || project.status === "started")) ||
       (activeTab === "completed" && project.status === "completed");
 
     return matchesSearch && matchesTab;
@@ -115,7 +116,12 @@ export default function DeveloperProjectsClient({
               In Progress
             </p>
             <p className="text-2xl font-bold">
-              {projects?.filter((p) => p.status === "in-progress").length}
+              {
+                projects?.filter(
+                  (p) =>
+                    p.status === "in-progress" || p.status === "started"
+                ).length
+              }
             </p>
           </div>
         </div>

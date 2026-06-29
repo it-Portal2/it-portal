@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Clock,
   Loader,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -33,6 +34,7 @@ import {
 export type ProjectStatus =
   | "pending"
   | "in-progress"
+  | "started"
   | "completed"
   | "rejected"
   | "delayed";
@@ -91,6 +93,12 @@ const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
       textColor = "text-orange-700";
       icon = <AlertCircle className="h-3.5 w-3.5 mr-1" />;
       label = "Delayed";
+      break;
+    case "started":
+      bgColor = "bg-indigo-100";
+      textColor = "text-indigo-700";
+      icon = <Rocket className="h-3.5 w-3.5 mr-1" />;
+      label = "Started";
       break;
     default:
       bgColor = "bg-gray-100";

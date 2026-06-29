@@ -9,8 +9,9 @@ import { useAuthStore } from "@/lib/store/userStore";
 import ManageAiKeysTab from "@/components/admin/settings/ManageAiKeysTab";
 import ClientManagementTab from "@/components/admin/settings/ClientManagementTab";
 import DeveloperManagementTab from "@/components/admin/settings/DeveloperManagementTab";
+import CouponsTab from "@/components/admin/settings/CouponsTab";
 import { useState } from "react";
-import { ChevronDown, User, Users, Code, Lock, CreditCard, UserPlus, Key } from "lucide-react";
+import { ChevronDown, User, Users, Code, Lock, CreditCard, UserPlus, Key, Ticket } from "lucide-react";
 
 const AdminSettings = () => {
   const { profile } = useAuthStore();
@@ -24,6 +25,7 @@ const AdminSettings = () => {
     { value: "developers", label: "Manage Developers", icon: Code, show: true },
     { value: "password", label: "Password", icon: Lock, show: !isSubadmin },
     { value: "payment", label: "Payment Details", icon: CreditCard, show: !isSubadmin },
+    { value: "coupons", label: "Create Coupon", icon: Ticket, show: !isSubadmin },
     { value: "subadmins", label: "Manage Subadmins", icon: UserPlus, show: !isSubadmin },
     { value: "ai-keys", label: "Manage AI Keys", icon: Key, show: !isSubadmin },
   ];
@@ -131,6 +133,9 @@ const AdminSettings = () => {
               </TabsContent>
               <TabsContent value="payment" className="space-y-6">
                 <PaymentTab />
+              </TabsContent>
+              <TabsContent value="coupons" className="space-y-6">
+                <CouponsTab />
               </TabsContent>
               <TabsContent value="subadmins" className="space-y-6">
                 <SubadminsTab />

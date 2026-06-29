@@ -3,21 +3,26 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Project } from "@/lib/types";
+import type { PaymentRecord } from "@/lib/firebase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
 import ProjectDetailCard from "@/components/client components/dashboard/ProjectDetailCard";
 import ProjectTimeline from "@/components/client components/dashboard/ProjectTimeline";
 import DocumentsList from "@/components/ui-custom/DocumentsList";
+import ProjectTable from "@/components/ui-custom/ProjectTable";
 
 interface ProjectDetailClientProps {
   initialProject: Project | null;
+  payments?: PaymentRecord[];
   error: string | null;
 }
 
-export default function ProjectDetailClient({ 
-  initialProject, 
-  error: initialError 
+export default function ProjectDetailClient({
+  initialProject,
+  payments = [],
+  error: initialError,
 }: ProjectDetailClientProps) {
   const router = useRouter();
   const [project] = useState<Project | null>(initialProject);
@@ -29,7 +34,7 @@ export default function ProjectDetailClient({
         <p className="text-destructive font-medium">
           {error || "Project not found"}
         </p>
-        <Link href="/client" className="mt-4">
+        <Link href="/client/" className="mt-4">
           <Button variant="outline">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Dashboard
@@ -111,6 +116,69 @@ export default function ProjectDetailClient({
             </div>
           </div>
         )}
+
+        {/* Payments for this project (manual receipts + PayU online) */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Payments</h2>
+            <p className="text-muted-foreground">
+              Payments recorded against this project
+            </p>
+          </div>
+          <ProjectTable
+            data={payments}
+            columns={[
+              {
+                header: "Date",
+                accessor: "createdAt",
+                cell: (row: PaymentRecord) =>
+                  new Date(row.createdAt).toLocaleDateString(),
+              },
+              { header: "Payment Mode", accessor: "modeOfPayment" },
+              {
+                header: "Type",
+                accessor: "paymentType",
+                cell: (row: PaymentRecord) => (
+                  <Badge variant="outline" className="text-xs">
+                    {row.paymentType === "full" ? "Full" : "Installment"}
+                  </Badge>
+                ),
+              },
+              {
+                header: "Amount",
+                accessor: "paidAmount",
+                cell: (row: PaymentRecord) =>
+                  `${row.currency === "USD" ? "$" : "₹"}${row.paidAmount.toLocaleString()}`,
+              },
+              {
+                header: "Status",
+                accessor: "status",
+                cell: (row: PaymentRecord) => (
+                  <Badge
+                    variant={
+                      row.status === "verified"
+                        ? "default"
+                        : row.status === "rejected"
+                        ? "destructive"
+                        : "secondary"
+                    }
+                    className="flex items-center gap-1 w-fit"
+                  >
+                    {row.status === "verified" && (
+                      <CheckCircle className="h-3 w-3" />
+                    )}
+                    {row.status === "rejected" && (
+                      <XCircle className="h-3 w-3" />
+                    )}
+                    {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+                  </Badge>
+                ),
+              },
+            ]}
+            itemsPerPage={5}
+            emptyMessage="No payments recorded for this project yet"
+          />
+        </div>
       </div>
     </>
   );

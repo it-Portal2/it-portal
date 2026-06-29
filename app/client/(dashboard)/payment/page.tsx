@@ -54,11 +54,16 @@ import ProjectTable from "@/components/ui-custom/ProjectTable";
 import { motion } from "framer-motion";
 import { uploadReceiptToCloudinary } from "@/lib/cloudinary";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   fetchClientPaymentRecordsAction,
   submitPaymentRecordAction,
 } from "@/app/actions/client-actions";
+import { fetchActiveInternationalBankAccountsAction } from "@/app/actions/payment-actions";
 import { PaymentFormData } from "@/lib/firebase/client";
+import { InternationalBankAccount, PaymentMethodActive } from "@/lib/types";
+import InternationalBankDetailsModal from "@/components/client components/payment/InternationalBankDetailsModal";
+import DirectPaymentTab from "@/components/client components/payment/DirectPaymentTab";
 
 type PaymentDetailsForm = {
   paypal: {
@@ -84,24 +89,6 @@ type PaymentDetailsForm = {
   };
 };
 
-type InternationalBankAccount = {
-  id: string;
-  country: string;
-  payment_method: string;
-  routing_number?: string;
-  fedwire_routing_number?: string;
-  account_number?: string;
-  iban?: string;
-  bic_swift_code?: string;
-  bsb_number?: string;
-  institution_number?: string;
-  transit_number?: string;
-  account_type: string;
-  bank_name: string;
-  beneficiary_address: string;
-  beneficiary_bank_country?: string;
-  account_holder_name: string;
-};
 
 type PaymentRecord = {
   id?: string;
@@ -130,387 +117,6 @@ type ReceiptForm = {
   totalProjectAmount: string;
 };
 
-// International Bank Details Modal Component
-const InternationalBankDetailsModal = () => {
-  const internationalAccounts: InternationalBankAccount[] = [
-    {
-      id: "US",
-      country: "United States",
-      payment_method: "ACH",
-      routing_number: "026073150",
-      account_number: "8335166394",
-      account_type: "Business checking account",
-      bank_name: "Community Federal Savings Bank",
-      beneficiary_address: "5 Penn Plaza, 14th Floor, New York, NY 10001, US",
-      account_holder_name: "CEHPOINT",
-    },
-    {
-      id: "US-1",
-      country: "United States",
-      payment_method: "ACH / Fedwire / SWIFT",
-      bank_name: "JPMorgan Chase & Co.",
-      account_number: "20000045876362",
-      account_type: "Business Checking",
-      account_holder_name: "CEHPOINT",
-      beneficiary_address: "383 Madison Ave, New York, NY 10179, USA",
-
-      routing_number: "028000024",
-      fedwire_routing_number: "021000021",
-      bic_swift_code: "CHASUS33XXX",
-    },
-
-    {
-      id: "UK",
-      country: "United Kingdom",
-      payment_method: "SWIFT (International wire)",
-      iban: "GB60TCCL04140475392256",
-      bic_swift_code: "TCCLGB3L",
-      account_type: "Business checking account",
-      bank_name: "The Currency Cloud Limited",
-      beneficiary_address:
-        "12 Steward Street, The Steward Building, London, E1 6FQ, Great Britain",
-      beneficiary_bank_country: "United Kingdom",
-      account_holder_name: "CEHPOINT",
-    },
-    {
-      id: "DE",
-      country: "Germany",
-      payment_method: "SEPA / SEPA Instant",
-      iban: "DE72202208000056418342",
-      bic_swift_code: "SXPYDEHH",
-      account_type: "Business checking account",
-      bank_name: "Banking Circle",
-      beneficiary_address:
-        "Banking Circle S.A. - German Branch, Maximilianstraße 54, 80538 München",
-      account_holder_name: "CEHPOINT",
-    },
-    {
-      id: "AU",
-      country: "Australia",
-      payment_method: "BECS / NPP / Osko",
-      account_number: "056418342",
-      bsb_number: "252000",
-      account_type: "Business checking account",
-      bank_name: "BC Payments",
-      beneficiary_address:
-        "Level 11/10 Carrington St, Sydney NSW 2000, Australia",
-      account_holder_name: "CEHPOINT",
-    },
-    {
-      id: "CA",
-      country: "Canada",
-      payment_method: "EFT",
-      account_number: "951160480",
-      routing_number: "035210009",
-      institution_number: "352",
-      transit_number: "10009",
-      account_type: "Business checking account",
-      bank_name: "Digital Commerce Bank",
-      beneficiary_address: "736 Meridian Road N.E, Calgary, Alberta, CA",
-      account_holder_name: "CEHPOINT",
-    },
-    {
-      id: "UAE",
-      country: "United Arab Emirates",
-      payment_method: "IPP / FTS",
-      iban: "AE550960000691060007781",
-      bic_swift_code: "ZANDAEAAXXX",
-      account_type: "Business checking account",
-      bank_name: "Zand Bank PJSC",
-      beneficiary_address:
-        "1st Floor, Emaar Square, Building 6, Dubai, United Arab Emirates",
-      account_holder_name: "CEHPOINT",
-    },
-  ];
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard");
-  };
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-2 w-full"
-        >
-          <Globe className="h-4 w-4" />
-          View International Bank Details
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            International Bank Account Details
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {internationalAccounts.map((account) => (
-            <Card key={account.id} className="border-2">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-purple-600" />
-                    {account.country}
-                  </span>
-                  <Badge variant="secondary">{account.payment_method}</Badge>
-                </CardTitle>
-                <CardDescription>{account.bank_name}</CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-3">
-                {/* Field Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Account Holder */}
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">
-                      Account Holder
-                    </Label>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">
-                        {account.account_holder_name}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          copyToClipboard(account.account_holder_name)
-                        }
-                        className="h-6 w-6 p-0"
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Account Type */}
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">
-                      Account Type
-                    </Label>
-                    <p className="text-sm font-medium">
-                      {account.account_type}
-                    </p>
-                  </div>
-
-                  {/* IBAN */}
-                  {account.iban && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        IBAN
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.iban}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.iban!)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SWIFT/BIC */}
-                  {account.bic_swift_code && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        BIC/SWIFT Code
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.bic_swift_code}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(account.bic_swift_code!)
-                          }
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Account Number */}
-                  {account.account_number && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        Account Number
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.account_number}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(account.account_number!)
-                          }
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Routing Number */}
-                  {account.routing_number && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        Routing Number (ACH)
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.routing_number}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(account.routing_number!)
-                          }
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Fedwire Routing Number (NEW) */}
-                  {account.fedwire_routing_number && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        Fedwire Routing Number
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.fedwire_routing_number}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(account.fedwire_routing_number!)
-                          }
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* BSB */}
-                  {account.bsb_number && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        BSB Number
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.bsb_number}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(account.bsb_number!)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Institution Number */}
-                  {account.institution_number && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        Institution Number
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.institution_number}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(account.institution_number!)
-                          }
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Transit Number */}
-                  {account.transit_number && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground">
-                        Transit Number
-                      </Label>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium font-mono">
-                          {account.transit_number}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(account.transit_number!)
-                          }
-                          className="h-6 w-6 p-0"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 border-t">
-                  <Label className="text-xs font-medium text-muted-foreground">
-                    Beneficiary Address
-                  </Label>
-                  <p className="text-sm">{account.beneficiary_address}</p>
-                </div>
-
-                {account.beneficiary_bank_country && (
-                  <div>
-                    <Label className="text-xs font-medium text-muted-foreground">
-                      Beneficiary Bank Country
-                    </Label>
-                    <p className="text-sm">
-                      {account.beneficiary_bank_country}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 // View Details Dialog Component
 const ViewDetailsDialog = ({ record }: { record: PaymentRecord }) => {
@@ -740,6 +346,16 @@ const Payment = () => {
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingPaymentDetails, setIsLoadingPaymentDetails] = useState(true);
+  const [active, setActive] = useState<PaymentMethodActive>({
+    upi: true,
+    paypal: true,
+    bankDetails: true,
+    crypto: true,
+  });
+  const [internationalAccounts, setInternationalAccounts] = useState<
+    InternationalBankAccount[]
+  >([]);
+  const [isLoadingInternational, setIsLoadingInternational] = useState(true);
 
   const getCurrencySymbol = (currency: string) => {
     return currency === "USD" ? "$" : "₹";
@@ -801,6 +417,12 @@ const Payment = () => {
             qrCodeUrl: "",
           },
         });
+        setActive({
+          upi: paymentData.active?.upi ?? true,
+          paypal: paymentData.active?.paypal ?? true,
+          bankDetails: paymentData.active?.bankDetails ?? true,
+          crypto: paymentData.active?.crypto ?? true,
+        });
       } else if (result.error && result.error !== "Payment details not found") {
         toast.error(result.error);
       }
@@ -808,6 +430,20 @@ const Payment = () => {
       toast.error(error.message || "Failed to load payment details");
     } finally {
       setIsLoadingPaymentDetails(false);
+    }
+  };
+
+  const loadInternationalAccounts = async () => {
+    setIsLoadingInternational(true);
+    try {
+      const result = await fetchActiveInternationalBankAccountsAction();
+      if (result.success && result.data) {
+        setInternationalAccounts(result.data);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+    } finally {
+      setIsLoadingInternational(false);
     }
   };
 
@@ -908,17 +544,27 @@ const Payment = () => {
     if (profile) {
       handleLoadPaymentDetails();
     }
+    loadInternationalAccounts();
   }, [profile]);
 
-  const hasPayPal =
-    paymentDetails.paypal.email && paymentDetails.paypal.accountName;
-  const hasUPI = paymentDetails.upi.upiId;
-  const hasBankDetails =
-    paymentDetails.bankDetails.accountHolderName &&
-    paymentDetails.bankDetails.accountNumber &&
-    paymentDetails.bankDetails.bankName;
-  const hasCrypto =
-    paymentDetails.crypto.walletAddress && paymentDetails.crypto.network;
+  // A method shows on the client only when it is both configured and active.
+  const hasPayPal = Boolean(
+    active.paypal &&
+      paymentDetails.paypal.email &&
+      paymentDetails.paypal.accountName
+  );
+  const hasUPI = Boolean(active.upi && paymentDetails.upi.upiId);
+  const hasBankDetails = Boolean(
+    active.bankDetails &&
+      paymentDetails.bankDetails.accountHolderName &&
+      paymentDetails.bankDetails.accountNumber &&
+      paymentDetails.bankDetails.bankName
+  );
+  const hasCrypto = Boolean(
+    active.crypto &&
+      paymentDetails.crypto.walletAddress &&
+      paymentDetails.crypto.network
+  );
 
   return (
     <>
@@ -942,13 +588,24 @@ const Payment = () => {
           </Alert>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-          className="space-y-6"
-        >
-          {isLoadingPaymentDetails ? (
+        <Tabs defaultValue="direct" className="space-y-8">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="direct">Direct Payment</TabsTrigger>
+            <TabsTrigger value="manual">Manual Payment</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="direct">
+            <DirectPaymentTab />
+          </TabsContent>
+
+          <TabsContent value="manual" className="space-y-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              className="space-y-6"
+            >
+              {isLoadingPaymentDetails ? (
             <Card className="p-12">
               <div className="flex flex-col items-center justify-center space-y-4">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -1163,12 +820,6 @@ const Payment = () => {
                           </Button>
                         </div>
                       </div>
-
-                      <Separator className="my-2" />
-
-                      <div className="pt-2">
-                        <InternationalBankDetailsModal />
-                      </div>
                     </CardContent>
                   </Card>
                 )}
@@ -1235,23 +886,47 @@ const Payment = () => {
                     </CardContent>
                   </Card>
                 )}
+
+                {internationalAccounts.length > 0 && (
+                  <Card className="relative overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <Globe className="h-5 w-5 text-purple-600" />
+                        International Bank Transfer
+                      </CardTitle>
+                      <CardDescription>
+                        Pay from outside India
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <InternationalBankDetailsModal
+                        accounts={internationalAccounts}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
-              {!hasPayPal && !hasUPI && !hasBankDetails && !hasCrypto && (
-                <Card className="text-center py-8">
-                  <CardContent>
-                    <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
-                      No Payment Methods Configured
-                    </h3>
-                    <p className="text-muted-foreground mb-4">
-                      Configure your payment methods in settings to start
-                      receiving payments
-                    </p>
-                    <Button>Configure Payment Methods</Button>
-                  </CardContent>
-                </Card>
-              )}
+              {!hasPayPal &&
+                !hasUPI &&
+                !hasBankDetails &&
+                !hasCrypto &&
+                !isLoadingInternational &&
+                internationalAccounts.length === 0 && (
+                  <Card className="text-center py-8">
+                    <CardContent>
+                      <CreditCard className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        No Payment Methods Configured
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        Configure your payment methods in settings to start
+                        receiving payments
+                      </p>
+                      <Button>Configure Payment Methods</Button>
+                    </CardContent>
+                  </Card>
+                )}
             </>
           )}
         </motion.div>
@@ -1357,7 +1032,7 @@ const Payment = () => {
                       handleReceiptFormChange("paymentMode", value)
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="paymentMode">
                       <SelectValue placeholder="Select payment mode" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1375,8 +1050,23 @@ const Payment = () => {
                           Cryptocurrency
                         </SelectItem>
                       )}
+                      {internationalAccounts.length > 0 && (
+                        <SelectItem value="International Bank Transfer">
+                          International Bank Transfer
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
+                  {!hasPayPal &&
+                    !hasUPI &&
+                    !hasBankDetails &&
+                    !hasCrypto &&
+                    internationalAccounts.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        No payment methods are currently available. Please
+                        contact support.
+                      </p>
+                    )}
                 </div>
               </div>
 
@@ -1535,6 +1225,8 @@ const Payment = () => {
             />
           </div>
         </motion.div>
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );

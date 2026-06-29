@@ -30,10 +30,16 @@ export default function DeveloperDashboardClient({
   // Calculate project statistics dynamically
   const projectStats = {
     total: projects?.length || 0,
-    inProgress: projects?.filter((p) => p.status === "in-progress").length || 0,
+    inProgress:
+      projects?.filter(
+        (p) => p.status === "in-progress" || p.status === "started"
+      ).length || 0,
     completed: projects?.filter((p) => p.status === "completed").length || 0,
     notStarted: projects?.filter(
-      (p) => p.status !== "in-progress" && p.status !== "completed"
+      (p) =>
+        p.status !== "in-progress" &&
+        p.status !== "started" &&
+        p.status !== "completed"
     ).length || 0,
   };
 

@@ -20,6 +20,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   const statusColors: Record<ProjectStatus, string> = {
     pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
     "in-progress": "bg-blue-500/10 text-blue-500 border-blue-500/20",
+    started: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
     completed: "bg-green-500/10 text-green-500 border-green-500/20",
     rejected: "bg-red-500/10 text-red-500 border-red-500/20",
     delayed: "bg-orange-500/10 text-orange-500 border-orange-500/20",
@@ -28,6 +29,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   const statusText: Record<ProjectStatus, string> = {
     pending: "Pending",
     "in-progress": "In Progress",
+    started: "Started",
     completed: "Completed",
     rejected: "Rejected",
     delayed: "Delayed",

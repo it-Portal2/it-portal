@@ -8,6 +8,7 @@ import {
   FileQuestion,
   XCircle,
   Briefcase,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,12 @@ export default function ProjectStatusCard({
       title: "In Progress",
       icon: <Clock className="h-5 w-5" />,
       color: "text-blue-500 bg-blue-500/10",
+      href: "/client/in-progress",
+    },
+    started: {
+      title: "Started",
+      icon: <Rocket className="h-5 w-5" />,
+      color: "text-indigo-500 bg-indigo-500/10",
       href: "/client/in-progress",
     },
     completed: {

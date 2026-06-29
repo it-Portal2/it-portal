@@ -21,6 +21,7 @@ export interface Client {
 export type ProjectStatus =
   | "pending"
   | "in-progress"
+  | "started"
   | "completed"
   | "rejected"
   | "delayed";
@@ -30,6 +31,87 @@ export type ProjectDocument = {
   fileName: string;
   cloudinaryUrl: string;
 };
+
+export type PayuMode = "test" | "production";
+
+export interface PayuConfig {
+  merchantKey: string;
+  merchantSalt: string;
+  clientId?: string;
+  clientSecret?: string;
+  mode: PayuMode;
+  appBaseUrl: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InternationalBankField {
+  label: string;
+  value: string;
+}
+
+export interface InternationalBankAccount {
+  id: string;
+  country: string;
+  bankName: string;
+  accountHolderName: string;
+  paymentMethod: string;
+  accountType: string;
+  beneficiaryAddress: string;
+  currency?: string;
+  fields: InternationalBankField[];
+  isActive: boolean;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PayuTransactionStatus =
+  | "initiated"
+  | "success"
+  | "failure"
+  | "pending";
+
+export interface PayuTransaction {
+  txnid: string;
+  projectId: string;
+  projectName: string;
+  clientUid: string;
+  clientEmail: string;
+  clientName: string;
+  clientPhone: string;
+  amount: number;
+  productinfo: string;
+  status: PayuTransactionStatus;
+  mode: PayuMode;
+  mihpayid?: string;
+  payuMode?: string;
+  payuResponse?: Record<string, string>;
+  projectActivated: boolean;
+  couponCode?: string; // applied coupon, if any
+  originalAmount?: number; // pre-discount amount, for audit
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentMethodActive {
+  upi: boolean;
+  paypal: boolean;
+  bankDetails: boolean;
+  crypto: boolean;
+}
+
+export type CouponDiscountType = "flat" | "percentage";
+
+export interface Coupon {
+  code: string; // == doc id, uppercased
+  discountType: CouponDiscountType;
+  discountValue: number; // flat → ₹ amount; percentage → 1–100
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type DocumentType = "quotation" | "developer";
 

@@ -23,19 +23,26 @@ export default function ClientDashboardUI({
 }: ClientDashboardUIProps) {
   const [activeTab, setActiveTab] = useState("all");
 
-  // Count projects by status
+  // Count projects by status. "started" (paid) projects are grouped with
+  // in-progress as active work.
   const projectCounts = {
     pending: projects?.filter((p) => p.status === "pending").length,
-    "in-progress": projects?.filter((p) => p.status === "in-progress").length,
+    "in-progress": projects?.filter(
+      (p) => p.status === "in-progress" || p.status === "started"
+    ).length,
     completed: projects?.filter((p) => p.status === "completed").length,
     rejected: projects?.filter((p) => p.status === "rejected").length,
   };
 
 
-  // Filter projects based on active tab
+  // Filter projects based on active tab (in-progress tab also shows started)
   const filteredProjects =
     activeTab === "all"
       ? projects
+      : activeTab === "in-progress"
+      ? projects?.filter(
+          (p) => p.status === "in-progress" || p.status === "started"
+        )
       : projects?.filter((project) => project.status === activeTab);
 
   return (

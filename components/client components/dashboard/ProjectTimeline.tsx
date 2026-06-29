@@ -32,7 +32,12 @@ export default function ProjectTimeline({ project }: ProjectTimelineProps) {
   }
 
   // Add start event
-  if ((project.status === "in-progress" || project.status === "completed") && project.startDate) {
+  if (
+    (project.status === "in-progress" ||
+      project.status === "started" ||
+      project.status === "completed") &&
+    project.startDate
+  ) {
     timelineEvents.push({
       date: project.startDate,
       title: "Project Started",
