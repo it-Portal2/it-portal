@@ -17,9 +17,11 @@ export async function uploadToCloudinary(
     cloudinaryData.append("upload_preset", "AllPDF");
     cloudinaryData.append("cloud_name", "db9um0dp4");
     cloudinaryData.append("resource_type", "raw");
-    // Upload to Cloudinary with progress tracking
+    // Raw (PDF/doc) assets must use the /raw/upload endpoint — Cloudinary picks
+    // the resource type from the URL path, not the body field, so posting a PDF
+    // to /image/upload is rejected with a 400.
     const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/db9um0dp4/image/upload`,
+      `https://api.cloudinary.com/v1_1/db9um0dp4/raw/upload`,
       cloudinaryData,
       {
         headers: { "Content-Type": "multipart/form-data" },
@@ -36,9 +38,17 @@ export async function uploadToCloudinary(
 
     // Return the secure URL from the Cloudinary response
     return response.data.secure_url;
-  } catch (error) {
-    console.error("Error uploading to Cloudinary:", error);
-    throw new Error("Failed to upload file to Cloudinary");
+  } catch (error: any) {
+    const cloudinaryMessage = error?.response?.data?.error?.message;
+    console.error(
+      "Error uploading to Cloudinary:",
+      error?.response?.data || error
+    );
+    throw new Error(
+      cloudinaryMessage
+        ? `Failed to upload file to Cloudinary: ${cloudinaryMessage}`
+        : "Failed to upload file to Cloudinary"
+    );
   }
 }
 export async function uploadToCloudinaryForTextExtraction(
@@ -53,9 +63,9 @@ export async function uploadToCloudinaryForTextExtraction(
     cloudinaryData.append("asset_folder", "textExtractedPdf");
     cloudinaryData.append("resource_type", "raw");
 
-    // Upload to Cloudinary with progress tracking
+    // Raw (PDF/doc) assets must use the /raw/upload endpoint (see uploadToCloudinary).
     const response = await axios.post(
-      `https://api.cloudinary.com/v1_1/db9um0dp4/image/upload`,
+      `https://api.cloudinary.com/v1_1/db9um0dp4/raw/upload`,
       cloudinaryData,
       {
         headers: { "Content-Type": "multipart/form-data" },
@@ -64,9 +74,17 @@ export async function uploadToCloudinaryForTextExtraction(
 
     // Return the secure URL from the Cloudinary response
     return response.data.secure_url;
-  } catch (error) {
-    console.error("Error uploading to Cloudinary:", error);
-    throw new Error("Failed to upload file to Cloudinary");
+  } catch (error: any) {
+    const cloudinaryMessage = error?.response?.data?.error?.message;
+    console.error(
+      "Error uploading to Cloudinary:",
+      error?.response?.data || error
+    );
+    throw new Error(
+      cloudinaryMessage
+        ? `Failed to upload file to Cloudinary: ${cloudinaryMessage}`
+        : "Failed to upload file to Cloudinary"
+    );
   }
 }
 export async function uploadAvatarToCloudinary(
